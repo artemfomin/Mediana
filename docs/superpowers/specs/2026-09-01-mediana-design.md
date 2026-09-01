@@ -26,6 +26,7 @@ Mediana — библиотека паттерна медиатор для .NET 1
 | D1 | Собственный API + отдельный пакет `Mediana.MediatR` (адаптер MediatR-хендлеров) | Свобода оптимизаций без наследования компромиссов MediatR; миграция существующего кода без изменений |
 | D2 | **Обе версии — полные**: net10.0 и netstandard2.1 реализуются параллельно для всех пакетов (где позволяет клиентская библиотека, см. D13), с идентичной API-поверхностью, одинаковыми namespace и именами типов; распространяются как мульти-таргет ассеты внутри **одних и тех же NuGet-пакетов** (единые ID) | Разные проекты команды используют разные рантаймы; net10.0-ассет задействует все доступные оптимизации (FrozenDictionary — ~47% быстрее lookup чем Dictionary, System.Threading.Lock, GetAlternateLookup, R2R), ns2.1-ассет — рукописные эквиваленты там, где API нет. Одинаковые имена пакетов и типов = максимальная совместимость: отдельные ID на TFM создавали бы конфликт типов при сборке двух веток в один граф зависимостей. Замечание о «40+%»: это микро-бенчмарк lookup'а; на end-to-end Send выигрыш скромнее, т.к. source-gen диспетч убирает lookup с горячего пути; net10-ассет дополнительно выигрывает на fallback-путях, async-инфраструктуре и startup (R2R) |
 | D13 | Транспортные/хранящие пакеты мульти-таргетятся с закреплением мажоров клиентских библиотек per TFM: RabbitMQ — net10.0: RabbitMQ.Client 7.x, ns2.1: 6.x (различие API — тонкий слой адаптации внутри пакета); Kafka — Confluent.Kafka единый API (мажор проверить в плане); MassTransit 8.x — поддерживает ns2.1-хосты; Dapper/Mongo — ns2.1 ок; **EF Core-провайдер — net10.0-only** (EF Core 6+ не таргетирует ns2.1; ns2.1-потребители outbox используют Dapper/Mongo-провайдеры) | Полный охват «обеих версий» без жертвы совместимости API; единственное исключение (EF) задокументировано явно |
+| D14 | **Минимум сторонних библиотек — вторая метрика после north star.** Ядро (Abstractions, Mediana, Transport.Abstractions, Generators, релей-логика Outbox) — только собственный код; внешние зависимости ядра ограничены пакетами Microsoft и только там, где это структурно неизбежно (MEDI-абстракции для DI, Roslyn для генератора, STJ как сериализатор по умолчанию). Всё стороннее допускается только в спутниковых пакетах, где SDK и есть суть пакета (клиенты очередей, DB-провайдеры, сериализатор-провайдеры MessagePack/protobuf) | Контролируемая поверхность риска и перф: ноль транзитивных сюрпризов в ядре. Собственные реализации: retry-политики и backoff (не Polly), пулы объектов/IVTS (не ObjectPooling), UUIDv7 на ns2.1 (на net10.0 — `Guid.CreateVersion7`), планировщик relay. Метрика автоматизирована CI-гейтом (§12.6) |
 | D3 | Интеграция с очередями: явная политика роутинга (локально / очередь / оба) + подключаемые транспорт-провайдеры; MassTransit — и как транспорт, и как мост | Предсказуемость + расширяемость |
 | D4 | Полный стек надёжности в v1: retry, DLQ, poison detection, inbox — в транспортном уровне ядра; **outbox — opt-in через отдельные NuGet-пакеты** | Ядро без зависимостей на БД; transactional-гарантии — осознанный выбор потребителя (по требованию пользователя) |
 | D5 | Функциональный объём ядра: parity MediatR + стриминг (`IAsyncEnumerable`), без саг | Стриминг дёшев на ns2.1+, саги — дублирование компетенции MassTransit |
@@ -38,7 +39,7 @@ Mediana — библиотека паттерна медиатор для .NET 1
 |---|---------|-------------|
 | D8 | DI — только `Microsoft.Extensions.DependencyInjection` | Стандарт экосистемы; keyed services доступны пакетом и на ns2.1 |
 | D9 | Сериализация по умолчанию — System.Text.Json source-gen; провайдеры MessagePack и protobuf подключаемые, выбор per message type | Zero-reflection + выбор по перф-бюджету |
-| D10 | `MessageId` — UUIDv7 | Sortable → индекс-friendly для outbox/inbox |
+| D10 | `MessageId` — UUIDv7 (net10.0: `Guid.CreateVersion7()`; ns2.1: собственная реализация, D14) | Sortable → индекс-friendly для outbox/inbox |
 | D11 | Удалённый стриминг в v1 — только RabbitMQ (chunked reply frames) и MassTransit; Kafka — нет (documented limitation) | Kafka не предназначен для streaming reply; fetch-loop анти-паттерн |
 | D12 | OpenTelemetry-first наблюдаемость; ошибки удалённого Send — `RemoteExecutionException` | Стандарт отрасли; MassTransit-совместимые Fault-события |
 
@@ -81,7 +82,7 @@ Mediana.sln
 
 Правила multi-target (D2/D13): каждый пакет собирается одним csproj'ом в два ассета; публичная API-поверхность ассетов идентична (проверяется контрактным тестом на публичные типы/члены); выбор оптимизаций — через `#if NET10_0` внутри реализации, не через раздельные типы. Хост-приложение всегда получает один ассет — конфликтов типов в графе зависимостей нет.
 
-Правила зависимостей: `Abstractions` не ссылается ни на что; `Mediana` ссылается только на `Abstractions` (+ MEDI); транспортные пакеты ссылаются на `Mediana.Transport.Abstractions`; outbox-пакеты ссылаются на `Mediana.Transport.Abstractions` и соответствующий DB SDK. Пакет `Mediana.Outbox` (и его DB-провайдеры) **не требуется** для работы без transactional-гарантий: без него удалённая публикация идёт напрямую в транспорт с retry/DLQ, но без атомарности с бизнес-транзакцией.
+Правила зависимостей (D14 — минимальный сторонний след): `Abstractions` не ссылается ни на что; `Mediana` — только `Abstractions` + MEDI-абстракции; `Transport.Abstractions` — без внешних зависимостей (in-memory inbox, контракты SPI); `Generators` — только Roslyn; outbox-relay — только собственный код; транспортные пакеты ссылаются на `Mediana.Transport.Abstractions` и свой клиентский SDK; outbox-провайдеры — на `Transport.Abstractions` и свой DB SDK. Сторонние SDK допускаются исключительно в спутниковых пакетах, где SDK и есть суть пакета. Пакет `Mediana.Outbox` (и его DB-провайдеры) **не требуется** для работы без transactional-гарантий: без него удалённая публикация идёт напрямую в транспорт с retry/DLQ, но без атомарности с бизнес-транзакцией.
 
 ---
 
@@ -319,7 +320,7 @@ public interface ITransportPublisher
 
 ### 9.2 Retry-политики
 
-- Per message type: `Fixed / Incremental / Exponential (+jitter)`, MaxAttempts; два контура — in-process (transient-ошибки, без редоставки) и transport-level (redelivery по механизмам §8). По умолчанию: Exponential 50ms→5s, 5 попыток in-process, дальше транспортный контур.
+- Per message type: `Fixed / Incremental / Exponential (+jitter)`, MaxAttempts; два контура — in-process (transient-ошибки, без редоставки) и transport-level (redelivery по механизмам §8). По умолчанию: Exponential 50ms→5s, 5 попыток in-process, дальше транспортный контур. Движок retry/backoff/jitter — собственная реализация (D14), не Polly.
 
 ### 9.3 DLQ и poison detection
 
@@ -361,6 +362,7 @@ public interface ITransportPublisher
 3. Десериализация + диспетч консьюмера: бюджет ≤ 1.2× стоимости сериализации payload.
 4. Outbox-путь: конверт + буферы ≤ 1 KB baseline аллокаций на сообщение.
 5. CI-гейт: benchmark-диф между main и PR; регрессия > 5% на любом зафиксированном бюджете → red build; аллокационные бюджеты — абсолютный гейт.
+6. CI-гейт зависимостей (D14): автоматический аудит деклараций пакетов ядра (Abstractions, Mediana, Transport.Abstractions, Generators, Outbox) — **ноль не-Microsoft внешних зависимостей**; появление новой зависимости Microsoft-пакета требует явного approve в PR (список разрешённых ведётся в CI-конфиге); спутниковые пакеты аудируются на отсутствие неожиданных транзитивных зависимостей.
 
 Бенчмарк-матрица: dispatch (vs MediatR 12.x), publish fan-out, сериализация (STJ/MessagePack), конверт, e2e через Testcontainers-RabbitMQ (throughput конкурентных консьюмеров).
 
