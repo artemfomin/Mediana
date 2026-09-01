@@ -7,40 +7,36 @@ namespace Mediana.Dispatch;
 
 /// <summary>
 /// Иммутабельный реестр сообщений: RuntimeTypeHandle → <see cref="MessageEntry"/>.
-/// Copy-on-write: <see cref="Add"/> строит новую карту и публикует через Volatile.Write; читатели не лочатся (§5.2).
-/// net10.0 — FrozenDictionary; netstandard2.1 — собственный immutable bucket-массив по RuntimeTypeHandle (D2).
+/// Чисто функциональный copy-on-write: <see cref="Add"/> НЕ мутирует этот экземпляр —
+/// возвращает новую версию на основе его содержимого (последовательность Adds накапливает типы).
+/// Конкурентные добавления из одной версии — под внешней синхронизацией вызывающего (документировано);
+/// чтение всегда без локов и аллокаций.
+/// net10.0 — FrozenDictionary; netstandard2.1 — собственный immutable bucket-массив (D2).
 /// </summary>
 public sealed class MessageRegistry
 {
     public static MessageRegistry Empty { get; } = Build(
         Array.Empty<KeyValuePair<RuntimeTypeHandle, MessageEntry>>());
 
-    private readonly object _writeLock = new();
 #if NET10_0
-    private readonly System.Collections.Frozen.FrozenDictionary<RuntimeTypeHandle, MessageEntry> _map;
+    private readonly FrozenDictionary<RuntimeTypeHandle, MessageEntry> _map;
 #else
     private readonly Bucket[] _buckets;
 #endif
-    private volatile MessageRegistry? _latest;
+    private readonly KeyValuePair<RuntimeTypeHandle, MessageEntry>[] _items;
 
 #if NET10_0
-    private MessageRegistry(
-        System.Collections.Frozen.FrozenDictionary<RuntimeTypeHandle, MessageEntry> map,
-        IReadOnlyCollection<KeyValuePair<RuntimeTypeHandle, MessageEntry>> seed)
+    private MessageRegistry(FrozenDictionary<RuntimeTypeHandle, MessageEntry> map, KeyValuePair<RuntimeTypeHandle, MessageEntry>[] items)
     {
         _map = map;
-        _seed = seed;
+        _items = items;
     }
-
-    private readonly IReadOnlyCollection<KeyValuePair<RuntimeTypeHandle, MessageEntry>> _seed;
 #else
-    private MessageRegistry(Bucket[] buckets, IReadOnlyCollection<KeyValuePair<RuntimeTypeHandle, MessageEntry>> seed)
+    private MessageRegistry(Bucket[] buckets, KeyValuePair<RuntimeTypeHandle, MessageEntry>[] items)
     {
         _buckets = buckets;
-        _seed = seed;
+        _items = items;
     }
-
-    private readonly IReadOnlyCollection<KeyValuePair<RuntimeTypeHandle, MessageEntry>> _seed;
 
     private const int InitialBuckets = 16;
 
@@ -76,47 +72,38 @@ public sealed class MessageRegistry
     }
 
     /// <summary>
-    /// Copy-on-write добавление: возвращает НОВУЮ версию реестра (эта остаётся консистентной для читателей).
-    /// Однопоточный lock сериализует писателей; публикация — volatile write.
+    /// Copy-on-write добавление: чистая функция — этот экземпляр неизменен, возвращается новая версия
+    /// со всеми его типами плюс новый. Дубликат — ошибка конфигурации.
     /// </summary>
     public MessageRegistry Add(Type messageType, MessageEntry entry)
     {
         if (TryGet(messageType) is not null)
         {
             throw new MediatorConfigurationException(
-                $"Message type {messageType} is already registered. Use the latest registry version or remove the previous entry first.");
+                $"Message type {messageType} is already registered.");
         }
 
-        lock (_writeLock)
+        var items = new KeyValuePair<RuntimeTypeHandle, MessageEntry>[_items.Length + 1];
+        for (var i = 0; i < _items.Length; i++)
         {
-            var latest = _latest ?? this;
-            var seed = new List<KeyValuePair<RuntimeTypeHandle, MessageEntry>>(latest._seed.Count + 1)
+            if (_items[i].Key.Equals(messageType.TypeHandle))
             {
-                Capacity = latest._seed.Count + 1,
-            };
-            foreach (var pair in latest._seed)
-            {
-                if (pair.Key.Equals(messageType.TypeHandle))
-                {
-                    throw new MediatorConfigurationException(
-                        $"Message type {messageType} is already registered.");
-                }
-
-                seed.Add(pair);
+                throw new MediatorConfigurationException(
+                    $"Message type {messageType} is already registered.");
             }
 
-            seed.Add(new KeyValuePair<RuntimeTypeHandle, MessageEntry>(messageType.TypeHandle, entry));
-
-            var next = Build(seed);
-            _latest = next;
-            return next;
+            items[i] = _items[i];
         }
+
+        items[_items.Length] = new KeyValuePair<RuntimeTypeHandle, MessageEntry>(messageType.TypeHandle, entry);
+        return Build(items);
     }
 
     internal static MessageRegistry Build(IEnumerable<KeyValuePair<RuntimeTypeHandle, MessageEntry>> pairs)
     {
 #if NET10_0
-        return new MessageRegistry(pairs.ToFrozenDictionary(), pairs.ToArray());
+        var items = pairs.ToArray();
+        return new MessageRegistry(items.ToFrozenDictionary(), items);
 #else
         var items = pairs.ToArray();
         var bucketCount = InitialBuckets;
@@ -135,7 +122,4 @@ public sealed class MessageRegistry
         return new MessageRegistry(buckets, items);
 #endif
     }
-
-    /// <summary>Самая свежая версия после copy-on-write добавлений (для диспетчера после runtime-регистрации).</summary>
-    public MessageRegistry Latest => _latest ?? this;
 }

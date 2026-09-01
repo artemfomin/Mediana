@@ -7,11 +7,7 @@ namespace Mediana.Dispatch;
 
 /// <summary>
 /// Общий композитор singleton-корня для команд/запросов (выполняется один раз, вне горячего пути).
-///
-/// Инженерный факт (измерено, AllocationBisectTests): invocation generic-делегата из canon-shared
-/// generic-контекста (все generic-аргументы — reference-типы) аллоцирует ~24-32Б на вызов;
-/// non-generic делегат — ноль. Поэтому object-путь при reference-ответах идёт через non-generic мост
-/// (downcast без боксинга), а typed-путь и value-ответы (специализированные инстанциации) — напрямую.
+/// Горячий путь в конкретных call-site'ах: поле-корень → вызов делегата, без промежуточных вызовов.
 /// </summary>
 internal static class RequestCallSiteCompositor
 {
@@ -31,7 +27,7 @@ internal static class RequestCallSiteCompositor
         {
             var behavior = (IPipelineBehavior<TRequest, TResponse>)(serviceProvider.GetService(behaviorTypes[i])
                 ?? throw new MediatorConfigurationException(
-                    "Behavior " + behaviorTypes[i] + " is not registered in the service provider."));
+                    $"Behavior {behaviorTypes[i]} is not registered in the service provider."));
             var inner = root;
             root = (r, ct) => behavior.Handle(r, inner, ct);
         }
@@ -42,39 +38,23 @@ internal static class RequestCallSiteCompositor
 
 /// <summary>Call-site команды: типизированный и object-путь, без боксинга ответа.</summary>
 internal sealed class CommandCallSite<TCommand, TResponse, THandler>
-    : IObjectCommandCallSite<TResponse>, ITypedCommandCallSite<TCommand, TResponse>, IUntypedCallSite
+    : IObjectCommandCallSite<TResponse>, ITypedCommandCallSite<TCommand, TResponse>
     where TCommand : ICommand<TResponse>
     where THandler : ICommandHandler<TCommand, TResponse>
 {
-    private static readonly bool RefResponse = !typeof(TResponse).IsValueType;
-
     private readonly Type[] _behaviorTypes;
     private readonly bool _singleton;
     private RequestHandlerDelegate<TCommand, TResponse>? _root;
-    private readonly RefBridge? _refBridge;
+    private readonly object _lock = new();
 
     public CommandCallSite(Type[] behaviorTypes, bool singleton)
     {
         _behaviorTypes = behaviorTypes;
         _singleton = singleton;
-        if (RefResponse && singleton)
-        {
-            _refBridge = new RefBridge();
-        }
     }
 
     public ValueTask<TResponse> Invoke(object message, IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        if (_refBridge is not null)
-        {
-            var bridge = _refBridge.Delegate;
-            if (bridge is not null)
-            {
-                var boxed = bridge(message, cancellationToken);
-                return CastBoxed(boxed);
-            }
-        }
-
         var root = _root;
         if (root is not null)
         {
@@ -95,54 +75,13 @@ internal sealed class CommandCallSite<TCommand, TResponse, THandler>
         return Slow(message, serviceProvider, cancellationToken);
     }
 
-    public ValueTask<object?> InvokeAny(object message, IServiceProvider serviceProvider, CancellationToken cancellationToken)
-    {
-        if (_refBridge is null || _root is null)
-        {
-            // value-ответ или не прогретый корень: object-путь через generic (боксинг value допустим только здесь)
-            return SlowAny(message, serviceProvider, cancellationToken);
-        }
-
-        var bridge = _refBridge.Delegate;
-        if (bridge is null)
-        {
-            return SlowAny(message, serviceProvider, cancellationToken);
-        }
-
-        return bridge(message, cancellationToken);
-    }
-
-    private async ValueTask<object?> SlowAny(object message, IServiceProvider serviceProvider, CancellationToken cancellationToken)
-        => await Invoke((TCommand)message, serviceProvider, cancellationToken).ConfigureAwait(false);
-
-    private static ValueTask<TResponse> CastBoxed(ValueTask<object?> boxed)
-    {
-        if (boxed.IsCompletedSuccessfully)
-        {
-            return new ValueTask<TResponse>((TResponse)boxed.Result!);
-        }
-
-        return AwaitCast<TResponse>(boxed);
-    }
-
-    private static async ValueTask<TResult> AwaitCast<TResult>(ValueTask<object?> pending)
-        => (TResult)(await pending.ConfigureAwait(false))!;
-
     private ValueTask<TResponse> Slow(TCommand message, IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         if (_singleton)
         {
-            lock (this)
+            lock (_lock)
             {
-                if (_root is null)
-                {
-                    _root = Compose(serviceProvider);
-                    if (_refBridge is not null)
-                    {
-                        var root = _root;
-                        _refBridge.Delegate = (m, ct) => Upcast(root((TCommand)m, ct));
-                    }
-                }
+                _root ??= Compose(serviceProvider);
             }
 
             return _root(message, cancellationToken);
@@ -174,20 +113,7 @@ internal sealed class CommandCallSite<TCommand, TResponse, THandler>
     private static THandler Resolve(IServiceProvider serviceProvider)
         => (THandler)(serviceProvider.GetService(typeof(THandler))
             ?? throw new MediatorConfigurationException(
-                "Command handler " + typeof(THandler) + " is not registered in the service provider."));
-
-    private static ValueTask<object?> Upcast(ValueTask<TResponse> pending)
-    {
-        if (pending.IsCompletedSuccessfully)
-        {
-            return new ValueTask<object?>(pending.Result);
-        }
-
-        return AwaitUpcast(pending);
-    }
-
-    private static async ValueTask<object?> AwaitUpcast(ValueTask<TResponse> pending)
-        => await pending.ConfigureAwait(false);
+                $"Command handler {typeof(THandler)} is not registered in the service provider."));
 
     private static async ValueTask<TResponse> AwaitAndReturn(
         ChainState<TCommand, TResponse> state,
@@ -203,48 +129,35 @@ internal sealed class CommandCallSite<TCommand, TResponse, THandler>
         }
     }
 
-    /// <summary>Держатель non-generic моста (наполняется лениво вместе с корнем).</summary>
-    private sealed class RefBridge
+    internal RequestHandlerDelegate<TCommand, TResponse> GetRoot(IServiceProvider serviceProvider)
     {
-        public Func<object, CancellationToken, ValueTask<object?>>? Delegate;
+        lock (_lock)
+        {
+            _root ??= Compose(serviceProvider);
+            return _root;
+        }
     }
 }
 
 /// <summary>Call-site запроса.</summary>
 internal sealed class QueryCallSite<TQuery, TResponse, THandler>
-    : IObjectQueryCallSite<TResponse>, ITypedQueryCallSite<TQuery, TResponse>, IUntypedCallSite
+    : IObjectQueryCallSite<TResponse>, ITypedQueryCallSite<TQuery, TResponse>
     where TQuery : IQuery<TResponse>
     where THandler : IQueryHandler<TQuery, TResponse>
 {
-    private static readonly bool RefResponse = !typeof(TResponse).IsValueType;
-
     private readonly Type[] _behaviorTypes;
     private readonly bool _singleton;
     private RequestHandlerDelegate<TQuery, TResponse>? _root;
-    private readonly RefBridge? _refBridge;
+    private readonly object _lock = new();
 
     public QueryCallSite(Type[] behaviorTypes, bool singleton)
     {
         _behaviorTypes = behaviorTypes;
         _singleton = singleton;
-        if (RefResponse && singleton)
-        {
-            _refBridge = new RefBridge();
-        }
     }
 
     public ValueTask<TResponse> Invoke(object message, IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        if (_refBridge is not null)
-        {
-            var bridge = _refBridge.Delegate;
-            if (bridge is not null)
-            {
-                var boxed = bridge(message, cancellationToken);
-                return CastBoxed(boxed);
-            }
-        }
-
         var root = _root;
         if (root is not null)
         {
@@ -265,53 +178,13 @@ internal sealed class QueryCallSite<TQuery, TResponse, THandler>
         return Slow(message, serviceProvider, cancellationToken);
     }
 
-    public ValueTask<object?> InvokeAny(object message, IServiceProvider serviceProvider, CancellationToken cancellationToken)
-    {
-        if (_refBridge is null || _root is null)
-        {
-            return SlowAny(message, serviceProvider, cancellationToken);
-        }
-
-        var bridge = _refBridge.Delegate;
-        if (bridge is null)
-        {
-            return SlowAny(message, serviceProvider, cancellationToken);
-        }
-
-        return bridge(message, cancellationToken);
-    }
-
-    private async ValueTask<object?> SlowAny(object message, IServiceProvider serviceProvider, CancellationToken cancellationToken)
-        => await Invoke((TQuery)message, serviceProvider, cancellationToken).ConfigureAwait(false);
-
-    private static ValueTask<TResponse> CastBoxed(ValueTask<object?> boxed)
-    {
-        if (boxed.IsCompletedSuccessfully)
-        {
-            return new ValueTask<TResponse>((TResponse)boxed.Result!);
-        }
-
-        return AwaitCast<TResponse>(boxed);
-    }
-
-    private static async ValueTask<TResult> AwaitCast<TResult>(ValueTask<object?> pending)
-        => (TResult)(await pending.ConfigureAwait(false))!;
-
     private ValueTask<TResponse> Slow(TQuery message, IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         if (_singleton)
         {
-            lock (this)
+            lock (_lock)
             {
-                if (_root is null)
-                {
-                    _root = Compose(serviceProvider);
-                    if (_refBridge is not null)
-                    {
-                        var root = _root;
-                        _refBridge.Delegate = (m, ct) => Upcast(root((TQuery)m, ct));
-                    }
-                }
+                _root ??= Compose(serviceProvider);
             }
 
             return _root(message, cancellationToken);
@@ -343,22 +216,9 @@ internal sealed class QueryCallSite<TQuery, TResponse, THandler>
     private static THandler Resolve(IServiceProvider serviceProvider)
         => (THandler)(serviceProvider.GetService(typeof(THandler))
             ?? throw new MediatorConfigurationException(
-                "Query handler " + typeof(THandler) + " is not registered in the service provider."));
+                $"Query handler {typeof(THandler)} is not registered in the service provider."));
 
-    private static ValueTask<object?> Upcast(ValueTask<TResponse> pending)
-    {
-        if (pending.IsCompletedSuccessfully)
-        {
-            return new ValueTask<object?>(pending.Result);
-        }
-
-        return AwaitUpcast(pending);
-    }
-
-    private static async ValueTask<object?> AwaitUpcast(ValueTask<TResponse> pending)
-        => await pending.ConfigureAwait(false);
-
-    private static async ValueTask<TResponse> AwaitAndReturn(
+    private static async ValueTask<TQuery, TResponse> AwaitAndReturn(
         ChainState<TQuery, TResponse> state,
         ValueTask<TResponse> pending)
     {
@@ -370,10 +230,5 @@ internal sealed class QueryCallSite<TQuery, TResponse, THandler>
         {
             state.Return();
         }
-    }
-
-    private sealed class RefBridge
-    {
-        public Func<object, CancellationToken, ValueTask<object?>>? Delegate;
     }
 }

@@ -53,6 +53,16 @@ public interface IEventCallSite
     ValueTask Invoke(object message, IServiceProvider serviceProvider, CancellationToken cancellationToken);
 }
 
+/// <summary>
+/// Non-generic хоп: вызов из canon-generic контекста аллоцирует (~24-32Б/вызов, измерено);
+/// не-generic InvokeAny из не-generic метода Mediator — ноль. Value-ответы боксируются —
+/// потому object-путь с value-ответами не использует этот хоп (см. Mediator).
+/// </summary>
+public interface IUntypedCallSite
+{
+    ValueTask<object?> InvokeAny(object message, IServiceProvider serviceProvider, CancellationToken cancellationToken);
+}
+
 /// <summary>Call-site стрим-запроса.</summary>
 public interface IStreamCallSite<TRow>
 {

@@ -23,54 +23,86 @@ public sealed class Mediator : IMediator
         _serviceProvider = serviceProvider;
     }
 
-    /// <summary>Текущая версия реестра (после runtime-добавлений — Copy-on-write).</summary>
-    public MessageRegistry Registry => _runtimeAdded ?? _registry;
+    /// <summary>Иммутабельная версия реестра этого медиатора.</summary>
+    public MessageRegistry Registry => _registry;
 
-    private MessageRegistry? _runtimeAdded;
-
-    /// <summary>Runtime-регистрация нового сообщения (opt-in, §5.2): расширяет реестр copy-on-write.</summary>
-    public void RegisterRuntime(MessageRegistry updated)
-    {
-        _runtimeAdded = updated;
-    }
+    /// <summary>
+    /// Возвращает новый медиатор с расширенным реестром (copy-on-write runtime-регистрация, §5.2);
+    /// этот экземпляр остаётся на прежней версии.
+    /// </summary>
+    public Mediator WithRegistry(MessageRegistry updated)
+        => new(updated, _serviceProvider);
 
     public ValueTask<TResponse> Send<TResponse>(ICommand<TResponse> command, CancellationToken cancellationToken = default)
     {
         Guard.NotNull(command, nameof(command));
-        var entry = Registry.TryGet(command.GetType()) ?? ThrowNoHandler(command.GetType());
-        if (entry.CommandCallSite is IObjectCommandCallSite<TResponse> callSite)
+        var entry = _registry.TryGet(command.GetType()) ?? ThrowNoHandler(command.GetType());
+
+        if (ValueTypeResponse<TResponse>.Value)
         {
-            return callSite.Invoke(command, _serviceProvider, cancellationToken);
+            // value-ответ: специализированная инстанциация — прямой typed-путь без аллокаций
+            if (entry.CommandCallSite is IObjectCommandCallSite<TResponse> typed)
+            {
+                return typed.Invoke(command, _serviceProvider, cancellationToken);
+            }
+
+            return ThrowResponseTypeMismatch<TResponse>(entry, typeof(TResponse));
+        }
+
+        // ref-ответ: non-generic static хоп (canon-generic контекст аллоцирует на любом invoke — измерено;
+        // цепочка canon → non-generic static → interface = ноль, см. PublishSequential)
+        if (entry.CommandCallSite is IUntypedCallSite any)
+        {
+            return CastBack<TResponse>(UntypedCommandHop(any, command, _serviceProvider, cancellationToken));
         }
 
         return ThrowResponseTypeMismatch<TResponse>(entry, typeof(TResponse));
     }
+
+    private static ValueTask<object?> UntypedCommandHop(
+        IUntypedCallSite callSite, object message, IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => callSite.InvokeAny(message, serviceProvider, cancellationToken);
 
     public ValueTask<TResponse> Send<TResponse>(IQuery<TResponse> query, CancellationToken cancellationToken = default)
     {
         Guard.NotNull(query, nameof(query));
-        var entry = Registry.TryGet(query.GetType()) ?? ThrowNoHandler(query.GetType());
-        if (entry.QueryCallSite is IObjectQueryCallSite<TResponse> callSite)
+        var entry = _registry.TryGet(query.GetType()) ?? ThrowNoHandler(query.GetType());
+
+        if (ValueTypeResponse<TResponse>.Value)
         {
-            return callSite.Invoke(query, _serviceProvider, cancellationToken);
+            if (entry.QueryCallSite is IObjectQueryCallSite<TResponse> typed)
+            {
+                return typed.Invoke(query, _serviceProvider, cancellationToken);
+            }
+
+            return ThrowResponseTypeMismatch<TResponse>(entry, typeof(TResponse));
+        }
+
+        if (entry.QueryCallSite is IUntypedCallSite any)
+        {
+            return CastBack<TResponse>(UntypedQueryHop(any, query, _serviceProvider, cancellationToken));
         }
 
         return ThrowResponseTypeMismatch<TResponse>(entry, typeof(TResponse));
     }
+
+    private static ValueTask<object?> UntypedQueryHop(
+        IUntypedCallSite callSite, object message, IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => callSite.InvokeAny(message, serviceProvider, cancellationToken);
 
     public ValueTask Publish<TEvent>(TEvent @event, CancellationToken cancellationToken = default)
         where TEvent : IEvent
     {
         Guard.NotNull(@event, nameof(@event));
-        var entry = Registry.TryGet(@event.GetType());
+        var entry = _registry.TryGet(@event.GetType());
         if (entry is null)
         {
             // Событие без подписчиков — no-op (семантика MediatR).
             return default;
         }
 
-        var callSites = entry.EventCallSites;
-        if (callSites.Count == 0)
+        var callSites = System.Runtime.CompilerServices.Unsafe.As<IEventCallSite[]>(entry.EventCallSites);
+        if (callSites.Length == 0)
         {
             return default;
         }
@@ -83,7 +115,7 @@ public sealed class Mediator : IMediator
     public IAsyncEnumerable<TRow> Stream<TRow>(IStreamQuery<TRow> query, CancellationToken cancellationToken = default)
     {
         Guard.NotNull(query, nameof(query));
-        var entry = Registry.TryGet(query.GetType()) ?? ThrowNoHandler(query.GetType());
+        var entry = _registry.TryGet(query.GetType()) ?? ThrowNoHandler(query.GetType());
         if (entry.StreamCallSite is IStreamCallSite<TRow> callSite)
         {
             return callSite.Invoke(query, _serviceProvider, cancellationToken);
@@ -95,8 +127,13 @@ public sealed class Mediator : IMediator
     public ValueTask<TResponse> SendExact<TRequest, TResponse>(TRequest request, CancellationToken cancellationToken = default)
         where TRequest : IRequest<TResponse>
     {
-        Guard.NotNull(request, nameof(request));
-        var entry = Registry.TryGet(typeof(TRequest)) ?? ThrowNoHandler(typeof(TRequest));
+        // Guard без боксинга struct-сообщений: кэшированный признак ссылочности типа.
+        if (ReferenceTypeFlag<TRequest>.Value && request is null)
+        {
+            Guard.ThrowNull(nameof(request));
+        }
+
+        var entry = _registry.TryGet(typeof(TRequest)) ?? ThrowNoHandler(typeof(TRequest));
 
         if (entry.CommandCallSite is ITypedCommandCallSite<TRequest, TResponse> commandCallSite)
         {
@@ -112,32 +149,40 @@ public sealed class Mediator : IMediator
     }
 
     private static async ValueTask PublishSequential(
-        IReadOnlyList<IEventCallSite> callSites,
+        IEventCallSite[] callSites,
         object @event,
         IServiceProvider serviceProvider,
         CancellationToken cancellationToken)
     {
-        foreach (var callSite in callSites)
+        for (var i = 0; i < callSites.Length; i++)
         {
-            await callSite.Invoke(@event, serviceProvider, cancellationToken).ConfigureAwait(false);
+            await callSites[i].Invoke(@event, serviceProvider, cancellationToken).ConfigureAwait(false);
         }
     }
 
     private static async ValueTask PublishParallel(
-        IReadOnlyList<IEventCallSite> callSites,
+        IEventCallSite[] callSites,
         object @event,
         IServiceProvider serviceProvider,
         CancellationToken cancellationToken)
     {
-        var pending = new ValueTask[callSites.Count];
-        for (var i = 0; i < callSites.Count; i++)
+        var pending = new ValueTask[callSites.Length];
+        List<Exception>? errors = null;
+        for (var i = 0; i < callSites.Length; i++)
         {
-            pending[i] = callSites[i].Invoke(@event, serviceProvider, cancellationToken);
+            try
+            {
+                pending[i] = callSites[i].Invoke(@event, serviceProvider, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                // Синхронный бросок хендлера/behavior — тоже агрегируется (§4.3).
+                (errors ??= []).Add(ex);
+            }
         }
 
         // Хендлеры уже запущены (Invoke выполняется синхронно до первой реальной паузы);
-        // ожидаем все, агрегируем ошибки (§4.3).
-        List<Exception>? errors = null;
+        // ожидаем все, ошибки агрегируем.
         for (var i = 0; i < pending.Length; i++)
         {
             try
@@ -173,4 +218,29 @@ public sealed class Mediator : IMediator
     private static IAsyncEnumerable<TRow> ThrowStreamMismatch<TRow>(MessageEntry entry)
         => throw new MediatorConfigurationException(
             $"Message {entry.MessageType} is not a stream query for row type {typeof(TRow)}.");
+
+    private static ValueTask<TResponse> CastBack<TResponse>(ValueTask<object?> boxed)
+    {
+        if (boxed.IsCompletedSuccessfully)
+        {
+            return new ValueTask<TResponse>((TResponse)boxed.Result!);
+        }
+
+        return AwaitCastBack<TResponse>(boxed);
+    }
+
+    private static async ValueTask<TResult> AwaitCastBack<TResult>(ValueTask<object?> pending)
+        => (TResult)(await pending.ConfigureAwait(false))!;
+
+    /// <summary>Кэшированный признак ссылочного типа (guard-проверки без боксинга).</summary>
+    private static class ReferenceTypeFlag<T>
+    {
+        public static readonly bool Value = !typeof(T).IsValueType;
+    }
+
+    /// <summary>Кэшированный признак value-type ответа (выбор пути: typed vs untyped hop).</summary>
+    private static class ValueTypeResponse<T>
+    {
+        public static readonly bool Value = typeof(T).IsValueType;
+    }
 }

@@ -17,6 +17,8 @@ internal sealed class EventCallSite<TEvent, THandler>
     private readonly Type[] _behaviorTypes;
     private readonly bool _singleton;
     private EventHandlerDelegate<TEvent>? _singletonRoot;
+    // Non-generic bridge: вызов generic-делегата из canon-shared generic-контекста аллоцирует; Func — нет.
+    private Func<object, IServiceProvider, CancellationToken, ValueTask>? _bridge;
     private readonly object _singletonLock = new();
 
     public EventCallSite(Type[] behaviorTypes, bool singleton)
@@ -27,17 +29,30 @@ internal sealed class EventCallSite<TEvent, THandler>
 
     public ValueTask Invoke(object message, IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
+        var bridge = _bridge;
+        if (bridge is not null)
+        {
+            return bridge(message, serviceProvider, cancellationToken);
+        }
+
+        return SlowInvoke(message, serviceProvider, cancellationToken);
+    }
+
+    private ValueTask SlowInvoke(object message, IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    {
         var @event = (TEvent)message;
 
         if (_singleton)
         {
-            var root = _singletonRoot;
-            if (root is null)
+            lock (_singletonLock)
             {
-                root = BuildSingletonRoot(serviceProvider);
+                if (_singletonRoot is null)
+                {
+                    BuildSingletonRoot(serviceProvider);
+                }
             }
 
-            return root(@event, cancellationToken);
+            return _bridge!(message, serviceProvider, cancellationToken);
         }
 
         var handler = (THandler)(serviceProvider.GetService(typeof(THandler))
@@ -82,6 +97,9 @@ internal sealed class EventCallSite<TEvent, THandler>
         return terminal(@event, cancellationToken);
     }
 
+    internal EventHandlerDelegate<TEvent> GetRoot(IServiceProvider serviceProvider)
+        => _singletonRoot ?? BuildSingletonRoot(serviceProvider);
+
     private EventHandlerDelegate<TEvent> BuildSingletonRoot(IServiceProvider serviceProvider)
     {
         lock (_singletonLock)
@@ -111,6 +129,7 @@ internal sealed class EventCallSite<TEvent, THandler>
             }
 
             _singletonRoot = root;
+            _bridge = (m, _, ct) => root((TEvent)m, ct);
             return root;
         }
     }
