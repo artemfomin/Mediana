@@ -1,0 +1,5341 @@
+{
+  "Mediana.Abstractions.dll": {
+    "F:\\Projects\\Mediana\\src\\Mediana.Abstractions\\Exceptions.cs": {
+      "Mediana.MediatorConfigurationException": {
+        "System.Void Mediana.MediatorConfigurationException::.ctor(System.String)": {
+          "Lines": {
+            "7": 47,
+            "9": 47
+          },
+          "Branches": []
+        },
+        "System.Void Mediana.MediatorConfigurationException::.ctor(System.String,System.Exception)": {
+          "Lines": {
+            "12": 1,
+            "14": 1
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.RemoteExecutionException": {
+        "System.String Mediana.RemoteExecutionException::get_RemoteErrorType()": {
+          "Lines": {
+            "30": 2
+          },
+          "Branches": []
+        },
+        "System.Collections.Generic.IReadOnlyDictionary`2<System.String,System.String> Mediana.RemoteExecutionException::get_Details()": {
+          "Lines": {
+            "32": 3
+          },
+          "Branches": []
+        },
+        "System.Void Mediana.RemoteExecutionException::.ctor(System.String,System.String,System.Collections.Generic.IReadOnlyDictionary`2<System.String,System.String>)": {
+          "Lines": {
+            "24": 2,
+            "26": 2,
+            "27": 2,
+            "28": 2
+          },
+          "Branches": [
+            {
+              "Line": 27,
+              "Offset": 17,
+              "EndOffset": 19,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 1
+            },
+            {
+              "Line": 27,
+              "Offset": 17,
+              "EndOffset": 25,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 1
+            }
+          ]
+        },
+        "System.Void Mediana.RemoteExecutionException::.cctor()": {
+          "Lines": {
+            "34": 1,
+            "35": 1
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.RemoteTimeoutException": {
+        "System.Void Mediana.RemoteTimeoutException::.ctor(System.String)": {
+          "Lines": {
+            "42": 1,
+            "44": 1
+          },
+          "Branches": []
+        }
+      }
+    }
+  },
+  "Mediana.dll": {
+    "F:\\Projects\\Mediana\\src\\Mediana\\Internal\\IsExternalInitPolyfill.cs": {
+      "System.Diagnostics.CodeAnalysis.RequiresUnreferencedCodeAttribute": {
+        "System.String System.Diagnostics.CodeAnalysis.RequiresUnreferencedCodeAttribute::get_Message()": {
+          "Lines": {
+            "20": 0
+          },
+          "Branches": []
+        },
+        "System.String System.Diagnostics.CodeAnalysis.RequiresUnreferencedCodeAttribute::get_Url()": {
+          "Lines": {
+            "22": 0
+          },
+          "Branches": []
+        },
+        "System.Void System.Diagnostics.CodeAnalysis.RequiresUnreferencedCodeAttribute::.ctor(System.String)": {
+          "Lines": {
+            "15": 0,
+            "17": 0,
+            "18": 0
+          },
+          "Branches": []
+        }
+      },
+      "System.Diagnostics.CodeAnalysis.RequiresDynamicCodeAttribute": {
+        "System.String System.Diagnostics.CodeAnalysis.RequiresDynamicCodeAttribute::get_Message()": {
+          "Lines": {
+            "33": 0
+          },
+          "Branches": []
+        },
+        "System.String System.Diagnostics.CodeAnalysis.RequiresDynamicCodeAttribute::get_Url()": {
+          "Lines": {
+            "35": 0
+          },
+          "Branches": []
+        },
+        "System.Void System.Diagnostics.CodeAnalysis.RequiresDynamicCodeAttribute::.ctor(System.String)": {
+          "Lines": {
+            "28": 0,
+            "30": 0,
+            "31": 0
+          },
+          "Branches": []
+        }
+      }
+    },
+    "F:\\Projects\\Mediana\\src\\Mediana\\MedianaConfiguration.cs": {
+      "Mediana.MedianaConfiguration": {
+        "Mediana.MedianaConfiguration Mediana.MedianaConfiguration::UseSingletonHandlers()": {
+          "Lines": {
+            "48": 42,
+            "49": 42
+          },
+          "Branches": []
+        },
+        "Mediana.MedianaConfiguration Mediana.MedianaConfiguration::AddCommandHandler()": {
+          "Lines": {
+            "56": 43,
+            "57": 43,
+            "58": 86,
+            "59": 43
+          },
+          "Branches": [
+            {
+              "Line": 56,
+              "Offset": 43,
+              "EndOffset": 45,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 20
+            },
+            {
+              "Line": 56,
+              "Offset": 43,
+              "EndOffset": 68,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 23
+            }
+          ]
+        },
+        "Mediana.MedianaConfiguration Mediana.MedianaConfiguration::AddQueryHandler()": {
+          "Lines": {
+            "66": 27,
+            "67": 27,
+            "68": 54,
+            "69": 27
+          },
+          "Branches": [
+            {
+              "Line": 66,
+              "Offset": 43,
+              "EndOffset": 45,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 14
+            },
+            {
+              "Line": 66,
+              "Offset": 43,
+              "EndOffset": 68,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 13
+            }
+          ]
+        },
+        "Mediana.MedianaConfiguration Mediana.MedianaConfiguration::AddStreamHandler()": {
+          "Lines": {
+            "76": 11,
+            "77": 11,
+            "78": 11,
+            "79": 22,
+            "80": 11
+          },
+          "Branches": [
+            {
+              "Line": 76,
+              "Offset": 43,
+              "EndOffset": 45,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 5
+            },
+            {
+              "Line": 76,
+              "Offset": 43,
+              "EndOffset": 68,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 6
+            }
+          ]
+        },
+        "Mediana.MedianaConfiguration Mediana.MedianaConfiguration::AddEventHandler()": {
+          "Lines": {
+            "87": 38,
+            "88": 38,
+            "89": 76,
+            "90": 38
+          },
+          "Branches": [
+            {
+              "Line": 87,
+              "Offset": 32,
+              "EndOffset": 34,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 15
+            },
+            {
+              "Line": 87,
+              "Offset": 32,
+              "EndOffset": 57,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 23
+            }
+          ]
+        },
+        "Mediana.MedianaConfiguration Mediana.MedianaConfiguration::AddMiddleware()": {
+          "Lines": {
+            "98": 19,
+            "99": 19
+          },
+          "Branches": []
+        },
+        "Mediana.MedianaConfiguration Mediana.MedianaConfiguration::AddEventMiddleware()": {
+          "Lines": {
+            "107": 15,
+            "108": 15
+          },
+          "Branches": []
+        },
+        "Mediana.MedianaConfiguration Mediana.MedianaConfiguration::AddStreamMiddleware()": {
+          "Lines": {
+            "117": 3,
+            "118": 3
+          },
+          "Branches": []
+        },
+        "Mediana.MedianaConfiguration Mediana.MedianaConfiguration::SetEventPolicy(Mediana.Dispatch.EventDispatchPolicy)": {
+          "Lines": {
+            "124": 7,
+            "125": 7
+          },
+          "Branches": []
+        },
+        "Mediana.MedianaConfiguration Mediana.MedianaConfiguration::AddHandlersFromAssembly(System.Reflection.Assembly)": {
+          "Lines": {
+            "137": 8,
+            "139": 26608,
+            "141": 13296,
+            "148": 44680,
+            "150": 13128,
+            "155": 3648,
+            "156": 3648,
+            "157": 3648,
+            "161": 84,
+            "163": 3564,
+            "167": 68,
+            "169": 3496,
+            "173": 20,
+            "175": 3476,
+            "177": 68,
+            "178": 68,
+            "180": 68,
+            "181": 68,
+            "182": 68,
+            "183": 68,
+            "197": 8
+          },
+          "Branches": [
+            {
+              "Line": 139,
+              "Offset": 377,
+              "EndOffset": 25,
+              "Path": 1,
+              "Ordinal": 21,
+              "Hits": 13296
+            },
+            {
+              "Line": 141,
+              "Offset": 30,
+              "EndOffset": 35,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 13296
+            },
+            {
+              "Line": 141,
+              "Offset": 41,
+              "EndOffset": 46,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 10652
+            },
+            {
+              "Line": 141,
+              "Offset": 52,
+              "EndOffset": 57,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 10652
+            },
+            {
+              "Line": 141,
+              "Offset": 63,
+              "EndOffset": 68,
+              "Path": 0,
+              "Ordinal": 6,
+              "Hits": 9332
+            },
+            {
+              "Line": 148,
+              "Offset": 364,
+              "EndOffset": 83,
+              "Path": 1,
+              "Ordinal": 19,
+              "Hits": 13128
+            },
+            {
+              "Line": 150,
+              "Offset": 96,
+              "EndOffset": 101,
+              "Path": 0,
+              "Ordinal": 8,
+              "Hits": 3648
+            },
+            {
+              "Line": 157,
+              "Offset": 136,
+              "EndOffset": 138,
+              "Path": 0,
+              "Ordinal": 10,
+              "Hits": 84
+            },
+            {
+              "Line": 157,
+              "Offset": 136,
+              "EndOffset": 163,
+              "Path": 1,
+              "Ordinal": 11,
+              "Hits": 3564
+            },
+            {
+              "Line": 163,
+              "Offset": 180,
+              "EndOffset": 182,
+              "Path": 0,
+              "Ordinal": 12,
+              "Hits": 68
+            },
+            {
+              "Line": 163,
+              "Offset": 180,
+              "EndOffset": 207,
+              "Path": 1,
+              "Ordinal": 13,
+              "Hits": 3496
+            },
+            {
+              "Line": 169,
+              "Offset": 224,
+              "EndOffset": 226,
+              "Path": 0,
+              "Ordinal": 14,
+              "Hits": 20
+            },
+            {
+              "Line": 169,
+              "Offset": 224,
+              "EndOffset": 248,
+              "Path": 1,
+              "Ordinal": 15,
+              "Hits": 3476
+            },
+            {
+              "Line": 175,
+              "Offset": 265,
+              "EndOffset": 267,
+              "Path": 0,
+              "Ordinal": 16,
+              "Hits": 68
+            },
+            {
+              "Line": 150,
+              "Offset": 96,
+              "EndOffset": 353,
+              "Path": 1,
+              "Ordinal": 9,
+              "Hits": 12888
+            },
+            {
+              "Line": 175,
+              "Offset": 265,
+              "EndOffset": 353,
+              "Path": 1,
+              "Ordinal": 17,
+              "Hits": 12888
+            },
+            {
+              "Line": 141,
+              "Offset": 30,
+              "EndOffset": 369,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 0
+            },
+            {
+              "Line": 141,
+              "Offset": 41,
+              "EndOffset": 369,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 2644
+            },
+            {
+              "Line": 141,
+              "Offset": 52,
+              "EndOffset": 369,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 0
+            },
+            {
+              "Line": 141,
+              "Offset": 63,
+              "EndOffset": 369,
+              "Path": 1,
+              "Ordinal": 7,
+              "Hits": 1320
+            },
+            {
+              "Line": 148,
+              "Offset": 364,
+              "EndOffset": 369,
+              "Path": 0,
+              "Ordinal": 18,
+              "Hits": 9332
+            },
+            {
+              "Line": 139,
+              "Offset": 377,
+              "EndOffset": 382,
+              "Path": 0,
+              "Ordinal": 20,
+              "Hits": 8
+            }
+          ]
+        },
+        "System.Void Mediana.MedianaConfiguration::AddScanned(System.Type,System.Type[],System.Type,Mediana.Dispatch.HandlerKind)": {
+          "Lines": {
+            "203": 172,
+            "204": 172,
+            "205": 172,
+            "206": 172,
+            "207": 172,
+            "208": 184,
+            "209": 172
+          },
+          "Branches": []
+        },
+        "Mediana.MedianaConfiguration Mediana.MedianaConfiguration::AddHandler(Mediana.Dispatch.HandlerKind,System.Type,System.Type)": {
+          "Lines": {
+            "214": 1,
+            "215": 1,
+            "216": 2,
+            "217": 1
+          },
+          "Branches": []
+        },
+        "Mediana.Dispatch.MessageRegistry Mediana.MedianaConfiguration::Freeze()": {
+          "Lines": {
+            "222": 136,
+            "223": 136,
+            "224": 136,
+            "226": 453,
+            "228": 94,
+            "229": 94,
+            "230": 94,
+            "232": 93,
+            "234": 52,
+            "236": 4,
+            "237": 4,
+            "240": 48,
+            "242": 41,
+            "244": 27,
+            "246": 1,
+            "247": 1,
+            "250": 26,
+            "252": 14,
+            "254": 14,
+            "256": 1,
+            "257": 1,
+            "260": 13,
+            "264": 0,
+            "268": 334,
+            "270": 38,
+            "272": 28,
+            "273": 28,
+            "276": 38,
+            "279": 314,
+            "281": 28,
+            "284": 270,
+            "286": 7,
+            "288": 2,
+            "289": 2,
+            "292": 5,
+            "295": 127,
+            "296": 460,
+            "298": 103,
+            "301": 127
+          },
+          "Branches": [
+            {
+              "Line": 226,
+              "Offset": 276,
+              "EndOffset": 40,
+              "Path": 1,
+              "Ordinal": 13,
+              "Hits": 94
+            },
+            {
+              "Line": 232,
+              "Offset": 120,
+              "EndOffset": 122,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 52
+            },
+            {
+              "Line": 234,
+              "Offset": 129,
+              "EndOffset": 131,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 4
+            },
+            {
+              "Line": 234,
+              "Offset": 129,
+              "EndOffset": 149,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 48
+            },
+            {
+              "Line": 232,
+              "Offset": 120,
+              "EndOffset": 160,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 41
+            },
+            {
+              "Line": 242,
+              "Offset": 163,
+              "EndOffset": 165,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 27
+            },
+            {
+              "Line": 244,
+              "Offset": 172,
+              "EndOffset": 174,
+              "Path": 0,
+              "Ordinal": 6,
+              "Hits": 1
+            },
+            {
+              "Line": 244,
+              "Offset": 172,
+              "EndOffset": 192,
+              "Path": 1,
+              "Ordinal": 7,
+              "Hits": 26
+            },
+            {
+              "Line": 242,
+              "Offset": 163,
+              "EndOffset": 203,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 14
+            },
+            {
+              "Line": 252,
+              "Offset": 206,
+              "EndOffset": 208,
+              "Path": 0,
+              "Ordinal": 8,
+              "Hits": 14
+            },
+            {
+              "Line": 254,
+              "Offset": 215,
+              "EndOffset": 217,
+              "Path": 0,
+              "Ordinal": 10,
+              "Hits": 1
+            },
+            {
+              "Line": 254,
+              "Offset": 215,
+              "EndOffset": 235,
+              "Path": 1,
+              "Ordinal": 11,
+              "Hits": 13
+            },
+            {
+              "Line": 252,
+              "Offset": 206,
+              "EndOffset": 246,
+              "Path": 1,
+              "Ordinal": 9,
+              "Hits": 0
+            },
+            {
+              "Line": 226,
+              "Offset": 276,
+              "EndOffset": 281,
+              "Path": 0,
+              "Ordinal": 12,
+              "Hits": 129
+            },
+            {
+              "Line": 268,
+              "Offset": 401,
+              "EndOffset": 312,
+              "Path": 1,
+              "Ordinal": 17,
+              "Hits": 38
+            },
+            {
+              "Line": 270,
+              "Offset": 352,
+              "EndOffset": 354,
+              "Path": 0,
+              "Ordinal": 14,
+              "Hits": 28
+            },
+            {
+              "Line": 270,
+              "Offset": 352,
+              "EndOffset": 371,
+              "Path": 1,
+              "Ordinal": 15,
+              "Hits": 38
+            },
+            {
+              "Line": 268,
+              "Offset": 401,
+              "EndOffset": 403,
+              "Path": 0,
+              "Ordinal": 16,
+              "Hits": 129
+            },
+            {
+              "Line": 279,
+              "Offset": 486,
+              "EndOffset": 429,
+              "Path": 1,
+              "Ordinal": 19,
+              "Hits": 28
+            },
+            {
+              "Line": 279,
+              "Offset": 486,
+              "EndOffset": 488,
+              "Path": 0,
+              "Ordinal": 18,
+              "Hits": 129
+            },
+            {
+              "Line": 284,
+              "Offset": 603,
+              "EndOffset": 519,
+              "Path": 1,
+              "Ordinal": 25,
+              "Hits": 7
+            },
+            {
+              "Line": 286,
+              "Offset": 557,
+              "EndOffset": 559,
+              "Path": 0,
+              "Ordinal": 20,
+              "Hits": 5
+            },
+            {
+              "Line": 286,
+              "Offset": 557,
+              "EndOffset": 569,
+              "Path": 1,
+              "Ordinal": 21,
+              "Hits": 2
+            },
+            {
+              "Line": 286,
+              "Offset": 567,
+              "EndOffset": 569,
+              "Path": 0,
+              "Ordinal": 22,
+              "Hits": 2
+            },
+            {
+              "Line": 286,
+              "Offset": 567,
+              "EndOffset": 587,
+              "Path": 1,
+              "Ordinal": 23,
+              "Hits": 5
+            },
+            {
+              "Line": 284,
+              "Offset": 603,
+              "EndOffset": 605,
+              "Path": 0,
+              "Ordinal": 24,
+              "Hits": 127
+            },
+            {
+              "Line": 296,
+              "Offset": 698,
+              "EndOffset": 643,
+              "Path": 1,
+              "Ordinal": 27,
+              "Hits": 103
+            },
+            {
+              "Line": 296,
+              "Offset": 698,
+              "EndOffset": 700,
+              "Path": 0,
+              "Ordinal": 26,
+              "Hits": 127
+            }
+          ]
+        },
+        "Mediana.Dispatch.MessageEntry Mediana.MedianaConfiguration::EnsureEntry(System.Collections.Generic.Dictionary`2<System.Type,Mediana.Dispatch.MessageEntry>,System.Type,Mediana.Dispatch.HandlerKind,System.Type)": {
+          "Lines": {
+            "307": 122,
+            "309": 116,
+            "310": 116,
+            "313": 122
+          },
+          "Branches": [
+            {
+              "Line": 307,
+              "Offset": 9,
+              "EndOffset": 11,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 116
+            },
+            {
+              "Line": 307,
+              "Offset": 9,
+              "EndOffset": 28,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 6
+            }
+          ]
+        },
+        "System.Boolean Mediana.MedianaConfiguration::ImplementsClosedInterface(System.Type,System.Type,System.Type,System.Type)": {
+          "Lines": {
+            "319": 117,
+            "322": 38,
+            "327": 38,
+            "328": 38,
+            "330": 15,
+            "334": 23,
+            "336": 20,
+            "340": 3
+          },
+          "Branches": [
+            {
+              "Line": 319,
+              "Offset": 92,
+              "EndOffset": 11,
+              "Path": 1,
+              "Ordinal": 11,
+              "Hits": 38
+            },
+            {
+              "Line": 322,
+              "Offset": 21,
+              "EndOffset": 23,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 38
+            },
+            {
+              "Line": 322,
+              "Offset": 35,
+              "EndOffset": 37,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 38
+            },
+            {
+              "Line": 328,
+              "Offset": 48,
+              "EndOffset": 50,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 15
+            },
+            {
+              "Line": 328,
+              "Offset": 48,
+              "EndOffset": 60,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 23
+            },
+            {
+              "Line": 334,
+              "Offset": 69,
+              "EndOffset": 71,
+              "Path": 0,
+              "Ordinal": 6,
+              "Hits": 20
+            },
+            {
+              "Line": 334,
+              "Offset": 80,
+              "EndOffset": 82,
+              "Path": 0,
+              "Ordinal": 8,
+              "Hits": 20
+            },
+            {
+              "Line": 322,
+              "Offset": 21,
+              "EndOffset": 84,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 3
+            },
+            {
+              "Line": 322,
+              "Offset": 35,
+              "EndOffset": 84,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 3
+            },
+            {
+              "Line": 334,
+              "Offset": 69,
+              "EndOffset": 84,
+              "Path": 1,
+              "Ordinal": 7,
+              "Hits": 3
+            },
+            {
+              "Line": 334,
+              "Offset": 80,
+              "EndOffset": 84,
+              "Path": 1,
+              "Ordinal": 9,
+              "Hits": 3
+            },
+            {
+              "Line": 319,
+              "Offset": 92,
+              "EndOffset": 94,
+              "Path": 0,
+              "Ordinal": 10,
+              "Hits": 3
+            }
+          ]
+        },
+        "System.Type[] Mediana.MedianaConfiguration::CollectMiddlewareTypes(System.Type,System.Type,Mediana.Dispatch.HandlerKind)": {
+          "Lines": {
+            "346": 94,
+            "347": 94,
+            "348": 24,
+            "349": 24,
+            "350": 114
+          },
+          "Branches": [
+            {
+              "Line": 346,
+              "Offset": 23,
+              "EndOffset": 25,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 80
+            },
+            {
+              "Line": 346,
+              "Offset": 23,
+              "EndOffset": 37,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 14
+            },
+            {
+              "Line": 348,
+              "Offset": 17,
+              "EndOffset": 19,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 23
+            },
+            {
+              "Line": 348,
+              "Offset": 17,
+              "EndOffset": 49,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 1
+            }
+          ]
+        },
+        "System.Type[] Mediana.MedianaConfiguration::CollectEventBehaviorTypes(System.Type)": {
+          "Lines": {
+            "355": 38,
+            "356": 38,
+            "357": 38,
+            "358": 16,
+            "359": 16,
+            "360": 53
+          },
+          "Branches": [
+            {
+              "Line": 358,
+              "Offset": 21,
+              "EndOffset": 23,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 15
+            },
+            {
+              "Line": 358,
+              "Offset": 21,
+              "EndOffset": 52,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 1
+            }
+          ]
+        },
+        "System.Boolean Mediana.MedianaConfiguration::get_IsSingleton()": {
+          "Lines": {
+            "363": 123
+          },
+          "Branches": []
+        },
+        "System.Collections.Generic.IEnumerable`1<System.Type> Mediana.MedianaConfiguration::get_HandlerTypes()": {
+          "Lines": {
+            "366": 206
+          },
+          "Branches": []
+        },
+        "System.Void Mediana.MedianaConfiguration::.ctor()": {
+          "Lines": {
+            "28": 137,
+            "29": 137,
+            "30": 137,
+            "31": 137
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.MedianaConfiguration/RequestRegistration": {
+        "Mediana.Dispatch.HandlerKind Mediana.MedianaConfiguration/RequestRegistration::get_Kind()": {
+          "Lines": {
+            "41": 548
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.MedianaConfiguration/EventRegistration": {
+        "System.Type Mediana.MedianaConfiguration/EventRegistration::get_EventType()": {
+          "Lines": {
+            "43": 159
+          },
+          "Branches": []
+        }
+      }
+    },
+    "F:\\Projects\\Mediana\\src\\Mediana\\MedianaDiagnostics.cs": {
+      "Mediana.MedianaDiagnostics": {
+        "System.Diagnostics.Activity Mediana.MedianaDiagnostics::StartDispatch(System.String)": {
+          "Lines": {
+            "20": 5,
+            "21": 5,
+            "22": 5
+          },
+          "Branches": [
+            {
+              "Line": 20,
+              "Offset": 10,
+              "EndOffset": 12,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 2
+            },
+            {
+              "Line": 20,
+              "Offset": 10,
+              "EndOffset": 14,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 3
+            }
+          ]
+        },
+        "System.Diagnostics.Activity Mediana.MedianaDiagnostics::StartPublish(System.String)": {
+          "Lines": {
+            "26": 4,
+            "27": 4,
+            "28": 4
+          },
+          "Branches": [
+            {
+              "Line": 26,
+              "Offset": 10,
+              "EndOffset": 12,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 1
+            },
+            {
+              "Line": 26,
+              "Offset": 10,
+              "EndOffset": 14,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 3
+            }
+          ]
+        },
+        "System.Diagnostics.Activity Mediana.MedianaDiagnostics::StartConsume(System.String)": {
+          "Lines": {
+            "32": 4,
+            "33": 4,
+            "34": 4
+          },
+          "Branches": [
+            {
+              "Line": 32,
+              "Offset": 10,
+              "EndOffset": 12,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 1
+            },
+            {
+              "Line": 32,
+              "Offset": 10,
+              "EndOffset": 14,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 3
+            }
+          ]
+        },
+        "System.Void Mediana.MedianaDiagnostics::Enrich(System.Diagnostics.Activity,System.String,System.Object)": {
+          "Lines": {
+            "41": 4,
+            "42": 4
+          },
+          "Branches": [
+            {
+              "Line": 41,
+              "Offset": 1,
+              "EndOffset": 3,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 1
+            },
+            {
+              "Line": 41,
+              "Offset": 1,
+              "EndOffset": 12,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 3
+            }
+          ]
+        },
+        "System.Void Mediana.MedianaDiagnostics::.cctor()": {
+          "Lines": {
+            "15": 1,
+            "16": 1
+          },
+          "Branches": []
+        }
+      }
+    },
+    "F:\\Projects\\Mediana\\src\\Mediana\\Mediator.cs": {
+      "Mediana.Mediator": {
+        "Mediana.Dispatch.MessageRegistry Mediana.Mediator::get_Registry()": {
+          "Lines": {
+            "27": 10
+          },
+          "Branches": []
+        },
+        "Mediana.Mediator Mediana.Mediator::WithRegistry(Mediana.Dispatch.MessageRegistry)": {
+          "Lines": {
+            "34": 1
+          },
+          "Branches": []
+        },
+        "System.Threading.Tasks.ValueTask`1<TResponse> Mediana.Mediator::Send(Mediana.Messaging.ICommand`1<TResponse>,System.Threading.CancellationToken)": {
+          "Lines": {
+            "38": 14141,
+            "39": 14140,
+            "41": 14136,
+            "44": 6120,
+            "46": 6118,
+            "49": 2,
+            "54": 8016,
+            "56": 1,
+            "59": 8015,
+            "61": 8015,
+            "64": 0
+          },
+          "Branches": [
+            {
+              "Line": 39,
+              "Offset": 29,
+              "EndOffset": 31,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 4
+            },
+            {
+              "Line": 39,
+              "Offset": 29,
+              "EndOffset": 43,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 14136
+            },
+            {
+              "Line": 41,
+              "Offset": 49,
+              "EndOffset": 51,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 6120
+            },
+            {
+              "Line": 44,
+              "Offset": 64,
+              "EndOffset": 66,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 6118
+            },
+            {
+              "Line": 44,
+              "Offset": 64,
+              "EndOffset": 81,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 2
+            },
+            {
+              "Line": 41,
+              "Offset": 49,
+              "EndOffset": 98,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 8016
+            },
+            {
+              "Line": 54,
+              "Offset": 119,
+              "EndOffset": 121,
+              "Path": 0,
+              "Ordinal": 6,
+              "Hits": 1
+            },
+            {
+              "Line": 54,
+              "Offset": 119,
+              "EndOffset": 138,
+              "Path": 1,
+              "Ordinal": 7,
+              "Hits": 8015
+            },
+            {
+              "Line": 59,
+              "Offset": 151,
+              "EndOffset": 153,
+              "Path": 0,
+              "Ordinal": 8,
+              "Hits": 8015
+            },
+            {
+              "Line": 59,
+              "Offset": 151,
+              "EndOffset": 173,
+              "Path": 1,
+              "Ordinal": 9,
+              "Hits": 0
+            }
+          ]
+        },
+        "System.Threading.Tasks.ValueTask`1<System.Object> Mediana.Mediator::UntypedCommandHop(Mediana.Dispatch.IUntypedCallSite,System.Object,System.IServiceProvider,System.Threading.CancellationToken)": {
+          "Lines": {
+            "69": 8015
+          },
+          "Branches": []
+        },
+        "System.Threading.Tasks.ValueTask`1<TResponse> Mediana.Mediator::Send(Mediana.Messaging.IQuery`1<TResponse>,System.Threading.CancellationToken)": {
+          "Lines": {
+            "73": 28,
+            "74": 27,
+            "78": 22,
+            "80": 11,
+            "82": 9,
+            "85": 2,
+            "88": 11,
+            "90": 1,
+            "93": 10,
+            "95": 10,
+            "98": 0
+          },
+          "Branches": [
+            {
+              "Line": 74,
+              "Offset": 29,
+              "EndOffset": 31,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 5
+            },
+            {
+              "Line": 74,
+              "Offset": 29,
+              "EndOffset": 43,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 22
+            },
+            {
+              "Line": 78,
+              "Offset": 49,
+              "EndOffset": 51,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 11
+            },
+            {
+              "Line": 80,
+              "Offset": 64,
+              "EndOffset": 66,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 9
+            },
+            {
+              "Line": 80,
+              "Offset": 64,
+              "EndOffset": 81,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 2
+            },
+            {
+              "Line": 78,
+              "Offset": 49,
+              "EndOffset": 98,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 11
+            },
+            {
+              "Line": 88,
+              "Offset": 119,
+              "EndOffset": 121,
+              "Path": 0,
+              "Ordinal": 6,
+              "Hits": 1
+            },
+            {
+              "Line": 88,
+              "Offset": 119,
+              "EndOffset": 138,
+              "Path": 1,
+              "Ordinal": 7,
+              "Hits": 10
+            },
+            {
+              "Line": 93,
+              "Offset": 151,
+              "EndOffset": 153,
+              "Path": 0,
+              "Ordinal": 8,
+              "Hits": 10
+            },
+            {
+              "Line": 93,
+              "Offset": 151,
+              "EndOffset": 173,
+              "Path": 1,
+              "Ordinal": 9,
+              "Hits": 0
+            }
+          ]
+        },
+        "System.Threading.Tasks.ValueTask`1<System.Object> Mediana.Mediator::UntypedQueryHop(Mediana.Dispatch.IUntypedCallSite,System.Object,System.IServiceProvider,System.Threading.CancellationToken)": {
+          "Lines": {
+            "103": 10
+          },
+          "Branches": []
+        },
+        "System.Threading.Tasks.ValueTask Mediana.Mediator::Publish(TEvent,System.Threading.CancellationToken)": {
+          "Lines": {
+            "108": 6133,
+            "109": 6131,
+            "110": 6131,
+            "113": 1,
+            "116": 6130,
+            "117": 6130,
+            "120": 1,
+            "123": 6129,
+            "124": 6129,
+            "125": 6129
+          },
+          "Branches": [
+            {
+              "Line": 110,
+              "Offset": 42,
+              "EndOffset": 44,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 1
+            },
+            {
+              "Line": 110,
+              "Offset": 42,
+              "EndOffset": 54,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 6130
+            },
+            {
+              "Line": 117,
+              "Offset": 68,
+              "EndOffset": 70,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 1
+            },
+            {
+              "Line": 117,
+              "Offset": 68,
+              "EndOffset": 80,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 6129
+            },
+            {
+              "Line": 123,
+              "Offset": 87,
+              "EndOffset": 89,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 6124
+            },
+            {
+              "Line": 123,
+              "Offset": 87,
+              "EndOffset": 109,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 5
+            }
+          ]
+        },
+        "System.Collections.Generic.IAsyncEnumerable`1<TRow> Mediana.Mediator::Stream(Mediana.Messaging.IStreamQuery`1<TRow>,System.Threading.CancellationToken)": {
+          "Lines": {
+            "130": 121,
+            "131": 120,
+            "132": 118,
+            "134": 117,
+            "137": 1
+          },
+          "Branches": [
+            {
+              "Line": 131,
+              "Offset": 29,
+              "EndOffset": 31,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 2
+            },
+            {
+              "Line": 131,
+              "Offset": 29,
+              "EndOffset": 43,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 118
+            },
+            {
+              "Line": 132,
+              "Offset": 57,
+              "EndOffset": 59,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 117
+            },
+            {
+              "Line": 132,
+              "Offset": 57,
+              "EndOffset": 74,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 1
+            }
+          ]
+        },
+        "System.Threading.Tasks.ValueTask`1<TResponse> Mediana.Mediator::SendExact(TRequest,System.Threading.CancellationToken)": {
+          "Lines": {
+            "144": 1111,
+            "146": 1,
+            "149": 1110,
+            "151": 1108,
+            "153": 1103,
+            "156": 5,
+            "158": 4,
+            "161": 1
+          },
+          "Branches": [
+            {
+              "Line": 144,
+              "Offset": 5,
+              "EndOffset": 7,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 10
+            },
+            {
+              "Line": 144,
+              "Offset": 13,
+              "EndOffset": 15,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 1
+            },
+            {
+              "Line": 144,
+              "Offset": 5,
+              "EndOffset": 25,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 1101
+            },
+            {
+              "Line": 144,
+              "Offset": 13,
+              "EndOffset": 25,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 9
+            },
+            {
+              "Line": 149,
+              "Offset": 47,
+              "EndOffset": 49,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 2
+            },
+            {
+              "Line": 149,
+              "Offset": 47,
+              "EndOffset": 65,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 1108
+            },
+            {
+              "Line": 151,
+              "Offset": 79,
+              "EndOffset": 81,
+              "Path": 0,
+              "Ordinal": 6,
+              "Hits": 1103
+            },
+            {
+              "Line": 151,
+              "Offset": 79,
+              "EndOffset": 96,
+              "Path": 1,
+              "Ordinal": 7,
+              "Hits": 5
+            },
+            {
+              "Line": 156,
+              "Offset": 109,
+              "EndOffset": 111,
+              "Path": 0,
+              "Ordinal": 8,
+              "Hits": 4
+            },
+            {
+              "Line": 156,
+              "Offset": 109,
+              "EndOffset": 126,
+              "Path": 1,
+              "Ordinal": 9,
+              "Hits": 1
+            }
+          ]
+        },
+        "Mediana.Dispatch.MessageEntry Mediana.Mediator::ThrowNoHandler(System.Type)": {
+          "Lines": {
+            "219": 13,
+            "220": 13,
+            "221": 13,
+            "222": 13
+          },
+          "Branches": []
+        },
+        "System.Threading.Tasks.ValueTask`1<TResponse> Mediana.Mediator::ThrowResponseTypeMismatch(Mediana.Dispatch.MessageEntry,System.Type)": {
+          "Lines": {
+            "226": 7,
+            "227": 7,
+            "228": 7
+          },
+          "Branches": []
+        },
+        "System.Collections.Generic.IAsyncEnumerable`1<TRow> Mediana.Mediator::ThrowStreamMismatch(Mediana.Dispatch.MessageEntry)": {
+          "Lines": {
+            "232": 1,
+            "233": 1
+          },
+          "Branches": []
+        },
+        "System.Threading.Tasks.ValueTask`1<TResponse> Mediana.Mediator::CastBack(System.Threading.Tasks.ValueTask`1<System.Object>)": {
+          "Lines": {
+            "237": 8025,
+            "239": 5288,
+            "242": 2737
+          },
+          "Branches": [
+            {
+              "Line": 237,
+              "Offset": 7,
+              "EndOffset": 9,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 5288
+            },
+            {
+              "Line": 237,
+              "Offset": 7,
+              "EndOffset": 27,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 2737
+            }
+          ]
+        },
+        "System.Void Mediana.Mediator::.ctor(Mediana.Dispatch.MessageRegistry,System.IServiceProvider)": {
+          "Lines": {
+            "20": 101,
+            "22": 101,
+            "23": 101,
+            "24": 101
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Mediator/ReferenceTypeFlag`1": {
+        "System.Void Mediana.Mediator/ReferenceTypeFlag`1::.cctor()": {
+          "Lines": {
+            "251": 9
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Mediator/ValueTypeResponse`1": {
+        "System.Void Mediana.Mediator/ValueTypeResponse`1::.cctor()": {
+          "Lines": {
+            "257": 9
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Mediator/<AwaitCastBack>d__19`1": {
+        "System.Void Mediana.Mediator/<AwaitCastBack>d__19`1::MoveNext()": {
+          "Lines": {
+            "246": 2737
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Mediator/<PublishParallel>d__14": {
+        "System.Void Mediana.Mediator/<PublishParallel>d__14::MoveNext()": {
+          "Lines": {
+            "182": 5,
+            "183": 5,
+            "184": 32,
+            "188": 11,
+            "189": 6,
+            "190": 5,
+            "193": 5,
+            "194": 5,
+            "199": 32,
+            "203": 11,
+            "204": 9,
+            "205": 2,
+            "207": 2,
+            "208": 2,
+            "211": 5,
+            "213": 4,
+            "215": 1
+          },
+          "Branches": [
+            {
+              "Line": 184,
+              "Offset": 135,
+              "EndOffset": 43,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 11
+            },
+            {
+              "Line": 193,
+              "Offset": 97,
+              "EndOffset": 99,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 3
+            },
+            {
+              "Line": 193,
+              "Offset": 97,
+              "EndOffset": 114,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 5
+            },
+            {
+              "Line": 184,
+              "Offset": 135,
+              "EndOffset": 137,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 5
+            },
+            {
+              "Line": 199,
+              "Offset": 337,
+              "EndOffset": 149,
+              "Path": 1,
+              "Ordinal": 7,
+              "Hits": 14
+            },
+            {
+              "Line": 207,
+              "Offset": 279,
+              "EndOffset": 281,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 1
+            },
+            {
+              "Line": 207,
+              "Offset": 279,
+              "EndOffset": 296,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 2
+            },
+            {
+              "Line": 199,
+              "Offset": 337,
+              "EndOffset": 342,
+              "Path": 0,
+              "Ordinal": 6,
+              "Hits": 5
+            },
+            {
+              "Line": 211,
+              "Offset": 348,
+              "EndOffset": 350,
+              "Path": 0,
+              "Ordinal": 8,
+              "Hits": 4
+            },
+            {
+              "Line": 211,
+              "Offset": 348,
+              "EndOffset": 362,
+              "Path": 1,
+              "Ordinal": 9,
+              "Hits": 1
+            }
+          ]
+        }
+      },
+      "Mediana.Mediator/<PublishSequential>d__13": {
+        "System.Void Mediana.Mediator/<PublishSequential>d__13::MoveNext()": {
+          "Lines": {
+            "170": 36688,
+            "172": 12226,
+            "174": 6118
+          },
+          "Branches": [
+            {
+              "Line": 170,
+              "Offset": 184,
+              "EndOffset": 22,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 12226
+            },
+            {
+              "Line": 170,
+              "Offset": 184,
+              "EndOffset": 189,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 6118
+            }
+          ]
+        }
+      }
+    },
+    "F:\\Projects\\Mediana\\src\\Mediana\\ServiceCollectionExtensions.cs": {
+      "Mediana.MedianaServiceCollectionExtensions": {
+        "Microsoft.Extensions.DependencyInjection.IServiceCollection Mediana.MedianaServiceCollectionExtensions::AddMediana(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.Action`1<Mediana.MedianaConfiguration>)": {
+          "Lines": {
+            "20": 83,
+            "22": 83,
+            "24": 83,
+            "25": 83,
+            "28": 412,
+            "30": 123,
+            "32": 16,
+            "36": 107,
+            "40": 83,
+            "43": 128,
+            "44": 77,
+            "45": 77
+          },
+          "Branches": [
+            {
+              "Line": 28,
+              "Offset": 94,
+              "EndOffset": 55,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 123
+            },
+            {
+              "Line": 30,
+              "Offset": 68,
+              "EndOffset": 70,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 16
+            },
+            {
+              "Line": 30,
+              "Offset": 68,
+              "EndOffset": 80,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 107
+            },
+            {
+              "Line": 28,
+              "Offset": 94,
+              "EndOffset": 96,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 83
+            }
+          ]
+        }
+      }
+    },
+    "F:\\Projects\\Mediana\\src\\Mediana\\Internal\\Compat.cs": {
+      "Mediana.Internal.Guard": {
+        "System.Void Mediana.Internal.Guard::ThrowNull(System.String)": {
+          "Lines": {
+            "10": 6
+          },
+          "Branches": []
+        },
+        "System.Void Mediana.Internal.Guard::NotNull(System.Object,System.String)": {
+          "Lines": {
+            "14": 20597,
+            "16": 5,
+            "18": 20592
+          },
+          "Branches": [
+            {
+              "Line": 14,
+              "Offset": 1,
+              "EndOffset": 3,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 5
+            },
+            {
+              "Line": 14,
+              "Offset": 1,
+              "EndOffset": 9,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 20592
+            }
+          ]
+        }
+      }
+    },
+    "F:\\Projects\\Mediana\\src\\Mediana\\Dispatch\\ChainState.cs": {
+      "Mediana.Dispatch.ChainState`2": {
+        "System.Void Mediana.Dispatch.ChainState`2::Configure(Mediana.Pipeline.IHandlerMiddleware`2<TRequest,TResponse>[],Mediana.Pipeline.HandlerDelegate`2<TRequest,TResponse>)": {
+          "Lines": {
+            "32": 27,
+            "33": 27,
+            "34": 27,
+            "35": 27
+          },
+          "Branches": []
+        },
+        "System.Threading.Tasks.ValueTask`1<TResponse> Mediana.Dispatch.ChainState`2::Next(TRequest,System.Threading.CancellationToken)": {
+          "Lines": {
+            "39": 39,
+            "40": 39,
+            "41": 39,
+            "43": 12,
+            "44": 12,
+            "47": 27,
+            "51": 26,
+            "52": 26,
+            "55": 1,
+            "56": 1,
+            "57": 1
+          },
+          "Branches": [
+            {
+              "Line": 41,
+              "Offset": 18,
+              "EndOffset": 20,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 12
+            },
+            {
+              "Line": 41,
+              "Offset": 18,
+              "EndOffset": 46,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 27
+            },
+            {
+              "Line": 47,
+              "Offset": 50,
+              "EndOffset": 52,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 26
+            },
+            {
+              "Line": 47,
+              "Offset": 50,
+              "EndOffset": 75,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 1
+            }
+          ]
+        },
+        "System.Void Mediana.Dispatch.ChainState`2::Return()": {
+          "Lines": {
+            "63": 25,
+            "64": 25,
+            "65": 25,
+            "66": 25
+          },
+          "Branches": []
+        },
+        "Mediana.Dispatch.ChainState`2<TRequest,TResponse> Mediana.Dispatch.ChainState`2::Take(System.IServiceProvider,System.Type[],Mediana.Pipeline.HandlerDelegate`2<TRequest,TResponse>)": {
+          "Lines": {
+            "74": 27,
+            "75": 27,
+            "78": 9,
+            "82": 18,
+            "86": 27,
+            "88": 18,
+            "92": 9,
+            "93": 42,
+            "95": 13,
+            "96": 13,
+            "97": 13,
+            "101": 26,
+            "102": 26
+          },
+          "Branches": [
+            {
+              "Line": 75,
+              "Offset": 7,
+              "EndOffset": 9,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 9
+            },
+            {
+              "Line": 75,
+              "Offset": 7,
+              "EndOffset": 17,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 18
+            },
+            {
+              "Line": 86,
+              "Offset": 25,
+              "EndOffset": 27,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 18
+            },
+            {
+              "Line": 86,
+              "Offset": 25,
+              "EndOffset": 35,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 9
+            },
+            {
+              "Line": 93,
+              "Offset": 96,
+              "EndOffset": 48,
+              "Path": 1,
+              "Ordinal": 7,
+              "Hits": 13
+            },
+            {
+              "Line": 95,
+              "Offset": 60,
+              "EndOffset": 62,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 1
+            },
+            {
+              "Line": 95,
+              "Offset": 60,
+              "EndOffset": 82,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 12
+            },
+            {
+              "Line": 93,
+              "Offset": 96,
+              "EndOffset": 98,
+              "Path": 0,
+              "Ordinal": 6,
+              "Hits": 26
+            }
+          ]
+        },
+        "System.Void Mediana.Dispatch.ChainState`2::.ctor()": {
+          "Lines": {
+            "16": 18,
+            "24": 18,
+            "27": 18,
+            "28": 18
+          },
+          "Branches": []
+        }
+      }
+    },
+    "F:\\Projects\\Mediana\\src\\Mediana\\Dispatch\\EventCallSite.cs": {
+      "Mediana.Dispatch.EventCallSite`2": {
+        "System.Threading.Tasks.ValueTask Mediana.Dispatch.EventCallSite`2::Invoke(System.Object,System.IServiceProvider,System.Threading.CancellationToken)": {
+          "Lines": {
+            "32": 17238,
+            "33": 17238,
+            "36": 17202,
+            "39": 36
+          },
+          "Branches": [
+            {
+              "Line": 33,
+              "Offset": 8,
+              "EndOffset": 10,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 17202
+            },
+            {
+              "Line": 33,
+              "Offset": 8,
+              "EndOffset": 20,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 36
+            }
+          ]
+        },
+        "System.Threading.Tasks.ValueTask Mediana.Dispatch.EventCallSite`2::SlowInvoke(System.Object,System.IServiceProvider,System.Threading.CancellationToken)": {
+          "Lines": {
+            "44": 36,
+            "48": 36,
+            "50": 11,
+            "52": 11,
+            "54": 11,
+            "56": 9,
+            "58": 9,
+            "61": 25,
+            "62": 25,
+            "63": 25,
+            "64": 47,
+            "65": 24,
+            "66": 23
+          },
+          "Branches": [
+            {
+              "Line": 48,
+              "Offset": 19,
+              "EndOffset": 21,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 11
+            },
+            {
+              "Line": 52,
+              "Offset": 47,
+              "EndOffset": 49,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 11
+            },
+            {
+              "Line": 52,
+              "Offset": 47,
+              "EndOffset": 57,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 9
+            },
+            {
+              "Line": 48,
+              "Offset": 19,
+              "EndOffset": 86,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 25
+            },
+            {
+              "Line": 61,
+              "Offset": 104,
+              "EndOffset": 106,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 1
+            },
+            {
+              "Line": 61,
+              "Offset": 104,
+              "EndOffset": 133,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 24
+            }
+          ]
+        },
+        "Mediana.Pipeline.IEventMiddleware`1<TEvent>[] Mediana.Dispatch.EventCallSite`2::ResolveBehaviors(System.IServiceProvider)": {
+          "Lines": {
+            "71": 24,
+            "74": 16,
+            "77": 8,
+            "78": 36,
+            "80": 11,
+            "81": 11,
+            "82": 11,
+            "85": 7
+          },
+          "Branches": [
+            {
+              "Line": 71,
+              "Offset": 7,
+              "EndOffset": 9,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 16
+            },
+            {
+              "Line": 71,
+              "Offset": 7,
+              "EndOffset": 15,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 8
+            },
+            {
+              "Line": 78,
+              "Offset": 96,
+              "EndOffset": 33,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 11
+            },
+            {
+              "Line": 80,
+              "Offset": 50,
+              "EndOffset": 52,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 1
+            },
+            {
+              "Line": 80,
+              "Offset": 50,
+              "EndOffset": 77,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 10
+            },
+            {
+              "Line": 78,
+              "Offset": 96,
+              "EndOffset": 98,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 7
+            }
+          ]
+        },
+        "System.Threading.Tasks.ValueTask Mediana.Dispatch.EventCallSite`2::RunChain(TEvent,Mediana.Pipeline.IEventMiddleware`1<TEvent>[],Mediana.Pipeline.EventHandlerDelegate`1<TEvent>,System.Int32,System.Threading.CancellationToken)": {
+          "Lines": {
+            "95": 33,
+            "97": 20,
+            "98": 10,
+            "101": 23
+          },
+          "Branches": [
+            {
+              "Line": 95,
+              "Offset": 41,
+              "EndOffset": 43,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 10
+            },
+            {
+              "Line": 95,
+              "Offset": 41,
+              "EndOffset": 79,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 23
+            }
+          ]
+        },
+        "Mediana.Pipeline.EventHandlerDelegate`1<TEvent> Mediana.Dispatch.EventCallSite`2::GetRoot(System.IServiceProvider)": {
+          "Lines": {
+            "108": 4
+          },
+          "Branches": [
+            {
+              "Line": 108,
+              "Offset": 7,
+              "EndOffset": 9,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 1
+            },
+            {
+              "Line": 108,
+              "Offset": 7,
+              "EndOffset": 17,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 3
+            }
+          ]
+        },
+        "Mediana.Pipeline.EventHandlerDelegate`1<TEvent> Mediana.Dispatch.EventCallSite`2::BuildSingletonRoot(System.IServiceProvider)": {
+          "Lines": {
+            "112": 13,
+            "114": 13,
+            "116": 1,
+            "119": 12,
+            "120": 12,
+            "121": 12,
+            "122": 17225,
+            "125": 11,
+            "127": 5,
+            "128": 20,
+            "130": 6,
+            "131": 6,
+            "132": 6,
+            "133": 5,
+            "134": 5,
+            "135": 13,
+            "139": 10,
+            "140": 17221,
+            "141": 10,
+            "143": 11
+          },
+          "Branches": [
+            {
+              "Line": 114,
+              "Offset": 29,
+              "EndOffset": 31,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 1
+            },
+            {
+              "Line": 114,
+              "Offset": 29,
+              "EndOffset": 43,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 12
+            },
+            {
+              "Line": 119,
+              "Offset": 61,
+              "EndOffset": 63,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 1
+            },
+            {
+              "Line": 119,
+              "Offset": 61,
+              "EndOffset": 90,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 11
+            },
+            {
+              "Line": 125,
+              "Offset": 125,
+              "EndOffset": 130,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 5
+            },
+            {
+              "Line": 128,
+              "Offset": 273,
+              "EndOffset": 159,
+              "Path": 1,
+              "Ordinal": 9,
+              "Hits": 6
+            },
+            {
+              "Line": 130,
+              "Offset": 186,
+              "EndOffset": 188,
+              "Path": 0,
+              "Ordinal": 6,
+              "Hits": 1
+            },
+            {
+              "Line": 130,
+              "Offset": 186,
+              "EndOffset": 214,
+              "Path": 1,
+              "Ordinal": 7,
+              "Hits": 5
+            },
+            {
+              "Line": 125,
+              "Offset": 125,
+              "EndOffset": 275,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 10
+            },
+            {
+              "Line": 128,
+              "Offset": 273,
+              "EndOffset": 275,
+              "Path": 0,
+              "Ordinal": 8,
+              "Hits": 10
+            }
+          ]
+        },
+        "System.Void Mediana.Dispatch.EventCallSite`2::.ctor(System.Type[],System.Boolean)": {
+          "Lines": {
+            "22": 38,
+            "24": 38,
+            "26": 38,
+            "27": 38,
+            "28": 38
+          },
+          "Branches": []
+        }
+      }
+    },
+    "F:\\Projects\\Mediana\\src\\Mediana\\Dispatch\\MessageEntry.cs": {
+      "Mediana.Dispatch.MessageEntry": {
+        "Mediana.Dispatch.HandlerKind Mediana.Dispatch.MessageEntry::get_Kind()": {
+          "Lines": {
+            "13": 5
+          },
+          "Branches": []
+        },
+        "System.Type Mediana.Dispatch.MessageEntry::get_MessageType()": {
+          "Lines": {
+            "15": 8
+          },
+          "Branches": []
+        },
+        "System.Type Mediana.Dispatch.MessageEntry::get_ResponseType()": {
+          "Lines": {
+            "18": 8034
+          },
+          "Branches": []
+        },
+        "System.Object Mediana.Dispatch.MessageEntry::get_CommandCallSite()": {
+          "Lines": {
+            "21": 15353
+          },
+          "Branches": []
+        },
+        "System.Object Mediana.Dispatch.MessageEntry::get_QueryCallSite()": {
+          "Lines": {
+            "24": 85
+          },
+          "Branches": []
+        },
+        "System.Object Mediana.Dispatch.MessageEntry::get_StreamCallSite()": {
+          "Lines": {
+            "27": 145
+          },
+          "Branches": []
+        },
+        "System.Collections.Generic.IReadOnlyList`1<Mediana.Dispatch.IEventCallSite> Mediana.Dispatch.MessageEntry::get_EventCallSites()": {
+          "Lines": {
+            "30": 6676
+          },
+          "Branches": []
+        },
+        "Mediana.Dispatch.EventDispatchPolicy Mediana.Dispatch.MessageEntry::get_Policy()": {
+          "Lines": {
+            "32": 6135
+          },
+          "Branches": []
+        },
+        "System.Void Mediana.Dispatch.MessageEntry::.ctor(Mediana.Dispatch.HandlerKind,System.Type,System.Type)": {
+          "Lines": {
+            "6": 514,
+            "8": 514,
+            "9": 514,
+            "10": 514,
+            "11": 514
+          },
+          "Branches": []
+        }
+      }
+    },
+    "F:\\Projects\\Mediana\\src\\Mediana\\Dispatch\\MessageRegistry.cs": {
+      "Mediana.Dispatch.MessageRegistry": {
+        "Mediana.Dispatch.MessageRegistry Mediana.Dispatch.MessageRegistry::get_Empty()": {
+          "Lines": {
+            "18": 17
+          },
+          "Branches": []
+        },
+        "Mediana.Dispatch.MessageEntry Mediana.Dispatch.MessageRegistry::TryGet(System.Type)": {
+          "Lines": {
+            "58": 44198,
+            "59": 44198,
+            "60": 61124,
+            "62": 60709,
+            "64": 43783,
+            "67": 16926,
+            "70": 415
+          },
+          "Branches": [
+            {
+              "Line": 60,
+              "Offset": 64,
+              "EndOffset": 30,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 60709
+            },
+            {
+              "Line": 62,
+              "Offset": 47,
+              "EndOffset": 49,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 43783
+            },
+            {
+              "Line": 62,
+              "Offset": 47,
+              "EndOffset": 56,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 16926
+            },
+            {
+              "Line": 60,
+              "Offset": 64,
+              "EndOffset": 66,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 415
+            }
+          ]
+        },
+        "Mediana.Dispatch.MessageRegistry Mediana.Dispatch.MessageRegistry::Add(System.Type,Mediana.Dispatch.MessageEntry)": {
+          "Lines": {
+            "80": 398,
+            "84": 4,
+            "85": 4,
+            "88": 394,
+            "89": 80482,
+            "91": 39847,
+            "93": 0,
+            "94": 0,
+            "97": 39847,
+            "100": 394,
+            "101": 394
+          },
+          "Branches": [
+            {
+              "Line": 80,
+              "Offset": 7,
+              "EndOffset": 9,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 4
+            },
+            {
+              "Line": 80,
+              "Offset": 7,
+              "EndOffset": 26,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 394
+            },
+            {
+              "Line": 89,
+              "Offset": 128,
+              "EndOffset": 46,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 39847
+            },
+            {
+              "Line": 91,
+              "Offset": 77,
+              "EndOffset": 79,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 0
+            },
+            {
+              "Line": 91,
+              "Offset": 77,
+              "EndOffset": 96,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 39847
+            },
+            {
+              "Line": 89,
+              "Offset": 128,
+              "EndOffset": 130,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 394
+            }
+          ]
+        },
+        "Mediana.Dispatch.MessageRegistry Mediana.Dispatch.MessageRegistry::Build(System.Collections.Generic.IEnumerable`1<System.Collections.Generic.KeyValuePair`2<System.RuntimeTypeHandle,Mediana.Dispatch.MessageEntry>>)": {
+          "Lines": {
+            "110": 522,
+            "111": 522,
+            "112": 1762,
+            "114": 1240,
+            "117": 522,
+            "118": 81732,
+            "120": 40344,
+            "121": 40344,
+            "124": 522
+          },
+          "Branches": [
+            {
+              "Line": 112,
+              "Offset": 22,
+              "EndOffset": 12,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 1240
+            },
+            {
+              "Line": 112,
+              "Offset": 22,
+              "EndOffset": 24,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 522
+            },
+            {
+              "Line": 118,
+              "Offset": 124,
+              "EndOffset": 38,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 40344
+            },
+            {
+              "Line": 118,
+              "Offset": 124,
+              "EndOffset": 126,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 522
+            }
+          ]
+        },
+        "System.Void Mediana.Dispatch.MessageRegistry::.ctor(Mediana.Dispatch.MessageRegistry/Bucket[],System.Collections.Generic.KeyValuePair`2<System.RuntimeTypeHandle,Mediana.Dispatch.MessageEntry>[])": {
+          "Lines": {
+            "35": 522,
+            "37": 522,
+            "38": 522,
+            "39": 522
+          },
+          "Branches": []
+        },
+        "System.Void Mediana.Dispatch.MessageRegistry::.cctor()": {
+          "Lines": {
+            "19": 1
+          },
+          "Branches": []
+        }
+      }
+    },
+    "F:\\Projects\\Mediana\\src\\Mediana\\Dispatch\\RequestCallSites.cs": {
+      "Mediana.Dispatch.RequestCallSiteCompositor": {
+        "Mediana.Pipeline.HandlerDelegate`2<TRequest,TResponse> Mediana.Dispatch.RequestCallSiteCompositor::Compose(System.IServiceProvider,System.Type[],System.Func`2<System.IServiceProvider,Mediana.Pipeline.HandlerDelegate`2<TRequest,TResponse>>)": {
+          "Lines": {
+            "24": 34,
+            "26": 34,
+            "29": 29,
+            "33": 22,
+            "36": 7,
+            "37": 7,
+            "38": 7,
+            "39": 6,
+            "40": 22221,
+            "43": 4
+          },
+          "Branches": [
+            {
+              "Line": 26,
+              "Offset": 10,
+              "EndOffset": 12,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 29
+            },
+            {
+              "Line": 26,
+              "Offset": 10,
+              "EndOffset": 14,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 5
+            },
+            {
+              "Line": 33,
+              "Offset": 112,
+              "EndOffset": 22,
+              "Path": 1,
+              "Ordinal": 7,
+              "Hits": 7
+            },
+            {
+              "Line": 36,
+              "Offset": 38,
+              "EndOffset": 40,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 1
+            },
+            {
+              "Line": 36,
+              "Offset": 50,
+              "EndOffset": 52,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 0
+            },
+            {
+              "Line": 36,
+              "Offset": 50,
+              "EndOffset": 56,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 1
+            },
+            {
+              "Line": 36,
+              "Offset": 38,
+              "EndOffset": 77,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 6
+            },
+            {
+              "Line": 33,
+              "Offset": 112,
+              "EndOffset": 114,
+              "Path": 0,
+              "Ordinal": 6,
+              "Hits": 4
+            }
+          ]
+        }
+      },
+      "Mediana.Dispatch.CommandCallSite`3": {
+        "System.Threading.Tasks.ValueTask`1<TResponse> Mediana.Dispatch.CommandCallSite`3::Invoke(System.Object,System.IServiceProvider,System.Threading.CancellationToken)": {
+          "Lines": {
+            "72": 16142,
+            "75": 12,
+            "76": 12,
+            "79": 2,
+            "80": 2,
+            "84": 16140,
+            "85": 16140,
+            "87": 16105,
+            "90": 35
+          },
+          "Branches": [
+            {
+              "Line": 72,
+              "Offset": 6,
+              "EndOffset": 8,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 12
+            },
+            {
+              "Line": 76,
+              "Offset": 21,
+              "EndOffset": 23,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 2
+            },
+            {
+              "Line": 72,
+              "Offset": 6,
+              "EndOffset": 37,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 16140
+            },
+            {
+              "Line": 76,
+              "Offset": 21,
+              "EndOffset": 37,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 16140
+            },
+            {
+              "Line": 85,
+              "Offset": 45,
+              "EndOffset": 47,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 16105
+            },
+            {
+              "Line": 85,
+              "Offset": 45,
+              "EndOffset": 61,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 35
+            }
+          ]
+        },
+        "System.Threading.Tasks.ValueTask`1<TResponse> Mediana.Dispatch.CommandCallSite`3::InvokeTyped(TCommand,System.IServiceProvider,System.Threading.CancellationToken)": {
+          "Lines": {
+            "96": 6106,
+            "97": 6106,
+            "99": 6102,
+            "102": 4
+          },
+          "Branches": [
+            {
+              "Line": 97,
+              "Offset": 8,
+              "EndOffset": 10,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 6102
+            },
+            {
+              "Line": 97,
+              "Offset": 8,
+              "EndOffset": 19,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 4
+            }
+          ]
+        },
+        "System.Threading.Tasks.ValueTask`1<System.Object> Mediana.Dispatch.CommandCallSite`3::InvokeAny(System.Object,System.IServiceProvider,System.Threading.CancellationToken)": {
+          "Lines": {
+            "107": 8023,
+            "110": 18,
+            "114": 8005,
+            "115": 8005,
+            "117": 0,
+            "120": 8005
+          },
+          "Branches": [
+            {
+              "Line": 107,
+              "Offset": 6,
+              "EndOffset": 8,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 8013
+            },
+            {
+              "Line": 107,
+              "Offset": 6,
+              "EndOffset": 16,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 10
+            },
+            {
+              "Line": 107,
+              "Offset": 14,
+              "EndOffset": 16,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 18
+            },
+            {
+              "Line": 107,
+              "Offset": 14,
+              "EndOffset": 26,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 8005
+            },
+            {
+              "Line": 115,
+              "Offset": 39,
+              "EndOffset": 41,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 0
+            },
+            {
+              "Line": 115,
+              "Offset": 39,
+              "EndOffset": 51,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 8005
+            }
+          ]
+        },
+        "System.Threading.Tasks.ValueTask`1<TResponse> Mediana.Dispatch.CommandCallSite`3::CastBoxed(System.Threading.Tasks.ValueTask`1<System.Object>)": {
+          "Lines": {
+            "130": 2,
+            "133": 2,
+            "136": 0
+          },
+          "Branches": [
+            {
+              "Line": 130,
+              "Offset": 7,
+              "EndOffset": 9,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 2
+            },
+            {
+              "Line": 130,
+              "Offset": 7,
+              "EndOffset": 27,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 0
+            }
+          ]
+        },
+        "System.Threading.Tasks.ValueTask`1<TResponse> Mediana.Dispatch.CommandCallSite`3::Slow(TCommand,System.IServiceProvider,System.Threading.CancellationToken)": {
+          "Lines": {
+            "145": 39,
+            "147": 21,
+            "149": 21,
+            "151": 21,
+            "152": 20,
+            "154": 10,
+            "155": 8017,
+            "158": 20,
+            "160": 20,
+            "163": 18,
+            "164": 29,
+            "165": 15,
+            "166": 14,
+            "169": 14,
+            "173": 11,
+            "174": 11,
+            "177": 3
+          },
+          "Branches": [
+            {
+              "Line": 145,
+              "Offset": 12,
+              "EndOffset": 14,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 21
+            },
+            {
+              "Line": 149,
+              "Offset": 35,
+              "EndOffset": 37,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 21
+            },
+            {
+              "Line": 152,
+              "Offset": 56,
+              "EndOffset": 58,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 10
+            },
+            {
+              "Line": 149,
+              "Offset": 35,
+              "EndOffset": 102,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 20
+            },
+            {
+              "Line": 152,
+              "Offset": 56,
+              "EndOffset": 102,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 20
+            },
+            {
+              "Line": 145,
+              "Offset": 12,
+              "EndOffset": 130,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 18
+            },
+            {
+              "Line": 169,
+              "Offset": 185,
+              "EndOffset": 187,
+              "Path": 0,
+              "Ordinal": 6,
+              "Hits": 11
+            },
+            {
+              "Line": 169,
+              "Offset": 185,
+              "EndOffset": 195,
+              "Path": 1,
+              "Ordinal": 7,
+              "Hits": 3
+            }
+          ]
+        },
+        "Mediana.Pipeline.HandlerDelegate`2<TCommand,TResponse> Mediana.Dispatch.CommandCallSite`3::Compose(System.IServiceProvider)": {
+          "Lines": {
+            "181": 21,
+            "182": 21,
+            "183": 21,
+            "184": 21,
+            "185": 21,
+            "186": 21,
+            "187": 30255,
+            "188": 21
+          },
+          "Branches": [
+            {
+              "Line": 181,
+              "Offset": 13,
+              "EndOffset": 15,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 15
+            },
+            {
+              "Line": 181,
+              "Offset": 13,
+              "EndOffset": 38,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 6
+            }
+          ]
+        },
+        "THandler Mediana.Dispatch.CommandCallSite`3::Resolve(System.IServiceProvider)": {
+          "Lines": {
+            "191": 39,
+            "192": 39,
+            "193": 39
+          },
+          "Branches": [
+            {
+              "Line": 191,
+              "Offset": 17,
+              "EndOffset": 19,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 3
+            },
+            {
+              "Line": 191,
+              "Offset": 36,
+              "EndOffset": 38,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 0
+            },
+            {
+              "Line": 191,
+              "Offset": 36,
+              "EndOffset": 42,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 3
+            },
+            {
+              "Line": 191,
+              "Offset": 17,
+              "EndOffset": 63,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 36
+            }
+          ]
+        },
+        "System.Threading.Tasks.ValueTask`1<System.Object> Mediana.Dispatch.CommandCallSite`3::Upcast(System.Threading.Tasks.ValueTask`1<TResponse>)": {
+          "Lines": {
+            "197": 8007,
+            "199": 5070,
+            "202": 2937
+          },
+          "Branches": [
+            {
+              "Line": 197,
+              "Offset": 7,
+              "EndOffset": 9,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 5070
+            },
+            {
+              "Line": 197,
+              "Offset": 7,
+              "EndOffset": 27,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 2937
+            }
+          ]
+        },
+        "System.Void Mediana.Dispatch.CommandCallSite`3::.ctor(System.Type[],System.Boolean)": {
+          "Lines": {
+            "60": 53,
+            "62": 53,
+            "63": 53,
+            "64": 53,
+            "66": 11,
+            "68": 53
+          },
+          "Branches": [
+            {
+              "Line": 64,
+              "Offset": 27,
+              "EndOffset": 29,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 11
+            },
+            {
+              "Line": 64,
+              "Offset": 27,
+              "EndOffset": 40,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 42
+            }
+          ]
+        },
+        "System.Void Mediana.Dispatch.CommandCallSite`3::.cctor()": {
+          "Lines": {
+            "53": 20
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Dispatch.CommandCallSite`3/<AwaitAndReturn>d__17": {
+        "System.Void Mediana.Dispatch.CommandCallSite`3/<AwaitAndReturn>d__17::MoveNext()": {
+          "Lines": {
+            "214": 3,
+            "220": 3,
+            "222": 3
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Dispatch.CommandCallSite`3/<AwaitCast>d__11`1": {
+        "System.Void Mediana.Dispatch.CommandCallSite`3/<AwaitCast>d__11`1::MoveNext()": {
+          "Lines": {
+            "140": 0
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Dispatch.CommandCallSite`3/<AwaitUpcast>d__16": {
+        "System.Void Mediana.Dispatch.CommandCallSite`3/<AwaitUpcast>d__16::MoveNext()": {
+          "Lines": {
+            "206": 2937
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Dispatch.CommandCallSite`3/<SlowAny>d__9": {
+        "System.Void Mediana.Dispatch.CommandCallSite`3/<SlowAny>d__9::MoveNext()": {
+          "Lines": {
+            "124": 18
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Dispatch.QueryCallSite`3": {
+        "System.Threading.Tasks.ValueTask`1<TResponse> Mediana.Dispatch.QueryCallSite`3::Invoke(System.Object,System.IServiceProvider,System.Threading.CancellationToken)": {
+          "Lines": {
+            "261": 24,
+            "264": 8,
+            "265": 8,
+            "268": 1,
+            "269": 1,
+            "273": 23,
+            "274": 23,
+            "277": 1,
+            "280": 22
+          },
+          "Branches": [
+            {
+              "Line": 261,
+              "Offset": 6,
+              "EndOffset": 8,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 8
+            },
+            {
+              "Line": 265,
+              "Offset": 21,
+              "EndOffset": 23,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 1
+            },
+            {
+              "Line": 261,
+              "Offset": 6,
+              "EndOffset": 37,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 23
+            },
+            {
+              "Line": 265,
+              "Offset": 21,
+              "EndOffset": 37,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 23
+            },
+            {
+              "Line": 274,
+              "Offset": 45,
+              "EndOffset": 47,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 1
+            },
+            {
+              "Line": 274,
+              "Offset": 45,
+              "EndOffset": 61,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 22
+            }
+          ]
+        },
+        "System.Threading.Tasks.ValueTask`1<TResponse> Mediana.Dispatch.QueryCallSite`3::InvokeTyped(TQuery,System.IServiceProvider,System.Threading.CancellationToken)": {
+          "Lines": {
+            "286": 4,
+            "287": 4,
+            "290": 4,
+            "293": 0
+          },
+          "Branches": [
+            {
+              "Line": 287,
+              "Offset": 8,
+              "EndOffset": 10,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 4
+            },
+            {
+              "Line": 287,
+              "Offset": 8,
+              "EndOffset": 19,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 0
+            }
+          ]
+        },
+        "System.Threading.Tasks.ValueTask`1<System.Object> Mediana.Dispatch.QueryCallSite`3::InvokeAny(System.Object,System.IServiceProvider,System.Threading.CancellationToken)": {
+          "Lines": {
+            "299": 17,
+            "301": 13,
+            "305": 4,
+            "306": 4,
+            "308": 0,
+            "311": 4
+          },
+          "Branches": [
+            {
+              "Line": 299,
+              "Offset": 6,
+              "EndOffset": 8,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 10
+            },
+            {
+              "Line": 299,
+              "Offset": 6,
+              "EndOffset": 16,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 7
+            },
+            {
+              "Line": 299,
+              "Offset": 14,
+              "EndOffset": 16,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 13
+            },
+            {
+              "Line": 299,
+              "Offset": 14,
+              "EndOffset": 26,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 4
+            },
+            {
+              "Line": 306,
+              "Offset": 39,
+              "EndOffset": 41,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 0
+            },
+            {
+              "Line": 306,
+              "Offset": 39,
+              "EndOffset": 51,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 4
+            }
+          ]
+        },
+        "System.Threading.Tasks.ValueTask`1<TResponse> Mediana.Dispatch.QueryCallSite`3::CastBoxed(System.Threading.Tasks.ValueTask`1<System.Object>)": {
+          "Lines": {
+            "321": 1,
+            "324": 1,
+            "327": 0
+          },
+          "Branches": [
+            {
+              "Line": 321,
+              "Offset": 7,
+              "EndOffset": 9,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 1
+            },
+            {
+              "Line": 321,
+              "Offset": 7,
+              "EndOffset": 27,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 0
+            }
+          ]
+        },
+        "System.Threading.Tasks.ValueTask`1<TResponse> Mediana.Dispatch.QueryCallSite`3::Slow(TQuery,System.IServiceProvider,System.Threading.CancellationToken)": {
+          "Lines": {
+            "338": 22,
+            "340": 13,
+            "342": 13,
+            "344": 13,
+            "345": 13,
+            "348": 7,
+            "349": 12,
+            "352": 13,
+            "354": 13,
+            "357": 9,
+            "358": 15,
+            "359": 8,
+            "360": 8,
+            "363": 6,
+            "367": 5,
+            "368": 5,
+            "371": 1
+          },
+          "Branches": [
+            {
+              "Line": 338,
+              "Offset": 12,
+              "EndOffset": 14,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 13
+            },
+            {
+              "Line": 342,
+              "Offset": 35,
+              "EndOffset": 37,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 13
+            },
+            {
+              "Line": 345,
+              "Offset": 56,
+              "EndOffset": 58,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 7
+            },
+            {
+              "Line": 342,
+              "Offset": 35,
+              "EndOffset": 102,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 13
+            },
+            {
+              "Line": 345,
+              "Offset": 56,
+              "EndOffset": 102,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 13
+            },
+            {
+              "Line": 338,
+              "Offset": 12,
+              "EndOffset": 130,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 9
+            },
+            {
+              "Line": 363,
+              "Offset": 185,
+              "EndOffset": 187,
+              "Path": 0,
+              "Ordinal": 6,
+              "Hits": 5
+            },
+            {
+              "Line": 363,
+              "Offset": 185,
+              "EndOffset": 195,
+              "Path": 1,
+              "Ordinal": 7,
+              "Hits": 1
+            }
+          ]
+        },
+        "Mediana.Pipeline.HandlerDelegate`2<TQuery,TResponse> Mediana.Dispatch.QueryCallSite`3::Compose(System.IServiceProvider)": {
+          "Lines": {
+            "375": 13,
+            "376": 13,
+            "377": 13,
+            "378": 13,
+            "379": 13,
+            "380": 13,
+            "381": 36,
+            "382": 13
+          },
+          "Branches": [
+            {
+              "Line": 375,
+              "Offset": 13,
+              "EndOffset": 15,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 9
+            },
+            {
+              "Line": 375,
+              "Offset": 13,
+              "EndOffset": 38,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 4
+            }
+          ]
+        },
+        "THandler Mediana.Dispatch.QueryCallSite`3::Resolve(System.IServiceProvider)": {
+          "Lines": {
+            "385": 22,
+            "386": 22,
+            "387": 22
+          },
+          "Branches": [
+            {
+              "Line": 385,
+              "Offset": 17,
+              "EndOffset": 19,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 1
+            },
+            {
+              "Line": 385,
+              "Offset": 36,
+              "EndOffset": 38,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 0
+            },
+            {
+              "Line": 385,
+              "Offset": 36,
+              "EndOffset": 42,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 1
+            },
+            {
+              "Line": 385,
+              "Offset": 17,
+              "EndOffset": 63,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 21
+            }
+          ]
+        },
+        "System.Threading.Tasks.ValueTask`1<System.Object> Mediana.Dispatch.QueryCallSite`3::Upcast(System.Threading.Tasks.ValueTask`1<TResponse>)": {
+          "Lines": {
+            "393": 5,
+            "396": 3,
+            "399": 2
+          },
+          "Branches": [
+            {
+              "Line": 393,
+              "Offset": 7,
+              "EndOffset": 9,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 3
+            },
+            {
+              "Line": 393,
+              "Offset": 7,
+              "EndOffset": 27,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 2
+            }
+          ]
+        },
+        "System.Void Mediana.Dispatch.QueryCallSite`3::.ctor(System.Type[],System.Boolean)": {
+          "Lines": {
+            "246": 27,
+            "248": 27,
+            "249": 27,
+            "252": 27,
+            "255": 8,
+            "257": 27
+          },
+          "Branches": [
+            {
+              "Line": 252,
+              "Offset": 27,
+              "EndOffset": 29,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 8
+            },
+            {
+              "Line": 252,
+              "Offset": 27,
+              "EndOffset": 40,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 19
+            }
+          ]
+        },
+        "System.Void Mediana.Dispatch.QueryCallSite`3::.cctor()": {
+          "Lines": {
+            "239": 14
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Dispatch.QueryCallSite`3/<AwaitAndReturn>d__17": {
+        "System.Void Mediana.Dispatch.QueryCallSite`3/<AwaitAndReturn>d__17::MoveNext()": {
+          "Lines": {
+            "411": 1,
+            "417": 1,
+            "419": 1
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Dispatch.QueryCallSite`3/<AwaitCast>d__11`1": {
+        "System.Void Mediana.Dispatch.QueryCallSite`3/<AwaitCast>d__11`1::MoveNext()": {
+          "Lines": {
+            "331": 0
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Dispatch.QueryCallSite`3/<AwaitUpcast>d__16": {
+        "System.Void Mediana.Dispatch.QueryCallSite`3/<AwaitUpcast>d__16::MoveNext()": {
+          "Lines": {
+            "403": 2
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Dispatch.QueryCallSite`3/<SlowAny>d__9": {
+        "System.Void Mediana.Dispatch.QueryCallSite`3/<SlowAny>d__9::MoveNext()": {
+          "Lines": {
+            "315": 13
+          },
+          "Branches": []
+        }
+      }
+    },
+    "F:\\Projects\\Mediana\\src\\Mediana\\Dispatch\\StreamCallSite.cs": {
+      "Mediana.Dispatch.StreamCallSite`3": {
+        "System.Collections.Generic.IAsyncEnumerable`1<TRow> Mediana.Dispatch.StreamCallSite`3::Invoke(System.Object,System.IServiceProvider,System.Threading.CancellationToken)": {
+          "Lines": {
+            "27": 117,
+            "28": 117,
+            "29": 117,
+            "30": 117,
+            "32": 116,
+            "34": 113,
+            "37": 3,
+            "38": 10,
+            "40": 3,
+            "41": 3,
+            "42": 3,
+            "45": 4,
+            "47": 8,
+            "50": 2,
+            "51": 2,
+            "52": 4,
+            "55": 2
+          },
+          "Branches": [
+            {
+              "Line": 28,
+              "Offset": 31,
+              "EndOffset": 33,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 1
+            },
+            {
+              "Line": 28,
+              "Offset": 31,
+              "EndOffset": 60,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 116
+            },
+            {
+              "Line": 32,
+              "Offset": 77,
+              "EndOffset": 79,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 113
+            },
+            {
+              "Line": 32,
+              "Offset": 77,
+              "EndOffset": 99,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 3
+            },
+            {
+              "Line": 38,
+              "Offset": 187,
+              "EndOffset": 118,
+              "Path": 1,
+              "Ordinal": 7,
+              "Hits": 3
+            },
+            {
+              "Line": 40,
+              "Offset": 137,
+              "EndOffset": 139,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 1
+            },
+            {
+              "Line": 40,
+              "Offset": 137,
+              "EndOffset": 165,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 2
+            },
+            {
+              "Line": 38,
+              "Offset": 187,
+              "EndOffset": 189,
+              "Path": 0,
+              "Ordinal": 6,
+              "Hits": 2
+            },
+            {
+              "Line": 47,
+              "Offset": 254,
+              "EndOffset": 211,
+              "Path": 1,
+              "Ordinal": 9,
+              "Hits": 2
+            },
+            {
+              "Line": 47,
+              "Offset": 254,
+              "EndOffset": 256,
+              "Path": 0,
+              "Ordinal": 8,
+              "Hits": 2
+            }
+          ]
+        },
+        "System.Void Mediana.Dispatch.StreamCallSite`3::.ctor(System.Type[],System.Boolean)": {
+          "Lines": {
+            "19": 14,
+            "21": 14,
+            "22": 14,
+            "23": 14
+          },
+          "Branches": []
+        }
+      }
+    }
+  },
+  "Mediana.Outbox.dll": {
+    "F:\\Projects\\Mediana\\src\\Mediana.Outbox\\OutboxRelay.cs": {
+      "Mediana.Outbox.OutboxMessage": {
+        "System.Int64 Mediana.Outbox.OutboxMessage::get_Sequence()": {
+          "Lines": {
+            "12": 263
+          },
+          "Branches": []
+        },
+        "System.Guid Mediana.Outbox.OutboxMessage::get_MessageId()": {
+          "Lines": {
+            "14": 71
+          },
+          "Branches": []
+        },
+        "System.String Mediana.Outbox.OutboxMessage::get_Destination()": {
+          "Lines": {
+            "16": 77
+          },
+          "Branches": []
+        },
+        "System.String Mediana.Outbox.OutboxMessage::get_Transport()": {
+          "Lines": {
+            "18": 2
+          },
+          "Branches": []
+        },
+        "System.Byte[] Mediana.Outbox.OutboxMessage::get_EnvelopeBytes()": {
+          "Lines": {
+            "20": 76
+          },
+          "Branches": []
+        },
+        "System.DateTimeOffset Mediana.Outbox.OutboxMessage::get_CreatedAt()": {
+          "Lines": {
+            "22": 5
+          },
+          "Branches": []
+        },
+        "System.Int64 Mediana.Outbox.OutboxMessage::get_LeaseUntil()": {
+          "Lines": {
+            "25": 199
+          },
+          "Branches": []
+        },
+        "System.Int32 Mediana.Outbox.OutboxMessage::get_DeliveryAttempts()": {
+          "Lines": {
+            "27": 132
+          },
+          "Branches": []
+        },
+        "System.String Mediana.Outbox.OutboxMessage::get_LastError()": {
+          "Lines": {
+            "29": 64
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Outbox.OutboxCollector": {
+        "System.Void Mediana.Outbox.OutboxCollector::Add(Mediana.Messaging.Envelope,System.String,System.String)": {
+          "Lines": {
+            "59": 2,
+            "60": 2,
+            "61": 2,
+            "62": 2,
+            "63": 2,
+            "64": 2,
+            "65": 2,
+            "66": 2,
+            "67": 2
+          },
+          "Branches": []
+        },
+        "System.Collections.Generic.IReadOnlyList`1<Mediana.Outbox.OutboxMessage> Mediana.Outbox.OutboxCollector::TakePending()": {
+          "Lines": {
+            "71": 1,
+            "72": 1,
+            "73": 1
+          },
+          "Branches": []
+        },
+        "System.Int32 Mediana.Outbox.OutboxCollector::get_Count()": {
+          "Lines": {
+            "76": 3
+          },
+          "Branches": []
+        },
+        "System.Void Mediana.Outbox.OutboxCollector::.ctor()": {
+          "Lines": {
+            "55": 2
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Outbox.EnvelopeCodec": {
+        "System.Byte[] Mediana.Outbox.EnvelopeCodec::Encode(Mediana.Messaging.Envelope)": {
+          "Lines": {
+            "84": 5
+          },
+          "Branches": []
+        },
+        "Mediana.Messaging.Envelope Mediana.Outbox.EnvelopeCodec::Decode(System.Byte[])": {
+          "Lines": {
+            "88": 67,
+            "89": 67
+          },
+          "Branches": [
+            {
+              "Line": 88,
+              "Offset": 13,
+              "EndOffset": 15,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 1
+            },
+            {
+              "Line": 88,
+              "Offset": 13,
+              "EndOffset": 27,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 66
+            }
+          ]
+        }
+      },
+      "Mediana.Outbox.OutboxRelayOptions": {
+        "System.Int32 Mediana.Outbox.OutboxRelayOptions::get_BatchSize()": {
+          "Lines": {
+            "95": 106
+          },
+          "Branches": []
+        },
+        "System.TimeSpan Mediana.Outbox.OutboxRelayOptions::get_PollInterval()": {
+          "Lines": {
+            "98": 36
+          },
+          "Branches": []
+        },
+        "System.TimeSpan Mediana.Outbox.OutboxRelayOptions::get_LeaseDuration()": {
+          "Lines": {
+            "101": 103
+          },
+          "Branches": []
+        },
+        "System.Int32 Mediana.Outbox.OutboxRelayOptions::get_MaxDeliveryAttempts()": {
+          "Lines": {
+            "104": 9
+          },
+          "Branches": []
+        },
+        "System.TimeSpan Mediana.Outbox.OutboxRelayOptions::get_FailureBackoff()": {
+          "Lines": {
+            "107": 84
+          },
+          "Branches": []
+        },
+        "System.Nullable`1<System.TimeSpan> Mediana.Outbox.OutboxRelayOptions::get_CleanupAge()": {
+          "Lines": {
+            "110": 9
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Outbox.OutboxRelay": {
+        "System.Void Mediana.Outbox.OutboxRelay::.ctor(Mediana.Outbox.IOutboxStore,System.Func`2<System.Threading.CancellationToken,System.Threading.Tasks.ValueTask`1<Mediana.Transports.ITransportPublisher>>,Mediana.Outbox.OutboxRelayOptions,Microsoft.Extensions.Logging.ILogger`1<Mediana.Outbox.OutboxRelay>)": {
+          "Lines": {
+            "118": 7,
+            "119": 7,
+            "120": 7,
+            "121": 7,
+            "122": 7,
+            "124": 7
+          },
+          "Branches": [
+            {
+              "Line": 124,
+              "Offset": 25,
+              "EndOffset": 27,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 2
+            },
+            {
+              "Line": 124,
+              "Offset": 25,
+              "EndOffset": 33,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 5
+            }
+          ]
+        }
+      },
+      "Mediana.Outbox.OutboxRelay/<Deliver>d__6": {
+        "System.Void Mediana.Outbox.OutboxRelay/<Deliver>d__6::MoveNext()": {
+          "Lines": {
+            "178": 66,
+            "179": 66,
+            "180": 66,
+            "181": 66,
+            "182": 66,
+            "183": 2,
+            "184": 2,
+            "185": 64,
+            "187": 64,
+            "189": 66
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Outbox.OutboxRelay/<ExecuteAsync>d__5": {
+        "System.Void Mediana.Outbox.OutboxRelay/<ExecuteAsync>d__5::MoveNext()": {
+          "Lines": {
+            "128": 6,
+            "129": 95,
+            "133": 94,
+            "134": 94,
+            "135": 94,
+            "136": 94,
+            "138": 88,
+            "140": 22,
+            "141": 19,
+            "144": 66,
+            "145": 264,
+            "147": 66,
+            "150": 66,
+            "151": 66,
+            "152": 3,
+            "154": 3,
+            "156": 6,
+            "158": 6,
+            "161": 6,
+            "162": 4,
+            "163": 2,
+            "165": 2,
+            "168": 4,
+            "171": 6
+          },
+          "Branches": [
+            {
+              "Line": 129,
+              "Offset": 1080,
+              "EndOffset": 47,
+              "Path": 1,
+              "Ordinal": 7,
+              "Hits": 94
+            },
+            {
+              "Line": 138,
+              "Offset": 257,
+              "EndOffset": 259,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 22
+            },
+            {
+              "Line": 138,
+              "Offset": 257,
+              "EndOffset": 384,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 66
+            },
+            {
+              "Line": 145,
+              "Offset": 686,
+              "EndOffset": 540,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 66
+            },
+            {
+              "Line": 145,
+              "Offset": 686,
+              "EndOffset": 691,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 66
+            },
+            {
+              "Line": 158,
+              "Offset": 847,
+              "EndOffset": 849,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 1
+            },
+            {
+              "Line": 158,
+              "Offset": 847,
+              "EndOffset": 852,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 5
+            },
+            {
+              "Line": 129,
+              "Offset": 1080,
+              "EndOffset": 1085,
+              "Path": 0,
+              "Ordinal": 6,
+              "Hits": 6
+            }
+          ]
+        }
+      },
+      "Mediana.Outbox.OutboxServiceCollectionExtensions": {
+        "Microsoft.Extensions.DependencyInjection.IServiceCollection Mediana.Outbox.OutboxServiceCollectionExtensions::AddMedianaOutbox(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.Func`2<Mediana.Outbox.OutboxRelayOptions,Mediana.Outbox.OutboxRelayOptions>)": {
+          "Lines": {
+            "199": 2,
+            "200": 2,
+            "201": 2,
+            "202": 2
+          },
+          "Branches": [
+            {
+              "Line": 199,
+              "Offset": 1,
+              "EndOffset": 3,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 1
+            },
+            {
+              "Line": 199,
+              "Offset": 1,
+              "EndOffset": 6,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 1
+            },
+            {
+              "Line": 199,
+              "Offset": 18,
+              "EndOffset": 20,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 1
+            },
+            {
+              "Line": 199,
+              "Offset": 18,
+              "EndOffset": 26,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 1
+            }
+          ]
+        }
+      }
+    },
+    "F:\\Projects\\Mediana\\src\\Mediana.Outbox\\Internal\\Polyfills.cs": {
+      "System.Diagnostics.CodeAnalysis.RequiresDynamicCodeAttribute": {
+        "System.String System.Diagnostics.CodeAnalysis.RequiresDynamicCodeAttribute::get_Message()": {
+          "Lines": {
+            "41": 0
+          },
+          "Branches": []
+        },
+        "System.String System.Diagnostics.CodeAnalysis.RequiresDynamicCodeAttribute::get_Url()": {
+          "Lines": {
+            "43": 0
+          },
+          "Branches": []
+        },
+        "System.Void System.Diagnostics.CodeAnalysis.RequiresDynamicCodeAttribute::.ctor(System.String)": {
+          "Lines": {
+            "36": 0,
+            "38": 0,
+            "39": 0
+          },
+          "Branches": []
+        }
+      },
+      "System.Diagnostics.CodeAnalysis.RequiresUnreferencedCodeAttribute": {
+        "System.String System.Diagnostics.CodeAnalysis.RequiresUnreferencedCodeAttribute::get_Message()": {
+          "Lines": {
+            "54": 0
+          },
+          "Branches": []
+        },
+        "System.String System.Diagnostics.CodeAnalysis.RequiresUnreferencedCodeAttribute::get_Url()": {
+          "Lines": {
+            "56": 0
+          },
+          "Branches": []
+        },
+        "System.Void System.Diagnostics.CodeAnalysis.RequiresUnreferencedCodeAttribute::.ctor(System.String)": {
+          "Lines": {
+            "49": 0,
+            "51": 0,
+            "52": 0
+          },
+          "Branches": []
+        }
+      },
+      "System.Runtime.CompilerServices.CompilerFeatureRequiredAttribute": {
+        "System.String System.Runtime.CompilerServices.CompilerFeatureRequiredAttribute::get_FeatureName()": {
+          "Lines": {
+            "22": 0
+          },
+          "Branches": []
+        },
+        "System.Void System.Runtime.CompilerServices.CompilerFeatureRequiredAttribute::.ctor(System.String)": {
+          "Lines": {
+            "17": 0,
+            "19": 0,
+            "20": 0
+          },
+          "Branches": []
+        }
+      }
+    }
+  },
+  "Mediana.Transport.Abstractions.dll": {
+    "F:\\Projects\\Mediana\\src\\Mediana.Transport.Abstractions\\Internal\\Polyfills.cs": {
+      "System.Diagnostics.CodeAnalysis.RequiresDynamicCodeAttribute": {
+        "System.String System.Diagnostics.CodeAnalysis.RequiresDynamicCodeAttribute::get_Message()": {
+          "Lines": {
+            "41": 0
+          },
+          "Branches": []
+        },
+        "System.String System.Diagnostics.CodeAnalysis.RequiresDynamicCodeAttribute::get_Url()": {
+          "Lines": {
+            "43": 0
+          },
+          "Branches": []
+        },
+        "System.Void System.Diagnostics.CodeAnalysis.RequiresDynamicCodeAttribute::.ctor(System.String)": {
+          "Lines": {
+            "36": 0,
+            "38": 0,
+            "39": 0
+          },
+          "Branches": []
+        }
+      },
+      "System.Diagnostics.CodeAnalysis.RequiresUnreferencedCodeAttribute": {
+        "System.String System.Diagnostics.CodeAnalysis.RequiresUnreferencedCodeAttribute::get_Message()": {
+          "Lines": {
+            "54": 0
+          },
+          "Branches": []
+        },
+        "System.String System.Diagnostics.CodeAnalysis.RequiresUnreferencedCodeAttribute::get_Url()": {
+          "Lines": {
+            "56": 0
+          },
+          "Branches": []
+        },
+        "System.Void System.Diagnostics.CodeAnalysis.RequiresUnreferencedCodeAttribute::.ctor(System.String)": {
+          "Lines": {
+            "49": 0,
+            "51": 0,
+            "52": 0
+          },
+          "Branches": []
+        }
+      },
+      "System.Runtime.CompilerServices.CompilerFeatureRequiredAttribute": {
+        "System.String System.Runtime.CompilerServices.CompilerFeatureRequiredAttribute::get_FeatureName()": {
+          "Lines": {
+            "22": 0
+          },
+          "Branches": []
+        },
+        "System.Void System.Runtime.CompilerServices.CompilerFeatureRequiredAttribute::.ctor(System.String)": {
+          "Lines": {
+            "17": 0,
+            "19": 0,
+            "20": 0
+          },
+          "Branches": []
+        }
+      }
+    },
+    "F:\\Projects\\Mediana\\src\\Mediana.Transport.Abstractions\\Transport\\Transport.cs": {
+      "Mediana.Transports.TransportCapabilities": {
+        "System.String Mediana.Transports.TransportCapabilities::get_Name()": {
+          "Lines": {
+            "9": 2
+          },
+          "Branches": []
+        },
+        "System.Boolean Mediana.Transports.TransportCapabilities::get_SupportsRequestReply()": {
+          "Lines": {
+            "11": 2
+          },
+          "Branches": []
+        },
+        "System.Boolean Mediana.Transports.TransportCapabilities::get_SupportsStreaming()": {
+          "Lines": {
+            "13": 2
+          },
+          "Branches": []
+        },
+        "System.Boolean Mediana.Transports.TransportCapabilities::get_SupportsDelayedRedelivery()": {
+          "Lines": {
+            "15": 0
+          },
+          "Branches": []
+        },
+        "System.Boolean Mediana.Transports.TransportCapabilities::get_SupportsPartitioning()": {
+          "Lines": {
+            "17": 0
+          },
+          "Branches": []
+        },
+        "System.Boolean Mediana.Transports.TransportCapabilities::get_SupportsFanOut()": {
+          "Lines": {
+            "19": 0
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Transports.ConsumerEndpoint": {
+        "System.String Mediana.Transports.ConsumerEndpoint::get_Name()": {
+          "Lines": {
+            "25": 2
+          },
+          "Branches": []
+        },
+        "System.Int32 Mediana.Transports.ConsumerEndpoint::get_MaxConcurrency()": {
+          "Lines": {
+            "28": 3
+          },
+          "Branches": []
+        },
+        "System.Collections.Generic.IReadOnlyList`1<System.String> Mediana.Transports.ConsumerEndpoint::get_MessageTypes()": {
+          "Lines": {
+            "31": 2
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Transports.TopologyManifest": {
+        "System.String Mediana.Transports.TopologyManifest::get_Transport()": {
+          "Lines": {
+            "37": 2
+          },
+          "Branches": []
+        },
+        "System.Collections.Generic.IReadOnlyList`1<Mediana.Transports.ConsumerEndpoint> Mediana.Transports.TopologyManifest::get_Endpoints()": {
+          "Lines": {
+            "39": 3
+          },
+          "Branches": []
+        },
+        "System.Collections.Generic.IReadOnlyList`1<System.String> Mediana.Transports.TopologyManifest::get_PublishDestinations()": {
+          "Lines": {
+            "42": 3
+          },
+          "Branches": []
+        },
+        "System.Collections.Generic.IReadOnlyList`1<System.ValueTuple`2<System.String,System.TimeSpan>> Mediana.Transports.TopologyManifest::get_RetryDestinations()": {
+          "Lines": {
+            "44": 1
+          },
+          "Branches": []
+        },
+        "System.Collections.Generic.IReadOnlyList`1<System.String> Mediana.Transports.TopologyManifest::get_DeadLetterDestinations()": {
+          "Lines": {
+            "46": 1
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Transports.PublishOptions": {
+        "System.Boolean Mediana.Transports.PublishOptions::get_ConfirmDelivery()": {
+          "Lines": {
+            "53": 67
+          },
+          "Branches": []
+        },
+        "System.String Mediana.Transports.PublishOptions::get_PartitionKey()": {
+          "Lines": {
+            "55": 0
+          },
+          "Branches": []
+        },
+        "System.String Mediana.Transports.PublishOptions::get_DestinationOverride()": {
+          "Lines": {
+            "58": 66
+          },
+          "Branches": []
+        },
+        "System.Void Mediana.Transports.PublishOptions::.cctor()": {
+          "Lines": {
+            "60": 1
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Transports.TransportException": {
+        "System.Void Mediana.Transports.TransportException::.ctor(System.String)": {
+          "Lines": {
+            "112": 64,
+            "114": 64
+          },
+          "Branches": []
+        },
+        "System.Void Mediana.Transports.TransportException::.ctor(System.String,System.Exception)": {
+          "Lines": {
+            "117": 1,
+            "119": 1
+          },
+          "Branches": []
+        }
+      }
+    },
+    "F:\\Projects\\Mediana\\src\\Mediana.Transport.Abstractions\\Routing\\RouteRegistry.cs": {
+      "Mediana.Routing.RoutePolicy": {
+        "Mediana.Routing.RouteTarget Mediana.Routing.RoutePolicy::get_Target()": {
+          "Lines": {
+            "21": 7
+          },
+          "Branches": []
+        },
+        "System.String Mediana.Routing.RoutePolicy::get_Transport()": {
+          "Lines": {
+            "24": 5
+          },
+          "Branches": []
+        },
+        "System.String Mediana.Routing.RoutePolicy::get_Destination()": {
+          "Lines": {
+            "27": 4
+          },
+          "Branches": []
+        },
+        "System.String Mediana.Routing.RoutePolicy::get_TopicPattern()": {
+          "Lines": {
+            "30": 2
+          },
+          "Branches": []
+        },
+        "System.TimeSpan Mediana.Routing.RoutePolicy::get_RequestTimeout()": {
+          "Lines": {
+            "33": 5
+          },
+          "Branches": []
+        },
+        "Mediana.Routing.DeliveryMode Mediana.Routing.RoutePolicy::get_Delivery()": {
+          "Lines": {
+            "36": 2
+          },
+          "Branches": []
+        },
+        "Mediana.Routing.RoutePolicy Mediana.Routing.RoutePolicy::LocalOnly()": {
+          "Lines": {
+            "38": 1
+          },
+          "Branches": []
+        },
+        "Mediana.Routing.RoutePolicy Mediana.Routing.RoutePolicy::ToQueue(System.String,System.String)": {
+          "Lines": {
+            "40": 1,
+            "41": 1,
+            "42": 1,
+            "43": 1,
+            "44": 1,
+            "45": 1
+          },
+          "Branches": []
+        },
+        "Mediana.Routing.RoutePolicy Mediana.Routing.RoutePolicy::FanOut(System.String,System.String)": {
+          "Lines": {
+            "47": 1,
+            "48": 1,
+            "49": 1,
+            "50": 1,
+            "51": 1,
+            "52": 1
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Routing.RemoteAttribute": {
+        "System.String Mediana.Routing.RemoteAttribute::get_Destination()": {
+          "Lines": {
+            "74": 1
+          },
+          "Branches": []
+        },
+        "System.String Mediana.Routing.RemoteAttribute::get_Transport()": {
+          "Lines": {
+            "76": 2
+          },
+          "Branches": []
+        },
+        "Mediana.Routing.RouteTarget Mediana.Routing.RemoteAttribute::get_Target()": {
+          "Lines": {
+            "78": 2
+          },
+          "Branches": []
+        },
+        "System.Void Mediana.Routing.RemoteAttribute::.ctor(System.String)": {
+          "Lines": {
+            "69": 1,
+            "71": 1,
+            "72": 1
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Routing.RouteRegistry": {
+        "Mediana.Routing.RouteRegistry Mediana.Routing.RouteRegistry::Set(Mediana.Routing.RoutePolicy)": {
+          "Lines": {
+            "90": 2,
+            "91": 2
+          },
+          "Branches": []
+        },
+        "Mediana.Routing.RoutePolicy Mediana.Routing.RouteRegistry::Resolve(System.Type)": {
+          "Lines": {
+            "97": 5,
+            "99": 3,
+            "102": 2,
+            "103": 2,
+            "105": 1,
+            "106": 1,
+            "107": 1,
+            "108": 1,
+            "109": 1,
+            "110": 1,
+            "113": 1
+          },
+          "Branches": [
+            {
+              "Line": 97,
+              "Offset": 14,
+              "EndOffset": 16,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 3
+            },
+            {
+              "Line": 97,
+              "Offset": 14,
+              "EndOffset": 18,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 2
+            },
+            {
+              "Line": 103,
+              "Offset": 38,
+              "EndOffset": 40,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 1
+            },
+            {
+              "Line": 103,
+              "Offset": 50,
+              "EndOffset": 52,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 1
+            },
+            {
+              "Line": 103,
+              "Offset": 38,
+              "EndOffset": 94,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 1
+            },
+            {
+              "Line": 103,
+              "Offset": 50,
+              "EndOffset": 94,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 1
+            }
+          ]
+        },
+        "System.Void Mediana.Routing.RouteRegistry::.ctor()": {
+          "Lines": {
+            "86": 4
+          },
+          "Branches": []
+        }
+      }
+    },
+    "F:\\Projects\\Mediana\\src\\Mediana.Transport.Abstractions\\Reliability\\Retry.cs": {
+      "Mediana.Reliability.RetryPolicy": {
+        "Mediana.Reliability.BackoffStrategy Mediana.Reliability.RetryPolicy::get_Strategy()": {
+          "Lines": {
+            "14": 36
+          },
+          "Branches": []
+        },
+        "System.TimeSpan Mediana.Reliability.RetryPolicy::get_BaseDelay()": {
+          "Lines": {
+            "17": 36
+          },
+          "Branches": []
+        },
+        "System.TimeSpan Mediana.Reliability.RetryPolicy::get_MaxDelay()": {
+          "Lines": {
+            "20": 44
+          },
+          "Branches": []
+        },
+        "System.Int32 Mediana.Reliability.RetryPolicy::get_MaxAttempts()": {
+          "Lines": {
+            "23": 39
+          },
+          "Branches": []
+        },
+        "System.Double Mediana.Reliability.RetryPolicy::get_Jitter()": {
+          "Lines": {
+            "26": 38
+          },
+          "Branches": []
+        },
+        "Mediana.Reliability.RetryPolicy Mediana.Reliability.RetryPolicy::get_Default()": {
+          "Lines": {
+            "28": 5
+          },
+          "Branches": []
+        },
+        "System.TimeSpan Mediana.Reliability.RetryPolicy::DelayFor(System.Int32,System.Random)": {
+          "Lines": {
+            "40": 19,
+            "42": 2,
+            "45": 19,
+            "46": 19,
+            "47": 14,
+            "48": 1,
+            "49": 3,
+            "50": 1,
+            "51": 19,
+            "53": 19,
+            "54": 19,
+            "56": 3,
+            "59": 19,
+            "61": 2,
+            "62": 2,
+            "65": 19
+          },
+          "Branches": [
+            {
+              "Line": 40,
+              "Offset": 2,
+              "EndOffset": 4,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 2
+            },
+            {
+              "Line": 40,
+              "Offset": 2,
+              "EndOffset": 7,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 17
+            },
+            {
+              "Line": 45,
+              "Offset": 15,
+              "EndOffset": 34,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 14
+            },
+            {
+              "Line": 45,
+              "Offset": 15,
+              "EndOffset": 46,
+              "Path": 2,
+              "Ordinal": 4,
+              "Hits": 1
+            },
+            {
+              "Line": 45,
+              "Offset": 15,
+              "EndOffset": 51,
+              "Path": 3,
+              "Ordinal": 5,
+              "Hits": 3
+            },
+            {
+              "Line": 45,
+              "Offset": 15,
+              "EndOffset": 72,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 1
+            },
+            {
+              "Line": 54,
+              "Offset": 119,
+              "EndOffset": 121,
+              "Path": 0,
+              "Ordinal": 6,
+              "Hits": 3
+            },
+            {
+              "Line": 54,
+              "Offset": 119,
+              "EndOffset": 128,
+              "Path": 1,
+              "Ordinal": 7,
+              "Hits": 16
+            },
+            {
+              "Line": 59,
+              "Offset": 143,
+              "EndOffset": 145,
+              "Path": 0,
+              "Ordinal": 8,
+              "Hits": 3
+            },
+            {
+              "Line": 59,
+              "Offset": 146,
+              "EndOffset": 148,
+              "Path": 0,
+              "Ordinal": 10,
+              "Hits": 2
+            },
+            {
+              "Line": 59,
+              "Offset": 143,
+              "EndOffset": 201,
+              "Path": 1,
+              "Ordinal": 9,
+              "Hits": 16
+            },
+            {
+              "Line": 59,
+              "Offset": 146,
+              "EndOffset": 201,
+              "Path": 1,
+              "Ordinal": 11,
+              "Hits": 1
+            }
+          ]
+        },
+        "System.Void Mediana.Reliability.RetryPolicy::.cctor()": {
+          "Lines": {
+            "29": 1,
+            "30": 1,
+            "31": 1,
+            "32": 1,
+            "33": 1,
+            "34": 1,
+            "35": 1
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Reliability.RetryEngine/<>c": {
+        "System.Boolean Mediana.Reliability.RetryEngine/<>c::<Execute>b__0_0(System.Exception)": {
+          "Lines": {
+            "83": 19
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Reliability.RetryEngine/<Execute>d__0": {
+        "System.Void Mediana.Reliability.RetryEngine/<Execute>d__0::MoveNext()": {
+          "Lines": {
+            "84": 12,
+            "87": 20,
+            "90": 20,
+            "91": 6,
+            "93": 14,
+            "95": 8,
+            "96": 8,
+            "98": 8,
+            "100": 8,
+            "102": 6
+          },
+          "Branches": [
+            {
+              "Line": 83,
+              "Offset": 23,
+              "EndOffset": 25,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 4
+            },
+            {
+              "Line": 83,
+              "Offset": 23,
+              "EndOffset": 62,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 12
+            },
+            {
+              "Line": 96,
+              "Offset": 349,
+              "EndOffset": 69,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 20
+            },
+            {
+              "Line": 96,
+              "Offset": 349,
+              "EndOffset": 354,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 8
+            }
+          ]
+        }
+      },
+      "Mediana.Reliability.PoisonDetector": {
+        "System.Boolean Mediana.Reliability.PoisonDetector::IsPoison(System.Exception)": {
+          "Lines": {
+            "121": 20,
+            "122": 20,
+            "123": 20,
+            "124": 20,
+            "125": 20
+          },
+          "Branches": [
+            {
+              "Line": 121,
+              "Offset": 6,
+              "EndOffset": 8,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 17
+            },
+            {
+              "Line": 121,
+              "Offset": 14,
+              "EndOffset": 16,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 15
+            },
+            {
+              "Line": 121,
+              "Offset": 22,
+              "EndOffset": 24,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 13
+            },
+            {
+              "Line": 121,
+              "Offset": 30,
+              "EndOffset": 32,
+              "Path": 0,
+              "Ordinal": 6,
+              "Hits": 12
+            },
+            {
+              "Line": 121,
+              "Offset": 6,
+              "EndOffset": 40,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 3
+            },
+            {
+              "Line": 121,
+              "Offset": 14,
+              "EndOffset": 40,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 2
+            },
+            {
+              "Line": 121,
+              "Offset": 22,
+              "EndOffset": 40,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 2
+            },
+            {
+              "Line": 121,
+              "Offset": 30,
+              "EndOffset": 40,
+              "Path": 1,
+              "Ordinal": 7,
+              "Hits": 1
+            },
+            {
+              "Line": 121,
+              "Offset": 38,
+              "EndOffset": 40,
+              "Path": 0,
+              "Ordinal": 8,
+              "Hits": 2
+            },
+            {
+              "Line": 121,
+              "Offset": 38,
+              "EndOffset": 44,
+              "Path": 1,
+              "Ordinal": 9,
+              "Hits": 10
+            }
+          ]
+        }
+      }
+    },
+    "F:\\Projects\\Mediana\\src\\Mediana.Transport.Abstractions\\Messaging\\Envelope.cs": {
+      "Mediana.Messaging.MessageTypeDescriptor": {
+        "System.String Mediana.Messaging.MessageTypeDescriptor::get_FullName()": {
+          "Lines": {
+            "12": 259
+          },
+          "Branches": []
+        },
+        "System.String Mediana.Messaging.MessageTypeDescriptor::get_TypeVersion()": {
+          "Lines": {
+            "15": 256
+          },
+          "Branches": []
+        },
+        "System.String Mediana.Messaging.MessageTypeDescriptor::get_ContractHash()": {
+          "Lines": {
+            "18": 73
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Messaging.Envelope": {
+        "System.Int32 Mediana.Messaging.Envelope::get_Version()": {
+          "Lines": {
+            "27": 157
+          },
+          "Branches": []
+        },
+        "System.Guid Mediana.Messaging.Envelope::get_MessageId()": {
+          "Lines": {
+            "30": 103
+          },
+          "Branches": []
+        },
+        "System.Nullable`1<System.Guid> Mediana.Messaging.Envelope::get_CorrelationId()": {
+          "Lines": {
+            "32": 73
+          },
+          "Branches": []
+        },
+        "System.Nullable`1<System.Guid> Mediana.Messaging.Envelope::get_CausationId()": {
+          "Lines": {
+            "34": 73
+          },
+          "Branches": []
+        },
+        "Mediana.Messaging.MessageTypeDescriptor Mediana.Messaging.Envelope::get_MessageType()": {
+          "Lines": {
+            "36": 177
+          },
+          "Branches": []
+        },
+        "System.DateTimeOffset Mediana.Messaging.Envelope::get_Timestamp()": {
+          "Lines": {
+            "38": 89
+          },
+          "Branches": []
+        },
+        "System.String Mediana.Messaging.Envelope::get_SourceEndpoint()": {
+          "Lines": {
+            "41": 88
+          },
+          "Branches": []
+        },
+        "System.String Mediana.Messaging.Envelope::get_TraceParent()": {
+          "Lines": {
+            "44": 73
+          },
+          "Branches": []
+        },
+        "System.Collections.Generic.IReadOnlyDictionary`2<System.String,System.String> Mediana.Messaging.Envelope::get_Headers()": {
+          "Lines": {
+            "47": 168
+          },
+          "Branches": []
+        },
+        "System.Byte[] Mediana.Messaging.Envelope::get_Payload()": {
+          "Lines": {
+            "50": 173
+          },
+          "Branches": []
+        },
+        "System.String Mediana.Messaging.Envelope::get_PartitionKey()": {
+          "Lines": {
+            "55": 8
+          },
+          "Branches": [
+            {
+              "Line": 55,
+              "Offset": 18,
+              "EndOffset": 20,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 7
+            },
+            {
+              "Line": 55,
+              "Offset": 18,
+              "EndOffset": 22,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 1
+            }
+          ]
+        },
+        "System.Void modreq(System.Runtime.CompilerServices.IsExternalInit) Mediana.Messaging.Envelope::set_PartitionKey(System.String)": {
+          "Lines": {
+            "58": 69,
+            "60": 1,
+            "61": 1,
+            "63": 69
+          },
+          "Branches": [
+            {
+              "Line": 58,
+              "Offset": 1,
+              "EndOffset": 3,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 1
+            },
+            {
+              "Line": 58,
+              "Offset": 1,
+              "EndOffset": 34,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 68
+            }
+          ]
+        },
+        "Mediana.Messaging.Envelope Mediana.Messaging.Envelope::Create(System.String,System.String,System.Byte[],System.String)": {
+          "Lines": {
+            "67": 14,
+            "68": 14,
+            "69": 14,
+            "70": 14,
+            "71": 14,
+            "72": 14,
+            "73": 14,
+            "74": 14
+          },
+          "Branches": []
+        }
+      }
+    },
+    "F:\\Projects\\Mediana\\src\\Mediana.Transport.Abstractions\\Messaging\\GuidV7.cs": {
+      "Mediana.Messaging.GuidV7": {
+        "System.Guid Mediana.Messaging.GuidV7::NewGuid()": {
+          "Lines": {
+            "21": 118
+          },
+          "Branches": []
+        },
+        "System.Int64 Mediana.Messaging.GuidV7::NextInt64()": {
+          "Lines": {
+            "28": 118,
+            "30": 118,
+            "32": 118
+          },
+          "Branches": []
+        },
+        "System.Guid Mediana.Messaging.GuidV7::Create()": {
+          "Lines": {
+            "36": 118,
+            "38": 118,
+            "39": 118,
+            "42": 105,
+            "46": 13,
+            "47": 13,
+            "50": 118,
+            "53": 118,
+            "54": 118,
+            "55": 118,
+            "56": 118,
+            "57": 118,
+            "58": 118,
+            "61": 118,
+            "62": 118,
+            "63": 118,
+            "66": 118,
+            "67": 118,
+            "68": 118,
+            "69": 118,
+            "70": 118,
+            "71": 118,
+            "72": 118,
+            "73": 118,
+            "74": 118,
+            "75": 118,
+            "77": 118,
+            "79": 118
+          },
+          "Branches": [
+            {
+              "Line": 39,
+              "Offset": 37,
+              "EndOffset": 39,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 105
+            },
+            {
+              "Line": 39,
+              "Offset": 37,
+              "EndOffset": 54,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 13
+            }
+          ]
+        },
+        "System.Void Mediana.Messaging.GuidV7::.cctor()": {
+          "Lines": {
+            "12": 1,
+            "13": 1
+          },
+          "Branches": []
+        }
+      }
+    },
+    "F:\\Projects\\Mediana\\src\\Mediana.Transport.Abstractions\\Messaging\\Serialization.cs": {
+      "Mediana.Messaging.SystemTextJsonMessageSerializer": {
+        "System.String Mediana.Messaging.SystemTextJsonMessageSerializer::get_ContentType()": {
+          "Lines": {
+            "36": 1
+          },
+          "Branches": []
+        },
+        "System.Byte[] Mediana.Messaging.SystemTextJsonMessageSerializer::Serialize(T)": {
+          "Lines": {
+            "41": 5
+          },
+          "Branches": []
+        },
+        "T Mediana.Messaging.SystemTextJsonMessageSerializer::Deserialize(System.ReadOnlySpan`1<System.Byte>)": {
+          "Lines": {
+            "46": 2,
+            "47": 2
+          },
+          "Branches": [
+            {
+              "Line": 46,
+              "Offset": 19,
+              "EndOffset": 21,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 1
+            },
+            {
+              "Line": 46,
+              "Offset": 37,
+              "EndOffset": 39,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 0
+            },
+            {
+              "Line": 46,
+              "Offset": 37,
+              "EndOffset": 43,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 1
+            },
+            {
+              "Line": 46,
+              "Offset": 19,
+              "EndOffset": 64,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 1
+            }
+          ]
+        },
+        "System.Object Mediana.Messaging.SystemTextJsonMessageSerializer::Deserialize(System.ReadOnlySpan`1<System.Byte>,System.Type)": {
+          "Lines": {
+            "52": 2,
+            "53": 2
+          },
+          "Branches": [
+            {
+              "Line": 52,
+              "Offset": 25,
+              "EndOffset": 27,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 1
+            },
+            {
+              "Line": 52,
+              "Offset": 35,
+              "EndOffset": 37,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 0
+            },
+            {
+              "Line": 52,
+              "Offset": 35,
+              "EndOffset": 41,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 1
+            },
+            {
+              "Line": 52,
+              "Offset": 25,
+              "EndOffset": 62,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 1
+            }
+          ]
+        },
+        "System.Void Mediana.Messaging.SystemTextJsonMessageSerializer::.ctor(System.Text.Json.JsonSerializerOptions)": {
+          "Lines": {
+            "31": 3,
+            "33": 3,
+            "34": 3
+          },
+          "Branches": [
+            {
+              "Line": 33,
+              "Offset": 9,
+              "EndOffset": 11,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 2
+            },
+            {
+              "Line": 33,
+              "Offset": 9,
+              "EndOffset": 17,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 1
+            }
+          ]
+        },
+        "System.Void Mediana.Messaging.SystemTextJsonMessageSerializer::.cctor()": {
+          "Lines": {
+            "27": 1
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Messaging.SystemTextJsonMessageSerializer/JsonOptions": {
+        "System.Void Mediana.Messaging.SystemTextJsonMessageSerializer/JsonOptions::.cctor()": {
+          "Lines": {
+            "57": 1
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Messaging.SerializationException": {
+        "System.Void Mediana.Messaging.SerializationException::.ctor(System.String)": {
+          "Lines": {
+            "65": 7,
+            "67": 7
+          },
+          "Branches": []
+        },
+        "System.Void Mediana.Messaging.SerializationException::.ctor(System.String,System.Exception)": {
+          "Lines": {
+            "70": 1,
+            "72": 1
+          },
+          "Branches": []
+        }
+      }
+    },
+    "F:\\Projects\\Mediana\\src\\Mediana.Transport.Abstractions\\Inbox\\InboxStore.cs": {
+      "Mediana.Inbox.InMemoryInboxStore": {
+        "System.Threading.Tasks.ValueTask`1<System.Boolean> Mediana.Inbox.InMemoryInboxStore::TryBegin(System.String,System.String)": {
+          "Lines": {
+            "36": 39,
+            "38": 39,
+            "39": 39,
+            "41": 21,
+            "42": 28,
+            "44": 7,
+            "48": 39,
+            "50": 39
+          },
+          "Branches": [
+            {
+              "Line": 39,
+              "Offset": 37,
+              "EndOffset": 39,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 21
+            },
+            {
+              "Line": 42,
+              "Offset": 99,
+              "EndOffset": 59,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 7
+            },
+            {
+              "Line": 39,
+              "Offset": 37,
+              "EndOffset": 101,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 39
+            },
+            {
+              "Line": 42,
+              "Offset": 99,
+              "EndOffset": 101,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 39
+            }
+          ]
+        },
+        "System.Threading.Tasks.ValueTask Mediana.Inbox.InMemoryInboxStore::Complete(System.String,System.String)": {
+          "Lines": {
+            "54": 1,
+            "57": 1,
+            "59": 1
+          },
+          "Branches": []
+        },
+        "System.String Mediana.Inbox.InMemoryInboxStore::Key(System.String,System.String)": {
+          "Lines": {
+            "63": 60
+          },
+          "Branches": []
+        },
+        "System.Void Mediana.Inbox.InMemoryInboxStore::.ctor(System.Int32)": {
+          "Lines": {
+            "24": 8,
+            "25": 8,
+            "26": 8,
+            "29": 8,
+            "31": 8,
+            "32": 8
+          },
+          "Branches": []
+        }
+      }
+    },
+    "F:\\Projects\\Mediana\\src\\Mediana.Transport.Abstractions\\Consuming\\ConsumerPipeline.cs": {
+      "Mediana.Consuming.ConsumerPipeline": {
+        "System.Void Mediana.Consuming.ConsumerPipeline::.ctor(Mediana.Inbox.IInboxStore,Microsoft.Extensions.Logging.ILogger)": {
+          "Lines": {
+            "19": 5,
+            "21": 5,
+            "22": 5,
+            "23": 5
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Consuming.ConsumerPipeline/<>c": {
+        "System.Boolean Mediana.Consuming.ConsumerPipeline/<>c::<Process>b__3_0(System.Exception)": {
+          "Lines": {
+            "35": 14
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Consuming.ConsumerPipeline/<>c__DisplayClass3_0": {
+        "System.Threading.Tasks.ValueTask Mediana.Consuming.ConsumerPipeline/<>c__DisplayClass3_0::<Process>b__1(System.Int32,System.Threading.CancellationToken)": {
+          "Lines": {
+            "48": 10
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Consuming.ConsumerPipeline/<Process>d__3": {
+        "System.Void Mediana.Consuming.ConsumerPipeline/<Process>d__3::MoveNext()": {
+          "Lines": {
+            "34": 8,
+            "37": 8,
+            "40": 1,
+            "41": 1,
+            "42": 1,
+            "47": 7,
+            "49": 7,
+            "50": 7,
+            "51": 7,
+            "52": 4,
+            "53": 4,
+            "54": 3,
+            "56": 3,
+            "58": 3,
+            "60": 8
+          },
+          "Branches": [
+            {
+              "Line": 34,
+              "Offset": 91,
+              "EndOffset": 93,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 4
+            },
+            {
+              "Line": 34,
+              "Offset": 91,
+              "EndOffset": 104,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 8
+            },
+            {
+              "Line": 35,
+              "Offset": 110,
+              "EndOffset": 112,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 8
+            },
+            {
+              "Line": 35,
+              "Offset": 110,
+              "EndOffset": 149,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 8
+            },
+            {
+              "Line": 37,
+              "Offset": 299,
+              "EndOffset": 304,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 1
+            },
+            {
+              "Line": 40,
+              "Offset": 311,
+              "EndOffset": 313,
+              "Path": 0,
+              "Ordinal": 6,
+              "Hits": 1
+            },
+            {
+              "Line": 40,
+              "Offset": 311,
+              "EndOffset": 316,
+              "Path": 1,
+              "Ordinal": 7,
+              "Hits": 0
+            },
+            {
+              "Line": 37,
+              "Offset": 299,
+              "EndOffset": 484,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 7
+            },
+            {
+              "Line": 56,
+              "Offset": 822,
+              "EndOffset": 824,
+              "Path": 0,
+              "Ordinal": 8,
+              "Hits": 2
+            },
+            {
+              "Line": 56,
+              "Offset": 822,
+              "EndOffset": 827,
+              "Path": 1,
+              "Ordinal": 9,
+              "Hits": 1
+            }
+          ]
+        }
+      },
+      "Mediana.Consuming.ConsumerHostService": {
+        "System.Void Mediana.Consuming.ConsumerHostService::.ctor(Mediana.Transports.IConsumerHost)": {
+          "Lines": {
+            "71": 1,
+            "73": 1,
+            "74": 1
+          },
+          "Branches": []
+        }
+      },
+      "Mediana.Consuming.ConsumerHostService/<ExecuteAsync>d__2": {
+        "System.Void Mediana.Consuming.ConsumerHostService/<ExecuteAsync>d__2::MoveNext()": {
+          "Lines": {
+            "78": 1,
+            "81": 1,
+            "82": 0,
+            "83": 1,
+            "86": 1,
+            "88": 1,
+            "89": 1
+          },
+          "Branches": []
+        }
+      }
+    }
+  }
+}

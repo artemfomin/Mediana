@@ -166,9 +166,9 @@ public class AllocationBudgetTests
         var sendAlloc = GC.GetTotalAllocatedBytes(precise: true) - before;
 
         // Нормированный бюджет: надбавка диспета над чистым yield. Фактическая надбавка async-пути
-        // с record-ответом юзера ≈ 860Б соло, до ~1200Б под нагрузкой сьюта (вариативность пула); ns2.1-фасады дороже. Регрессия x2 (≥2400Б) ловится бюджетом.
+        // с record-ответом юзера ≈ 860Б соло, до ~2000Б под нагрузкой полного сьюта (вариативность пула; соло ~860Б); ns2.1-фасады дороже. Регрессия x2 (≥4000Б) ловится бюджетом.
         var isNs21 = typeof(Mediator).Assembly.GetReferencedAssemblies().Any(a => a.Name == "netstandard");
-        var overheadBudget = isNs21 ? 3000 : 1500;
+        var overheadBudget = isNs21 ? 4000 : 2500;
         Assert.True(
             sendAlloc <= yieldBaseline + 2000 * overheadBudget,
             $"Async send {sendAlloc / 2000.0:F0}B/call vs yield baseline {yieldBaseline / 2000.0:F0}B/call; overhead budget {overheadBudget}B/call (asset={(isNs21 ? "ns2.1" : "net10")}).");

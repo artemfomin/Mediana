@@ -5,7 +5,7 @@
       <DataCollector friendlyName="XPlat code coverage" enabled="true">
         <Configuration>
           <Format>cobertura,json</Format>
-          <Include>[Mediana]*,[Mediana.Abstractions]*</Include>
+          <Include>[Mediana]*,[Mediana.Abstractions]*,[Mediana.Transport.Abstractions]*,[Mediana.Outbox]*</Include>
           <UseSourceLink>false</UseSourceLink>
         </Configuration>
       </DataCollector>

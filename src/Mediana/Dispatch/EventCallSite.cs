@@ -107,7 +107,7 @@ internal sealed class EventCallSite<TEvent, THandler>
         // Stryker disable once null-coalescing: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
         => _singletonRoot ?? BuildSingletonRoot(serviceProvider);
 
-    private EventHandlerDelegate<TEvent> BuildSingletonRoot(IServiceProvider serviceProvider)
+    internal EventHandlerDelegate<TEvent> BuildSingletonRoot(IServiceProvider serviceProvider)
     {
         lock (_singletonLock)
         {

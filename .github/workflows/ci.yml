@@ -17,9 +17,10 @@ jobs:
         run: dotnet restore
       - name: Build (warnings as errors)
         run: dotnet build -c Release --no-restore
-      - name: Unit tests + coverage gate (branch >= 95%)
+      - name: Unit tests (both assets) + coverage gate (union branch >= 95%)
         run: |
           dotnet test tests/Mediana.UnitTests -c Release --no-build --collect:"XPlat Code Coverage" --settings coverlet.runsettings
+          dotnet test tests/Mediana.UnitTests.Ns21 -c Release --no-build --collect:"XPlat Code Coverage" --settings coverlet.runsettings
           powershell -File scripts/check-coverage.ps1
       - name: Generator + Contract + Interop tests
         run: |

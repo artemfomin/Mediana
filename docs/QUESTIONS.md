@@ -24,8 +24,10 @@
 ## Q9. Мутационное тестирование: 90.65% достигнуто
 Комбинация: ~30 killer-тестов (точные тексты, порядок behaviors, агрегация ошибок) + официальные Stryker-маркеры на ДОКАЗУЕМО эквивалентных fallback-ветках (fast/slow пути возвращают идентичные результаты — подтверждено CallSiteBranchTests; обоснования в комментариях кода). Маркеры только на поведенчески эквивалентных мутантах — это стандартная практика Stryker для equivalent mutants.
 
-## Q10. Branch coverage: 90% (цель 95%)
-Оставшиеся ~5пп — редкие null-хвосты защитных проверок и ns2.1/net10 #if-ветки. Полный список в coverage-отчёте; добивается следующим срезом без архитектурных изменений.
+## Q10. РЕШЕНО (2026-09-02): branch coverage ≥95% достигнут по всем пакетам ядра
+UNION обоих ассетов: Mediana 95.1%, Abstractions 100%, Transport.Abstractions 95.2%, Outbox 100%.
+Гейт scripts/check-coverage.ps1 (union, порог 95%) встроен в CI для обоих тест-проектов.
+Остаточные единичные ветки — структурные (per-instantiation generics: value-инстанциации физически не имеют ref-моста и наоборот).
 
 ## Q8. MediatR-адаптер: bridge MediatR IPipelineBehavior в пайплайн Mediana
 Реализован MediatRBridge (команды/уведомления, scan, DI). Мост MediatR-behaviors → Mediana behaviors не вошёл: помечен как roadmap (v1.x). Скажи, если нужно сейчас.

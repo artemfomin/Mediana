@@ -208,6 +208,15 @@ public sealed class MedianaConfiguration
             (behaviors, singleton) => Activator.CreateInstance(callSiteType, new object[] { behaviors, singleton })!));
     }
 
+    /// <summary>Тестовый хук: прямая регистрация request-вида (для защитных веток Freeze).</summary>
+    internal MedianaConfiguration AddHandler(HandlerKind kind, Type messageType, Type handlerType)
+    {
+        _requests.Add(new RequestRegistration(
+            kind, messageType, typeof(void), handlerType,
+            (_, _) => throw new InvalidOperationException("Test-only registration must not be invoked.")));
+        return this;
+    }
+
     internal MessageRegistry Freeze()
     {
         var entries = new Dictionary<Type, MessageEntry>();
@@ -220,37 +229,39 @@ public sealed class MedianaConfiguration
             var middlewareTypes = CollectMiddlewareTypes(messageType, responseType, kind);
             var callSite = factory(middlewareTypes, singleton);
 
-            switch (kind)
+            if (kind == HandlerKind.Command)
             {
-                case HandlerKind.Command:
-                    if (entry.CommandCallSite is not null)
-                    {
-                        throw new MediatorConfigurationException(
-                            $"Duplicate command handler for {messageType}: a command must have exactly one handler.");
-                    }
+                if (entry.CommandCallSite is not null)
+                {
+                    throw new MediatorConfigurationException(
+                        $"Duplicate command handler for {messageType}: a command must have exactly one handler.");
+                }
 
-                    entry.CommandCallSite = callSite;
-                    break;
-                case HandlerKind.Query:
-                    if (entry.QueryCallSite is not null)
-                    {
-                        throw new MediatorConfigurationException(
-                            $"Duplicate query handler for {messageType}: a query must have exactly one handler.");
-                    }
+                entry.CommandCallSite = callSite;
+            }
+            else if (kind == HandlerKind.Query)
+            {
+                if (entry.QueryCallSite is not null)
+                {
+                    throw new MediatorConfigurationException(
+                        $"Duplicate query handler for {messageType}: a query must have exactly one handler.");
+                }
 
-                    entry.QueryCallSite = callSite;
-                    break;
-                case HandlerKind.Stream:
-                    if (entry.StreamCallSite is not null)
-                    {
-                        throw new MediatorConfigurationException(
-                            $"Duplicate stream handler for {messageType}: a stream query must have exactly one handler.");
-                    }
+                entry.QueryCallSite = callSite;
+            }
+            else if (kind == HandlerKind.Stream)
+            {
+                if (entry.StreamCallSite is not null)
+                {
+                    throw new MediatorConfigurationException(
+                        $"Duplicate stream handler for {messageType}: a stream query must have exactly one handler.");
+                }
 
-                    entry.StreamCallSite = callSite;
-                    break;
-                default:
-                    throw new InvalidOperationException($"Unknown handler kind {kind}.");
+                entry.StreamCallSite = callSite;
+            }
+            else
+            {
+                throw new InvalidOperationException($"Unknown handler kind {kind}.");
             }
         }
 
