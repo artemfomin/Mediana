@@ -21,6 +21,9 @@
 ## Q5. Мутационное тестирование: полный Stryker-прогон всех пакетов долгий.
 **Дефолт:** Stryker по ядру (Abstractions+Mediana+Transport.Abstractions+Outbox) с порогом score ≥90%; транспорты/адаптеры — в основном integration-покрытии; конфиг расширяется одной строкой.
 
+## Q8. MediatR-адаптер: bridge MediatR IPipelineBehavior в пайплайн Mediana
+Реализован MediatRBridge (команды/уведомления, scan, DI). Мост MediatR-behaviors → Mediana behaviors не вошёл: помечен как roadmap (v1.x). Скажи, если нужно сейчас.
+
 ## Q7 (решено в реализации). RabbitMQ.Client 7.2.2 несёт netstandard2.0-ассет
 D13 упрощён: Mediana.RabbitMQ использует единый клиент 7.2.2 на ОБОИХ TFM (6.x-адаптер не нужен).
 Спека обновлена быть должна при ревью — отметь, если хочешь вернуть 6.x-ветку.

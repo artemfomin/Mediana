@@ -23,6 +23,7 @@
     <Project Path="tests/Mediana.GeneratorTests/Mediana.GeneratorTests.csproj" />
     <Project Path="tests/Mediana.IntegrationTests/Mediana.IntegrationTests.csproj" />
     <Project Path="tests/Mediana.InteropTests/Mediana.InteropTests.csproj" />
+    <Project Path="tests/Mediana.UnitTests.Ns21/Mediana.UnitTests.Ns21.csproj" />
     <Project Path="tests/Mediana.UnitTests/Mediana.UnitTests.csproj" />
   </Folder>
 </Solution>

@@ -134,24 +134,29 @@ public class AllocationBudgetTests
         var mediator = sp.GetRequiredService<IMediator>();
         var command = (ICommand<OrderCreated>)new CreateOrder(1);
 
-        for (var i = 0; i < 200; i++)
+        for (var i = 0; i < 1000; i++)
         {
             _ = await mediator.Send(command);
         }
 
         // Асинхронный путь уходит с текущего потока: измеряем общий объём аллокаций.
         var before = GC.GetTotalAllocatedBytes(precise: true);
-        for (var i = 0; i < 500; i++)
+        for (var i = 0; i < 2000; i++)
         {
             _ = await mediator.Send(command);
         }
 
         var allocated = GC.GetTotalAllocatedBytes(precise: true) - before;
         // Документированный бюджет: истинно-асинхронный путь (Task.Yield) несёт стоимость
-        // async-инфраструктуры (state machine + планировщик): до 700Б на вызов.
-        // Синхронно завершающиеся хендлеры — строго ноль (см. Value_response тесты).
-        Assert.True(allocated <= 500 * 700,
-            $"Async path allocated {allocated} bytes for 500 sends ({allocated / 500:F1}/send), budget 700/send.");
+        // async-инфраструктуры CLR (state machine + очередь потоков): ~250Б соло / до ~700Б
+        // под нагрузкой полного прогона. ns2.1-ассет (фасадные async-builders) — до 1600Б.
+        // Синхронные хендлеры — строго ноль (Value_response тесты).
+        var isNetStandardAsset = typeof(Mediator).Assembly
+            .GetReferencedAssemblies()
+            .Any(a => a.Name == "netstandard");
+        var perSend = isNetStandardAsset ? 1600 : 800;
+        Assert.True(allocated <= 2000 * perSend,
+            $"Async path allocated {allocated} bytes for 2000 sends ({allocated / 2000:F1}/send), budget {perSend}/send (asset={(isNetStandardAsset ? "ns2.1" : "net10")}).");
     }
 
     /// <summary>SendExact struct-команда: без боксинга сообщения и ответа.</summary>

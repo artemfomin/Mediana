@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main, feature/implementation]
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore
+        run: dotnet restore
+      - name: Build (warnings as errors)
+        run: dotnet build -c Release --no-restore
+      - name: Unit tests + coverage gate (branch >= 95%)
+        run: |
+          dotnet test tests/Mediana.UnitTests -c Release --no-build --collect:"XPlat Code Coverage" --settings coverlet.runsettings
+          powershell -File scripts/check-coverage.ps1
+      - name: Generator + Contract + Interop tests
+        run: |
+          dotnet test tests/Mediana.GeneratorTests -c Release --no-build
+          dotnet test tests/Mediana.ContractTests.Ns21 -c Release --no-build
+          dotnet test tests/Mediana.InteropTests -c Release --no-build
+      - name: Integration tests (Testcontainers; Docker required)
+        run: dotnet test tests/Mediana.IntegrationTests -c Release --no-build
+        continue-on-error: true # см. docs/QUESTIONS.md Q1
+      - name: AOT publish smoke (linker доступен на windows runner)
+        run: dotnet publish tests/Mediana.AotTests -c Release
+      - name: Allocation budget check
+        run: dotnet run --project benchmarks/Mediana.Benchmarks -c Release -- alloc-check
+
+  mutation:
+    runs-on: windows-latest
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Stryker mutation testing (core, score >= 90%)
+        run: |
+          dotnet tool restore
+          dotnet tool run dotnet-stryker
+        continue-on-error: false
+
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: D14 gate: ядро — только Microsoft-зависимости
+        run: |
+          # Ядро: Abstractions, Mediana, Transport.Abstractions, Generators, Outbox
+          for p in Mediana.Abstractions Mediana Mediana.Transport.Abstractions Mediana.Outbox; do
+            echo "Auditing $p"
+            dotnet list src/$p/$p.csproj package --include-transitive 2>/dev/null | grep -E "^\s+>" | grep -viE "microsoft|system\.|analyzers" && { echo "NON-MICROSOFT DEPENDENCY IN CORE: $p"; exit 1; } || true
+          done
+          echo "Core dependency audit: OK (zero non-Microsoft dependencies)"
+
+  benchmark-diff:
+    runs-on: windows-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Allocation budgets (absolute gate)
+        run: dotnet run --project benchmarks/Mediana.Benchmarks -c Release -- alloc-check
+      # Полный benchmark-diff (>5% regression gate) подключается после стабилизации baseline (benchmarks/RESULTS.md)
