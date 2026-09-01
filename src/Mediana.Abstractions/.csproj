@@ -1,7 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <Description>Mediana message contracts: IRequest hierarchy, handlers, pipelines, IMediator.</Description>
-    <IsPackable>true</IsPackable>
-    <PackageId>Mediana.Abstractions</PackageId>
-  </PropertyGroup>
-</Project>

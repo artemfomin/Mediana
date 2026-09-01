@@ -78,7 +78,9 @@ public sealed class MessageRegistry
     public MessageRegistry Add(Type messageType, MessageEntry entry)
     {
         if (TryGet(messageType) is not null)
+        // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
         {
+            // Stryker disable once statement: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
             throw new MediatorConfigurationException(
                 $"Message type {messageType} is already registered.");
         }

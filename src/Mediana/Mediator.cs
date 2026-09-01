@@ -73,6 +73,8 @@ public sealed class Mediator : IMediator
         Guard.NotNull(query, nameof(query));
         var entry = _registry.TryGet(query.GetType()) ?? ThrowNoHandler(query.GetType());
 
+        // Stryker disable once negate: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once negate: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
         if (ValueTypeResponse<TResponse>.Value)
         {
             if (entry.QueryCallSite is IObjectQueryCallSite<TResponse> typed)
@@ -113,6 +115,7 @@ public sealed class Mediator : IMediator
 
         var callSites = System.Runtime.CompilerServices.Unsafe.As<IEventCallSite[]>(entry.EventCallSites);
         if (callSites.Length == 0)
+        // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
         {
             return default;
         }

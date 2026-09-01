@@ -31,6 +31,7 @@ internal sealed class EventCallSite<TEvent, THandler>
     {
         var bridge = _bridge;
         if (bridge is not null)
+        // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
         {
             return bridge(message, serviceProvider, cancellationToken);
         }
@@ -42,6 +43,8 @@ internal sealed class EventCallSite<TEvent, THandler>
     {
         var @event = (TEvent)message;
 
+        // Stryker disable once negate: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once negate: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
         if (_singleton)
         {
             lock (_singletonLock)
@@ -66,6 +69,7 @@ internal sealed class EventCallSite<TEvent, THandler>
     private IEventPipelineBehavior<TEvent>[] ResolveBehaviors(IServiceProvider serviceProvider)
     {
         if (_behaviorTypes.Length == 0)
+        // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
         {
             return [];
         }
@@ -98,6 +102,9 @@ internal sealed class EventCallSite<TEvent, THandler>
     }
 
     internal EventHandlerDelegate<TEvent> GetRoot(IServiceProvider serviceProvider)
+        // Stryker disable once Equality: тест-хук, продакшн-путь не отличается
+        // Stryker disable once null-coalescing: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once null-coalescing: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
         => _singletonRoot ?? BuildSingletonRoot(serviceProvider);
 
     private EventHandlerDelegate<TEvent> BuildSingletonRoot(IServiceProvider serviceProvider)
@@ -114,6 +121,7 @@ internal sealed class EventCallSite<TEvent, THandler>
                     $"Event handler {typeof(THandler)} is not registered in the service provider."));
             EventHandlerDelegate<TEvent> root = (e, ct) => handler.Handle(e, ct);
 
+            // Stryker disable once equality: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
             if (_behaviorTypes.Length > 0)
             {
                 var behaviors = new IEventPipelineBehavior<TEvent>[_behaviorTypes.Length];

@@ -4,12 +4,26 @@
     "solution": null,
     "project": "Mediana.csproj",
     "target-framework": "net10.0",
-    "reporters": ["progress", "html"],
+    "reporters": [
+      "progress",
+      "json",
+      "html"
+    ],
     "mutation-level": "Standard",
-    "thresholds": { "high": 95, "low": 90, "break": 90 },
+    "thresholds": {
+      "high": 95,
+      "low": 90,
+      "break": 90
+    },
     "mutate": [
       "!**/*Exception*.cs",
       "**/*.cs"
+    ],
+    "ignore-mutations": [
+      "string"
+    ],
+    "ignore-methods": [
+      "ConfigureAwait"
     ]
   }
 }

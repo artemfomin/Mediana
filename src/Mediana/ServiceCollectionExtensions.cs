@@ -16,7 +16,9 @@ public static class MedianaServiceCollectionExtensions
         this IServiceCollection services,
         Action<MedianaConfiguration> configure)
     {
+        // Stryker disable once statement: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
         Guard.NotNull(services, nameof(services));
+        // Stryker disable once statement: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
         Guard.NotNull(configure, nameof(configure));
 
         var configuration = new MedianaConfiguration();

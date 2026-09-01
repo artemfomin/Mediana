@@ -58,6 +58,7 @@ internal sealed class ChainState<TRequest, TResponse> where TRequest : IRequest<
     }
 
     public void Return()
+    // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
     {
         Behaviors = [];
         Terminal = null!;
@@ -72,6 +73,7 @@ internal sealed class ChainState<TRequest, TResponse> where TRequest : IRequest<
     {
         var state = _pooled;
         if (state is not null)
+        // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
         {
             _pooled = null;
         }

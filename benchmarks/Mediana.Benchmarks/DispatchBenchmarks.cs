@@ -162,7 +162,14 @@ public static class Program
                 _ = benchmarks.Mediana_Send();
             }
 
-            Console.WriteLine($"Mediana Send+2behaviors: {(GC.GetAllocatedBytesForCurrentThread() - before) / 10_000.0:F2} bytes/call");
+            var perCall = (GC.GetAllocatedBytesForCurrentThread() - before) / 10_000.0;
+            Console.WriteLine($"Mediana Send+2behaviors: {perCall:F2} bytes/call");
+            if (perCall > 0.5)
+            {
+                Console.Error.WriteLine($"ALLOC GATE FAIL: {perCall:F2} > 0.5 bytes/call");
+                Environment.Exit(1);
+            }
+
             return;
         }
 
