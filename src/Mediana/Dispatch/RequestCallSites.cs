@@ -15,27 +15,27 @@ namespace Mediana.Dispatch;
 /// </summary>
 internal static class RequestCallSiteCompositor
 {
-    public static RequestHandlerDelegate<TRequest, TResponse> Compose<TRequest, TResponse>(
+    public static HandlerDelegate<TRequest, TResponse> Compose<TRequest, TResponse>(
         IServiceProvider serviceProvider,
-        Type[] behaviorTypes,
-        Func<IServiceProvider, RequestHandlerDelegate<TRequest, TResponse>> terminalFactory)
+        Type[] middlewareTypes,
+        Func<IServiceProvider, HandlerDelegate<TRequest, TResponse>> terminalFactory)
         where TRequest : IRequest<TResponse>
     {
         var root = terminalFactory(serviceProvider);
         // Stryker disable once Equality: fast-path идентичен пустому циклу (мутант эквивалентен)
-        if (behaviorTypes.Length == 0)
+        if (middlewareTypes.Length == 0)
         // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
         {
             return root;
         }
 
         // Stryker disable once equality: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
-        for (var i = behaviorTypes.Length - 1; i >= 0; i--)
+        for (var i = middlewareTypes.Length - 1; i >= 0; i--)
         // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
         {
-            var behavior = (IPipelineBehavior<TRequest, TResponse>)(serviceProvider.GetService(behaviorTypes[i])
+            var behavior = (IHandlerMiddleware<TRequest, TResponse>)(serviceProvider.GetService(middlewareTypes[i])
                 ?? throw new MediatorConfigurationException(
-                    "Behavior " + behaviorTypes[i] + " is not registered in the service provider."));
+                    "Behavior " + middlewareTypes[i] + " is not registered in the service provider."));
             var inner = root;
             root = (r, ct) => behavior.Handle(r, inner, ct);
         }
@@ -52,14 +52,14 @@ internal sealed class CommandCallSite<TCommand, TResponse, THandler>
 {
     private static readonly bool RefResponse = !typeof(TResponse).IsValueType;
 
-    private readonly Type[] _behaviorTypes;
+    private readonly Type[] _middlewareTypes;
     private readonly bool _singleton;
-    private RequestHandlerDelegate<TCommand, TResponse>? _root;
+    private HandlerDelegate<TCommand, TResponse>? _root;
     private readonly RefBridge? _refBridge;
 
-    public CommandCallSite(Type[] behaviorTypes, bool singleton)
+    public CommandCallSite(Type[] middlewareTypes, bool singleton)
     {
-        _behaviorTypes = behaviorTypes;
+        _middlewareTypes = middlewareTypes;
         _singleton = singleton;
         if (RefResponse && singleton)
         {
@@ -161,8 +161,8 @@ internal sealed class CommandCallSite<TCommand, TResponse, THandler>
         }
 
         var scoped = Resolve(serviceProvider);
-        RequestHandlerDelegate<TCommand, TResponse> terminal = (r, ct) => scoped.Handle(r, ct);
-        var state = ChainState<TCommand, TResponse>.Take(serviceProvider, _behaviorTypes, terminal);
+        HandlerDelegate<TCommand, TResponse> terminal = (r, ct) => scoped.Handle(r, ct);
+        var state = ChainState<TCommand, TResponse>.Take(serviceProvider, _middlewareTypes, terminal);
         var result = state.Next(message, cancellationToken);
         // Stryker disable once negate: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
         // Stryker disable once negate: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
@@ -177,10 +177,10 @@ internal sealed class CommandCallSite<TCommand, TResponse, THandler>
         return AwaitAndReturn(state, result);
     }
 
-    private RequestHandlerDelegate<TCommand, TResponse> Compose(IServiceProvider serviceProvider)
+    private HandlerDelegate<TCommand, TResponse> Compose(IServiceProvider serviceProvider)
         => RequestCallSiteCompositor.Compose<TCommand, TResponse>(
             serviceProvider,
-            _behaviorTypes,
+            _middlewareTypes,
             sp =>
             {
                 var handler = Resolve(sp);
@@ -238,14 +238,14 @@ internal sealed class QueryCallSite<TQuery, TResponse, THandler>
     // Stryker disable once unary: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
     private static readonly bool RefResponse = !typeof(TResponse).IsValueType;
 
-    private readonly Type[] _behaviorTypes;
+    private readonly Type[] _middlewareTypes;
     private readonly bool _singleton;
-    private RequestHandlerDelegate<TQuery, TResponse>? _root;
+    private HandlerDelegate<TQuery, TResponse>? _root;
     private readonly RefBridge? _refBridge;
 
-    public QueryCallSite(Type[] behaviorTypes, bool singleton)
+    public QueryCallSite(Type[] middlewareTypes, bool singleton)
     {
-        _behaviorTypes = behaviorTypes;
+        _middlewareTypes = middlewareTypes;
         _singleton = singleton;
         // Stryker disable once logical, negate: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
         // Stryker disable once negate: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
@@ -355,8 +355,8 @@ internal sealed class QueryCallSite<TQuery, TResponse, THandler>
         }
 
         var scoped = Resolve(serviceProvider);
-        RequestHandlerDelegate<TQuery, TResponse> terminal = (r, ct) => scoped.Handle(r, ct);
-        var state = ChainState<TQuery, TResponse>.Take(serviceProvider, _behaviorTypes, terminal);
+        HandlerDelegate<TQuery, TResponse> terminal = (r, ct) => scoped.Handle(r, ct);
+        var state = ChainState<TQuery, TResponse>.Take(serviceProvider, _middlewareTypes, terminal);
         var result = state.Next(message, cancellationToken);
         // Stryker disable once negate: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
         // Stryker disable once negate: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
@@ -371,10 +371,10 @@ internal sealed class QueryCallSite<TQuery, TResponse, THandler>
         return AwaitAndReturn(state, result);
     }
 
-    private RequestHandlerDelegate<TQuery, TResponse> Compose(IServiceProvider serviceProvider)
+    private HandlerDelegate<TQuery, TResponse> Compose(IServiceProvider serviceProvider)
         => RequestCallSiteCompositor.Compose<TQuery, TResponse>(
             serviceProvider,
-            _behaviorTypes,
+            _middlewareTypes,
             sp =>
             {
                 var handler = Resolve(sp);

@@ -80,7 +80,7 @@ public class MutationKiller2Tests
     private sealed record OE : IEvent;
     private sealed class OETrace { public static List<string> Log = []; }
 
-    private sealed class OEBehaviorA : IEventPipelineBehavior<OE>
+    private sealed class OEBehaviorA : IEventMiddleware<OE>
     {
         public ValueTask Handle(OE e, EventHandlerDelegate<OE> next, CancellationToken ct)
         {
@@ -91,7 +91,7 @@ public class MutationKiller2Tests
         }
     }
 
-    private sealed class OEBehaviorB : IEventPipelineBehavior<OE>
+    private sealed class OEBehaviorB : IEventMiddleware<OE>
     {
         public ValueTask Handle(OE e, EventHandlerDelegate<OE> next, CancellationToken ct)
         {
@@ -114,7 +114,7 @@ public class MutationKiller2Tests
     }
 
     [Fact]
-    public async Task Event_singleton_behaviors_execute_in_registration_order()
+    public async Task Event_singleton_middlewares_execute_in_registration_order()
     {
         OETrace.Log = [];
         OECounting.Calls = 0;
@@ -125,8 +125,8 @@ public class MutationKiller2Tests
             .AddMediana(c => c
                 .UseSingletonHandlers()
                 .AddEventHandler<OE, OECounting>()
-                .AddEventBehavior<OE, OEBehaviorA>()
-                .AddEventBehavior<OE, OEBehaviorB>());
+                .AddEventMiddleware<OE, OEBehaviorA>()
+                .AddEventMiddleware<OE, OEBehaviorB>());
         var sp = sc.BuildServiceProvider();
         var mediator = sp.GetRequiredService<IMediator>();
 
@@ -144,7 +144,7 @@ public class MutationKiller2Tests
     }
 
     [Fact]
-    public async Task Event_scoped_behaviors_execute_in_registration_order()
+    public async Task Event_scoped_middlewares_execute_in_registration_order()
     {
         OETrace.Log = [];
         OECounting.Calls = 0;
@@ -154,8 +154,8 @@ public class MutationKiller2Tests
             .AddScoped<OECounting>()
             .AddMediana(c => c
                 .AddEventHandler<OE, OECounting>()
-                .AddEventBehavior<OE, OEBehaviorA>()
-                .AddEventBehavior<OE, OEBehaviorB>());
+                .AddEventMiddleware<OE, OEBehaviorA>()
+                .AddEventMiddleware<OE, OEBehaviorB>());
         sc.AddScoped<OECounting>();
         var sp = sc.BuildServiceProvider();
         var mediator = sp.GetRequiredService<IMediator>();

@@ -47,6 +47,12 @@ Mediana — библиотека паттерна медиатор для .NET 1
 
 ---
 
+## 2.1. Дополнение к журналу решений (пост-ревью реализации)
+
+| # | Решение | Обоснование |
+|---|---------|-------------|
+| D17 | Семейство behaviors переименовано в **Middleware** (выбор пользователя): IPipelineBehavior → IHandlerMiddleware, IEventPipelineBehavior → IEventMiddleware, IStreamPipelineBehavior → IStreamMiddleware, делегат RequestHandlerDelegate<,> → HandlerDelegate<,>, конфиг-методы Add*Behavior → Add*Middleware | Полное совпадение имён с MediatR вызывало CS0104-неоднозначность при совместных ссылках; Middleware — универсальная ментальная модель (ASP.NET Core/MassTransit), ноль коллизий. Namespace Mediana.Pipeline сохранён |
+
 ## 3. Структура решения и пакеты
 
 ```
@@ -160,15 +166,15 @@ public interface IMediator
 ### 4.4 Пайплайн
 
 ```csharp
-public interface IPipelineBehavior<TRequest, TResponse> where TRequest : IRequest<TResponse>
+public interface IHandlerMiddleware<TRequest, TResponse> where TRequest : IRequest<TResponse>
 {
-    ValueTask<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken ct);
+    ValueTask<TResponse> Handle(TRequest request, HandlerDelegate<TResponse> next, CancellationToken ct);
 }
 
-public delegate ValueTask<TResponse> RequestHandlerDelegate<in TRequest, TResponse>(TRequest request, CancellationToken ct);
+public delegate ValueTask<TResponse> HandlerDelegate<in TRequest, TResponse>(TRequest request, CancellationToken ct);
 
 // Пайплайн событий (IEvent не имеет ответа — отдельный контракт)
-public interface IEventPipelineBehavior<in TEvent> where TEvent : IEvent
+public interface IEventMiddleware<in TEvent> where TEvent : IEvent
 {
     ValueTask Handle(TEvent @event, EventHandlerDelegate next, CancellationToken ct);
 }
@@ -179,9 +185,9 @@ public interface IPreProcessor<in TRequest> where TRequest : IRequest { ValueTas
 public interface IPostProcessor<in TRequest, in TResponse> where TRequest : IRequest<TResponse> { ValueTask Process(TRequest r, TResponse response, CancellationToken ct); }
 ```
 
-Порядок: глобальные behaviors (регистрация по порядку) → per-message behaviors → pre-processors → handler → post-processors. Для событий — аналогичная цепочка из `IEventPipelineBehavior` (порядок: глобальные → per-event → хендлеры). Порядок фиксирован при построении реестра; пайплайн сшивается в один статический делегат через scoped-фабрики один раз, не на вызове (§5.1). Behaviors применяются и к локальному диспетчу, и к консьюмеру из очереди (единая семантика кросс-каттинга).
+Порядок: глобальные behaviors (регистрация по порядку) → per-message behaviors → pre-processors → handler → post-processors. Для событий — аналогичная цепочка из `IEventMiddleware` (порядок: глобальные → per-event → хендлеры). Порядок фиксирован при построении реестра; пайплайн сшивается в один статический делегат через scoped-фабрики один раз, не на вызове (§5.1). Behaviors применяются и к локальному диспетчу, и к консьюмеру из очереди (единая семантика кросс-каттинга).
 
-Стриминг: behaviors для `IStreamQuery` — отдельный контракт `IStreamPipelineBehavior<TQuery, TRow>` (композиция через `IAsyncEnumerable`, обёртки не аллоцируют при синхронном движении курсора).
+Стриминг: behaviors для `IStreamQuery` — отдельный контракт `IStreamMiddleware<TQuery, TRow>` (композиция через `IAsyncEnumerable`, обёртки не аллоцируют при синхронном движении курсора).
 
 ---
 
@@ -356,7 +362,7 @@ public interface ITransportPublisher
 
 ## 10. Стриминг
 
-- Локальный: `IAsyncEnumerable` от хендлера через `IMediator.Stream`, behaviors через `IStreamPipelineBehavior` (композиция без аллокаций на синхронном движении курсора).
+- Локальный: `IAsyncEnumerable` от хендлера через `IMediator.Stream`, behaviors через `IStreamMiddleware` (композиция без аллокаций на синхронном движении курсора).
 - Удалённый: RabbitMQ chunked reply-frames + completion/error frame (D11); MassTransit — через его колбэки, где применимо. Kafka — нет.
 - Backpressure: рамки тянутся с consumer-prefetch; отмена (`ct`) → cancel-frame гасит серверный курсор.
 
@@ -465,7 +471,7 @@ Incremental source generator (netstandard2.0, регистрация как anal
 
 - SemVer 2.0; пакеты транспортов и outbox версионируются синхронно с ядром в рамках мажора 1.x.
 - Wire-формат конверта: `EnvelopeVersion`, эволюция только additive; старые читатели игнорируют неизвестные поля.
-- `Mediana.MediatR` поддерживает контракты MediatR 12.x (`IRequestHandler<,>`, `INotificationHandler<>`, `IPipelineBehavior<,>`) через адаптерную регистрацию `cfg.AddMediatRHandlers(assemblies)` — хендлеры оборачиваются в нативные Mediana-хендлеры, участвуют в общих пайплайнах.
+- `Mediana.MediatR` поддерживает контракты MediatR 12.x (`IRequestHandler<,>`, `INotificationHandler<>`, `IHandlerMiddleware<,>`) через адаптерную регистрацию `cfg.AddMediatRHandlers(assemblies)` — хендлеры оборачиваются в нативные Mediana-хендлеры, участвуют в общих пайплайнах.
 - Минимальные версии клиентов фиксируются в csproj как диапазоны с нижней границей (RabbitMQ.Client 7.x, Confluent.Kafka 2.x, MassTransit 8.x+) — точные нижние границы фиксируются на этапе плана реализации по актуальным стабильным версиям.
 
 ---

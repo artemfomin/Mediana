@@ -35,15 +35,15 @@ public sealed class BenchEventHandler2 : IEventHandler<BenchEvent>
     public ValueTask Handle(BenchEvent @event, CancellationToken ct) => default;
 }
 
-public sealed class PassBehavior1 : IPipelineBehavior<BenchCommand, int>
+public sealed class PassBehavior1 : IHandlerMiddleware<BenchCommand, int>
 {
-    public ValueTask<int> Handle(BenchCommand request, RequestHandlerDelegate<BenchCommand, int> next, CancellationToken ct)
+    public ValueTask<int> Handle(BenchCommand request, HandlerDelegate<BenchCommand, int> next, CancellationToken ct)
         => next(request, ct);
 }
 
-public sealed class PassBehavior2 : IPipelineBehavior<BenchCommand, int>
+public sealed class PassBehavior2 : IHandlerMiddleware<BenchCommand, int>
 {
-    public ValueTask<int> Handle(BenchCommand request, RequestHandlerDelegate<BenchCommand, int> next, CancellationToken ct)
+    public ValueTask<int> Handle(BenchCommand request, HandlerDelegate<BenchCommand, int> next, CancellationToken ct)
         => next(request, ct);
 }
 
@@ -105,8 +105,8 @@ public class DispatchBenchmarks
                 .AddQueryHandler<BenchQuery, int, BenchQueryHandler>()
                 .AddEventHandler<BenchEvent, BenchEventHandler1>()
                 .AddEventHandler<BenchEvent, BenchEventHandler2>()
-                .AddBehavior<BenchCommand, int, PassBehavior1>()
-                .AddBehavior<BenchCommand, int, PassBehavior2>());
+                .AddMiddleware<BenchCommand, int, PassBehavior1>()
+                .AddMiddleware<BenchCommand, int, PassBehavior2>());
         _mediana = mediana.BuildServiceProvider().GetRequiredService<IMediator>();
         _command = new BenchCommand(1);
         _query = new BenchQuery(1);

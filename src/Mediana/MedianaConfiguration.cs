@@ -27,15 +27,15 @@ public sealed class MedianaConfiguration
 {
     private readonly List<RequestRegistration> _requests = [];
     private readonly List<EventRegistration> _events = [];
-    private readonly List<(Type BehaviorType, Type OpenInterface)> _behaviors = [];
+    private readonly List<(Type BehaviorType, Type OpenInterface)> _middlewares = [];
     private readonly Dictionary<Type, EventDispatchPolicy> _eventPolicies = [];
     private HandlerLifetime _lifetime = HandlerLifetime.Scoped;
 
-    /// <summary>Фабрика call-site команды/запроса/стрим-запроса: (behaviorTypes, singleton) → call-site.</summary>
-    private delegate object RequestCallSiteFactory(Type[] behaviorTypes, bool singleton);
+    /// <summary>Фабрика call-site команды/запроса/стрим-запроса: (middlewareTypes, singleton) → call-site.</summary>
+    private delegate object RequestCallSiteFactory(Type[] middlewareTypes, bool singleton);
 
     /// <summary>Фабрика call-site события.</summary>
-    private delegate IEventCallSite EventCallSiteFactory(Type[] behaviorTypes, bool singleton);
+    private delegate IEventCallSite EventCallSiteFactory(Type[] middlewareTypes, bool singleton);
 
     private readonly record struct RequestRegistration(
         HandlerKind Kind, Type MessageType, Type ResponseType, Type HandlerType, RequestCallSiteFactory Factory);
@@ -91,30 +91,30 @@ public sealed class MedianaConfiguration
     }
 
     /// <summary>Глобальный behaviour команд/запросов (порядок применения = порядок регистрации).</summary>
-    public MedianaConfiguration AddBehavior<TRequest, TResponse, TBehavior>()
+    public MedianaConfiguration AddMiddleware<TRequest, TResponse, TBehavior>()
         where TRequest : IRequest<TResponse>
-        where TBehavior : IPipelineBehavior<TRequest, TResponse>
+        where TBehavior : IHandlerMiddleware<TRequest, TResponse>
     {
-        _behaviors.Add((typeof(TBehavior), typeof(IPipelineBehavior<,>)));
+        _middlewares.Add((typeof(TBehavior), typeof(IHandlerMiddleware<,>)));
         return this;
     }
 
     /// <summary>Глобальный event-behaviour (ко всем совместимым событиям).</summary>
-    public MedianaConfiguration AddEventBehavior<TEvent, TBehavior>()
+    public MedianaConfiguration AddEventMiddleware<TEvent, TBehavior>()
         where TEvent : IEvent
-        where TBehavior : IEventPipelineBehavior<TEvent>
+        where TBehavior : IEventMiddleware<TEvent>
     {
-        _behaviors.Add((typeof(TBehavior), typeof(IEventPipelineBehavior<>)));
+        _middlewares.Add((typeof(TBehavior), typeof(IEventMiddleware<>)));
         return this;
     }
 
     /// <summary>Глобальный stream-behaviour (ко всем совместимым стрим-запросам).</summary>
-    public MedianaConfiguration AddStreamBehavior<TQuery, TRow, TBehavior>()
+    public MedianaConfiguration AddStreamMiddleware<TQuery, TRow, TBehavior>()
         where TQuery : IStreamQuery<TRow>
-        where TBehavior : IStreamPipelineBehavior<TQuery, TRow>
+        where TBehavior : IStreamMiddleware<TQuery, TRow>
     {
         // Stryker disable once statement: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
-        _behaviors.Add((typeof(TBehavior), typeof(IStreamPipelineBehavior<,>)));
+        _middlewares.Add((typeof(TBehavior), typeof(IStreamMiddleware<,>)));
         return this;
     }
 
@@ -217,8 +217,8 @@ public sealed class MedianaConfiguration
         foreach (var (kind, messageType, responseType, _, factory) in _requests)
         {
             var entry = EnsureEntry(entries, messageType, kind, responseType);
-            var behaviorTypes = CollectBehaviorTypes(messageType, responseType, kind);
-            var callSite = factory(behaviorTypes, singleton);
+            var middlewareTypes = CollectMiddlewareTypes(messageType, responseType, kind);
+            var callSite = factory(middlewareTypes, singleton);
 
             switch (kind)
             {
@@ -329,11 +329,11 @@ public sealed class MedianaConfiguration
         return false;
     }
 
-    private Type[] CollectBehaviorTypes(Type requestType, Type responseType, HandlerKind kind)
+    private Type[] CollectMiddlewareTypes(Type requestType, Type responseType, HandlerKind kind)
     {
         // Stryker disable once conditional: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
-        var openInterface = kind == HandlerKind.Stream ? typeof(IStreamPipelineBehavior<,>) : typeof(IPipelineBehavior<,>);
-        return [.. _behaviors
+        var openInterface = kind == HandlerKind.Stream ? typeof(IStreamMiddleware<,>) : typeof(IHandlerMiddleware<,>);
+        return [.. _middlewares
             .Where(b => b.OpenInterface == openInterface
                 && ImplementsClosedInterface(b.BehaviorType, openInterface, requestType, responseType))
             .Select(b => b.BehaviorType)];
@@ -341,11 +341,11 @@ public sealed class MedianaConfiguration
 
     private Type[] CollectEventBehaviorTypes(Type eventType)
     {
-        return [.. _behaviors
+        return [.. _middlewares
             // Stryker disable once logical: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
             // Stryker disable once logical: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
-            .Where(b => b.OpenInterface == typeof(IEventPipelineBehavior<>)
-                && ImplementsClosedInterface(b.BehaviorType, typeof(IEventPipelineBehavior<>), eventType, null))
+            .Where(b => b.OpenInterface == typeof(IEventMiddleware<>)
+                && ImplementsClosedInterface(b.BehaviorType, typeof(IEventMiddleware<>), eventType, null))
             .Select(b => b.BehaviorType)];
     }
 

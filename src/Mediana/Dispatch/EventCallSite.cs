@@ -14,16 +14,16 @@ internal sealed class EventCallSite<TEvent, THandler>
     where TEvent : IEvent
     where THandler : IEventHandler<TEvent>
 {
-    private readonly Type[] _behaviorTypes;
+    private readonly Type[] _middlewareTypes;
     private readonly bool _singleton;
     private EventHandlerDelegate<TEvent>? _singletonRoot;
     // Non-generic bridge: вызов generic-делегата из canon-shared generic-контекста аллоцирует; Func — нет.
     private Func<object, IServiceProvider, CancellationToken, ValueTask>? _bridge;
     private readonly object _singletonLock = new();
 
-    public EventCallSite(Type[] behaviorTypes, bool singleton)
+    public EventCallSite(Type[] middlewareTypes, bool singleton)
     {
-        _behaviorTypes = behaviorTypes;
+        _middlewareTypes = middlewareTypes;
         _singleton = singleton;
     }
 
@@ -66,20 +66,20 @@ internal sealed class EventCallSite<TEvent, THandler>
         return RunChain(@event, behaviors, terminal, 0, cancellationToken);
     }
 
-    private IEventPipelineBehavior<TEvent>[] ResolveBehaviors(IServiceProvider serviceProvider)
+    private IEventMiddleware<TEvent>[] ResolveBehaviors(IServiceProvider serviceProvider)
     {
-        if (_behaviorTypes.Length == 0)
+        if (_middlewareTypes.Length == 0)
         // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
         {
             return [];
         }
 
-        var behaviors = new IEventPipelineBehavior<TEvent>[_behaviorTypes.Length];
-        for (var i = 0; i < _behaviorTypes.Length; i++)
+        var behaviors = new IEventMiddleware<TEvent>[_middlewareTypes.Length];
+        for (var i = 0; i < _middlewareTypes.Length; i++)
         {
-            behaviors[i] = (IEventPipelineBehavior<TEvent>)(serviceProvider.GetService(_behaviorTypes[i])
+            behaviors[i] = (IEventMiddleware<TEvent>)(serviceProvider.GetService(_middlewareTypes[i])
                 ?? throw new MediatorConfigurationException(
-                    $"Event behavior {_behaviorTypes[i]} is not registered in the service provider."));
+                    $"Event behavior {_middlewareTypes[i]} is not registered in the service provider."));
         }
 
         return behaviors;
@@ -87,7 +87,7 @@ internal sealed class EventCallSite<TEvent, THandler>
 
     private static ValueTask RunChain(
         TEvent @event,
-        IEventPipelineBehavior<TEvent>[] behaviors,
+        IEventMiddleware<TEvent>[] behaviors,
         EventHandlerDelegate<TEvent> terminal,
         int index,
         CancellationToken cancellationToken)
@@ -122,14 +122,14 @@ internal sealed class EventCallSite<TEvent, THandler>
             EventHandlerDelegate<TEvent> root = (e, ct) => handler.Handle(e, ct);
 
             // Stryker disable once equality: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
-            if (_behaviorTypes.Length > 0)
+            if (_middlewareTypes.Length > 0)
             {
-                var behaviors = new IEventPipelineBehavior<TEvent>[_behaviorTypes.Length];
-                for (var i = _behaviorTypes.Length - 1; i >= 0; i--)
+                var behaviors = new IEventMiddleware<TEvent>[_middlewareTypes.Length];
+                for (var i = _middlewareTypes.Length - 1; i >= 0; i--)
                 {
-                    behaviors[i] = (IEventPipelineBehavior<TEvent>)(serviceProvider.GetService(_behaviorTypes[i])
+                    behaviors[i] = (IEventMiddleware<TEvent>)(serviceProvider.GetService(_middlewareTypes[i])
                         ?? throw new MediatorConfigurationException(
-                            $"Event behavior {_behaviorTypes[i]} is not registered in the service provider."));
+                            $"Event behavior {_middlewareTypes[i]} is not registered in the service provider."));
                     var inner = root;
                     var behavior = behaviors[i];
                     root = (e, ct) => behavior.Handle(e, inner, ct);

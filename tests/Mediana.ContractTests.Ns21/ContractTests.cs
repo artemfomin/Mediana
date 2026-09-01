@@ -58,9 +58,9 @@ public class ApiSurfaceTests
         Assert.Contains("Mediana.Handlers.IQueryHandler`2", api);
         Assert.Contains("Mediana.Handlers.IEventHandler`1", api);
         Assert.Contains("Mediana.Handlers.IStreamHandler`2", api);
-        Assert.Contains("Mediana.Pipeline.IPipelineBehavior`2", api);
-        Assert.Contains("Mediana.Pipeline.IEventPipelineBehavior`1", api);
-        Assert.Contains("Mediana.Pipeline.IStreamPipelineBehavior`2", api);
+        Assert.Contains("Mediana.Pipeline.IHandlerMiddleware`2", api);
+        Assert.Contains("Mediana.Pipeline.IEventMiddleware`1", api);
+        Assert.Contains("Mediana.Pipeline.IStreamMiddleware`2", api);
         Assert.Contains("Mediana.Pipeline.IPreProcessor`1", api);
         Assert.Contains("Mediana.Pipeline.IPostProcessor`2", api);
         Assert.Contains("Mediana.MediatorConfigurationException", api);
@@ -78,7 +78,7 @@ public class ApiSurfaceTests
         Assert.Contains("Mediana.MedianaConfiguration::AddQueryHandler/3", api);
         Assert.Contains("Mediana.MedianaConfiguration::AddEventHandler/2", api);
         Assert.Contains("Mediana.MedianaConfiguration::AddStreamHandler/3", api);
-        Assert.Contains("Mediana.MedianaConfiguration::AddBehavior/3", api);
+        Assert.Contains("Mediana.MedianaConfiguration::AddMiddleware/3", api);
         Assert.Contains("Mediana.MedianaConfiguration::UseSingletonHandlers/0", api);
         Assert.Contains("Mediana.HandlerLifetime", api);
         Assert.Contains("Mediana.Dispatch.MessageRegistry", api);

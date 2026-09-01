@@ -116,13 +116,13 @@ public class QueryPathCoverageTests
         Assert.Equal("parallel-after-await", ex.InnerExceptions[0].Message);
     }
 
-    internal sealed class CountedEventBehavior : Pipeline.IEventPipelineBehavior<CountedEvent>
+    internal sealed class CountedEventBehavior : Pipeline.IEventMiddleware<CountedEvent>
     {
         public ValueTask Handle(CountedEvent @event, Pipeline.EventHandlerDelegate<CountedEvent> next, CancellationToken ct)
             => next(@event, ct);
     }
 
-    internal sealed class SyncRowsFilter : Pipeline.IStreamPipelineBehavior<SyncRows, int>
+    internal sealed class SyncRowsFilter : Pipeline.IStreamMiddleware<SyncRows, int>
     {
         public IAsyncEnumerable<int> Handle(SyncRows query, Pipeline.StreamHandlerDelegate<SyncRows, int> next, CancellationToken ct)
             => next(query, ct);
@@ -138,15 +138,15 @@ public class QueryPathCoverageTests
     }
 
     [Fact]
-    public async Task Publish_event_behaviors_applied_twice()
+    public async Task Publish_event_middlewares_applied_twice()
     {
         var sc = new ServiceCollection()
             .AddSingleton<CountingHandler1>()
             .AddSingleton<CountedEventBehavior>()
             .AddMediana(c => c
                 .AddEventHandler<CountedEvent, CountingHandler1>()
-                .AddEventBehavior<CountedEvent, CountedEventBehavior>()
-                .AddEventBehavior<CountedEvent, CountedEventBehavior>());
+                .AddEventMiddleware<CountedEvent, CountedEventBehavior>()
+                .AddEventMiddleware<CountedEvent, CountedEventBehavior>());
         var sp = sc.BuildServiceProvider();
         var mediator = sp.GetRequiredService<IMediator>();
 
@@ -201,7 +201,7 @@ public class QueryPathCoverageTests
             .AddMediana(c => c
                 .UseSingletonHandlers()
                 .AddStreamHandler<SyncRows, int, SyncRowsStreamHandler>()
-                .AddStreamBehavior<SyncRows, int, SyncRowsFilter>());
+                .AddStreamMiddleware<SyncRows, int, SyncRowsFilter>());
         var sp = sc.BuildServiceProvider();
         var mediator = sp.GetRequiredService<IMediator>();
 

@@ -71,19 +71,19 @@ public class CallSiteBranchTests
         }
     }
 
-    private sealed class Beh1 : IPipelineBehavior<VCmd, int>
+    private sealed class Beh1 : IHandlerMiddleware<VCmd, int>
     {
-        public ValueTask<int> Handle(VCmd r, RequestHandlerDelegate<VCmd, int> next, CancellationToken ct) => next(r, ct);
+        public ValueTask<int> Handle(VCmd r, HandlerDelegate<VCmd, int> next, CancellationToken ct) => next(r, ct);
     }
 
-    private sealed class Beh2 : IPipelineBehavior<VCmd, int>
+    private sealed class Beh2 : IHandlerMiddleware<VCmd, int>
     {
-        public ValueTask<int> Handle(VCmd r, RequestHandlerDelegate<VCmd, int> next, CancellationToken ct) => next(r, ct);
+        public ValueTask<int> Handle(VCmd r, HandlerDelegate<VCmd, int> next, CancellationToken ct) => next(r, ct);
     }
 
-    private sealed class RBeh : IPipelineBehavior<RCmd, RResp>
+    private sealed class RBeh : IHandlerMiddleware<RCmd, RResp>
     {
-        public ValueTask<RResp> Handle(RCmd r, RequestHandlerDelegate<RCmd, RResp> next, CancellationToken ct) => next(r, ct);
+        public ValueTask<RResp> Handle(RCmd r, HandlerDelegate<RCmd, RResp> next, CancellationToken ct) => next(r, ct);
     }
 
     private static Mediator BuildMediator(MedianaConfiguration cfg, IServiceCollection services)
@@ -97,14 +97,14 @@ public class CallSiteBranchTests
     // ── Command: матрица путей ───────────────────────────────────────────────
 
     [Fact]
-    public async Task Command_value_singleton_with_behaviors_all_paths()
+    public async Task Command_value_singleton_with_middlewares_all_paths()
     {
         var cfg = new MedianaConfiguration().UseSingletonHandlers()
             .AddCommandHandler<VCmd, int, VCmdHandler>()
             .AddCommandHandler<RCmd, RResp, RCmdHandler>()
-            .AddBehavior<VCmd, int, Beh1>()
-            .AddBehavior<VCmd, int, Beh2>()
-            .AddBehavior<RCmd, RResp, RBeh>();
+            .AddMiddleware<VCmd, int, Beh1>()
+            .AddMiddleware<VCmd, int, Beh2>()
+            .AddMiddleware<RCmd, RResp, RBeh>();
         var services = new ServiceCollection()
             .AddSingleton<VCmdHandler>()
             .AddSingleton<RCmdHandler>()
@@ -123,12 +123,12 @@ public class CallSiteBranchTests
     }
 
     [Fact]
-    public async Task Command_value_scoped_with_behaviors()
+    public async Task Command_value_scoped_with_middlewares()
     {
         var cfg = new MedianaConfiguration()
             .AddCommandHandler<VCmd, int, VCmdHandler>()
-            .AddBehavior<VCmd, int, Beh1>()
-            .AddBehavior<VCmd, int, Beh2>();
+            .AddMiddleware<VCmd, int, Beh1>()
+            .AddMiddleware<VCmd, int, Beh2>();
         var services = new ServiceCollection()
             .AddScoped<VCmdHandler>()
             .AddScoped<Beh1>()
@@ -146,7 +146,7 @@ public class CallSiteBranchTests
     {
         var cfg = new MedianaConfiguration()
             .AddCommandHandler<RCmd, RResp, RCmdHandler>()
-            .AddBehavior<RCmd, RResp, RBeh>();
+            .AddMiddleware<RCmd, RResp, RBeh>();
         var services = new ServiceCollection()
             .AddScoped<RCmdHandler>()
             .AddScoped<RBeh>();
@@ -175,7 +175,7 @@ public class CallSiteBranchTests
     {
         var cfg = new MedianaConfiguration()
             .AddCommandHandler<VCmd, int, VCmdAsyncHandler>()
-            .AddBehavior<VCmd, int, Beh1>();
+            .AddMiddleware<VCmd, int, Beh1>();
         var services = new ServiceCollection()
             .AddScoped<VCmdAsyncHandler>()
             .AddScoped<Beh1>();
@@ -282,7 +282,7 @@ public class CallSiteBranchTests
     // ── Композитор: 0-behavior fast-path ────────────────────────────────────
 
     [Fact]
-    public async Task Compositor_zero_behaviors_returns_terminal()
+    public async Task Compositor_zero_middlewares_returns_terminal()
     {
         var cfg = new MedianaConfiguration().UseSingletonHandlers()
             .AddCommandHandler<VCmd, int, VCmdHandler>(); // behaviors не зарегистрированы
@@ -301,13 +301,13 @@ public class CallSiteBranchTests
         public ValueTask Handle(Evt e, CancellationToken ct) => default;
     }
 
-    private sealed class EB : IEventPipelineBehavior<Evt>
+    private sealed class EB : IEventMiddleware<Evt>
     {
         public ValueTask Handle(Evt e, EventHandlerDelegate<Evt> next, CancellationToken ct) => next(e, ct);
     }
 
     [Fact]
-    public async Task Event_singleton_without_behaviors()
+    public async Task Event_singleton_without_middlewares()
     {
         var cfg = new MedianaConfiguration().UseSingletonHandlers()
             .AddEventHandler<Evt, EH1>();
@@ -323,7 +323,7 @@ public class CallSiteBranchTests
     {
         var scopedCfg = new MedianaConfiguration()
             .AddEventHandler<Evt, EH1>()
-            .AddEventBehavior<Evt, EB>();
+            .AddEventMiddleware<Evt, EB>();
         var scopedServices = new ServiceCollection()
             .AddScoped<EH1>()
             .AddScoped<EB>();
@@ -332,7 +332,7 @@ public class CallSiteBranchTests
 
         var singletonCfg = new MedianaConfiguration().UseSingletonHandlers()
             .AddEventHandler<Evt, EH1>()
-            .AddEventBehavior<Evt, EB>();
+            .AddEventMiddleware<Evt, EB>();
         var singletonServices = new ServiceCollection()
             .AddSingleton<EH1>()
             .AddSingleton<EB>();

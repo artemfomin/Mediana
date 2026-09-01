@@ -244,8 +244,8 @@ public class MediatorTests
         OrderingBehavior.Trace = [];
         var sp = Build(
             c => c.AddCommandHandler<CreateOrder, OrderCreated, CreateOrderHandler>()
-                  .AddBehavior<CreateOrder, OrderCreated, OrderingBehavior>()
-                  .AddBehavior<CreateOrder, OrderCreated, SecondBehavior>(),
+                  .AddMiddleware<CreateOrder, OrderCreated, OrderingBehavior>()
+                  .AddMiddleware<CreateOrder, OrderCreated, SecondBehavior>(),
             s =>
             {
                 s.AddSingleton<CreateOrderHandler>();
@@ -265,11 +265,11 @@ public class MediatorTests
     }
 
     [Fact]
-    public async Task Cancellation_token_reaches_behaviors()
+    public async Task Cancellation_token_reaches_middlewares()
     {
         var sp = Build(
             c => c.AddQueryHandler<GetOrder, OrderDto, GetOrderHandler>()
-                  .AddBehavior<GetOrder, OrderDto, CancellationBehavior>(),
+                  .AddMiddleware<GetOrder, OrderDto, CancellationBehavior>(),
             s =>
             {
                 s.AddSingleton<GetOrderHandler>();
@@ -285,12 +285,12 @@ public class MediatorTests
     }
 
     [Fact]
-    public async Task Event_behaviors_wrap_event_handlers()
+    public async Task Event_middlewares_wrap_event_handlers()
     {
         EventOrderingBehavior.Trace = [];
         var sp = Build(
             c => c.AddEventHandler<OrderCreated, OrderCreatedAuditHandler>()
-                  .AddEventBehavior<OrderCreated, EventOrderingBehavior>(),
+                  .AddEventMiddleware<OrderCreated, EventOrderingBehavior>(),
             s =>
             {
                 s.AddSingleton<OrderCreatedAuditHandler>();

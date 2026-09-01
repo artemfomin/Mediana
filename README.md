@@ -23,7 +23,7 @@ services.AddMediana(cfg => cfg
     .AddQueryHandler<GetOrder, OrderDto, GetOrderHandler>()
     .AddEventHandler<OrderCreated, OrderCreatedAuditHandler>()
     .AddStreamHandler<SearchOrders, OrderDto, SearchOrdersHandler>()
-    .AddBehavior<CreateOrder, OrderCreated, ValidationBehavior>()
+    .AddMiddleware<CreateOrder, OrderCreated, ValidationBehavior>()
     .UseSingletonHandlers()); // 0 DI-обращений на вызов для stateless-хендлеров
 
 // Или генератором (без рефлексии):

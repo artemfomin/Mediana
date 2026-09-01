@@ -131,7 +131,7 @@ public class ClosingBranchTests
     public async Task ChainState_pool_reuse()
     {
         await Task.CompletedTask;
-        Pipeline.RequestHandlerDelegate<C2, int> terminal = (_, _) => new ValueTask<int>(1);
+        Pipeline.HandlerDelegate<C2, int> terminal = (_, _) => new ValueTask<int>(1);
         var sp = new ServiceCollection().BuildServiceProvider();
         var s1 = ChainState<C2, int>.Take(sp, [], terminal);
         var r1 = s1.Next(new C2(1), default);

@@ -78,15 +78,15 @@ public interface IEventHandler<in TEvent> where TEvent : IEvent
 public interface IStreamHandler<in TQuery, TRow> where TQuery : IStreamQuery<TRow>
 { IAsyncEnumerable<TRow> Handle(TQuery query, CancellationToken ct); }
 
-public delegate ValueTask<TResponse> RequestHandlerDelegate<in TRequest, TResponse>(TRequest request, CancellationToken ct) where TRequest : IRequest<TResponse>;
+public delegate ValueTask<TResponse> HandlerDelegate<in TRequest, TResponse>(TRequest request, CancellationToken ct) where TRequest : IRequest<TResponse>;
 public delegate ValueTask EventHandlerDelegate<in TEvent>(TEvent @event, CancellationToken ct) where TEvent : IEvent;
 public delegate IAsyncEnumerable<TRow> StreamHandlerDelegate<in TQuery, TRow>(TQuery query, CancellationToken ct) where TQuery : IStreamQuery<TRow>;
 
-public interface IPipelineBehavior<TRequest, TResponse> where TRequest : IRequest<TResponse>
-{ ValueTask<TResponse> Handle(TRequest request, RequestHandlerDelegate<TRequest, TResponse> next, CancellationToken ct); }
-public interface IEventPipelineBehavior<in TEvent> where TEvent : IEvent
+public interface IHandlerMiddleware<TRequest, TResponse> where TRequest : IRequest<TResponse>
+{ ValueTask<TResponse> Handle(TRequest request, HandlerDelegate<TRequest, TResponse> next, CancellationToken ct); }
+public interface IEventMiddleware<in TEvent> where TEvent : IEvent
 { ValueTask Handle(TEvent @event, EventHandlerDelegate<TEvent> next, CancellationToken ct); }
-public interface IStreamPipelineBehavior<in TQuery, TRow> where TQuery : IStreamQuery<TRow>
+public interface IStreamMiddleware<in TQuery, TRow> where TQuery : IStreamQuery<TRow>
 { IAsyncEnumerable<TRow> Handle(TQuery query, StreamHandlerDelegate<TQuery, TRow> next, CancellationToken ct); }
 
 public interface IMediator
@@ -129,7 +129,7 @@ internal sealed class MessageRegistry {
 **Files:** `src/Mediana/Dispatch/PipelineCompiler.cs`, `Mediator.cs`, `Dispatch/PrePostProcessorBehavior.cs`, `ValueTasks/PooledValueTaskSource.cs`, `ValueTasks/ValueTaskPool.cs`.
 
 **Ключевые решения:**
-- `PipelineCompiler` строит на registration-time цепочку: для command/query — resolve behaviors (`IPipelineBehavior<T,R>` в порядке регистрации), wrapper для pre/post, терминальный вызов handler. Цепочка — статические делегаты, замыканий нет (всё через captured-free static lambdas + передаваемый `IServiceProvider` только в точке резолва singleton/scoped).
+- `PipelineCompiler` строит на registration-time цепочку: для command/query — resolve behaviors (`IHandlerMiddleware<T,R>` в порядке регистрации), wrapper для pre/post, терминальный вызов handler. Цепочка — статические делегаты, замыканий нет (всё через captured-free static lambdas + передаваемый `IServiceProvider` только в точке резолва singleton/scoped).
 - `Mediator.Send`: lookup в реестре → вызов compiled `Invoker(message, serviceProvider, ct)`. Синхронное завершение — `new ValueTask<T>(result)` (struct, не аллоцирует); истинная асинхронность — хендлер возвращает ValueTask напрямую (никакого ожидания/await в диспетче для sync-пути: диспетч возвращает ValueTask хендлера как есть).
 - Publish sequential: цикл по compiled invokers, await каждый; Parallel: `ParallelAsyncBarrier` на pooled IVTS — ValueTaskPool.
 - `ValueTaskPool`: кольцевой пул `ManualResetValueTaskSourceCore<bool>` (ns2.1-совместимо).

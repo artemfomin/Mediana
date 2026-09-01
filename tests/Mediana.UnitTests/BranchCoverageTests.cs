@@ -98,8 +98,8 @@ public class BranchCoverageTests
             .AddSingleton<StreamFilterBehavior>()
             .AddMediana(c => c
                 .AddStreamHandler<SearchOrders, OrderDto, SearchOrdersHandler>()
-                .AddStreamBehavior<SearchOrders, OrderDto, StreamFilterBehavior>()
-                .AddBehavior<CreateOrder, OrderCreated, OrderingBehavior>()); // не применим к стриму
+                .AddStreamMiddleware<SearchOrders, OrderDto, StreamFilterBehavior>()
+                .AddMiddleware<CreateOrder, OrderCreated, OrderingBehavior>()); // не применим к стриму
         var sp = sc.BuildServiceProvider();
         var mediator = sp.GetRequiredService<IMediator>();
 
@@ -236,14 +236,14 @@ public class BranchCoverageTests
     }
 
     [Fact]
-    public async Task Scoped_command_with_behaviors_uses_chain_state()
+    public async Task Scoped_command_with_middlewares_uses_chain_state()
     {
         var sc = new ServiceCollection()
             .AddScoped<ScopedCounterHandler>()
             .AddScoped<AllocBehavior1>()
             .AddMediana(c => c
                 .AddCommandHandler<AllocCommand, int, AllocCommandHandler>()
-                .AddBehavior<AllocCommand, int, AllocBehavior1>());
+                .AddMiddleware<AllocCommand, int, AllocBehavior1>());
         sc.AddScoped<AllocCommandHandler>();
         var sp = sc.BuildServiceProvider();
         using var scope = sp.CreateScope();
@@ -294,7 +294,7 @@ public class BranchCoverageTests
     {
         var cfg = new MedianaConfiguration()
             .AddCommandHandler<AllocCommand, int, AllocCommandHandler>()
-            .AddBehavior<AllocCommand, int, AllocBehavior1>(); // behavior не в DI
+            .AddMiddleware<AllocCommand, int, AllocBehavior1>(); // behavior не в DI
         var mediator = new Mediator(cfg.Freeze(), new ServiceCollection().BuildServiceProvider());
 
         await Assert.ThrowsAsync<MediatorConfigurationException>(
@@ -331,7 +331,7 @@ public class BranchCoverageTests
     public async Task ChainState_double_next_after_terminal_throws()
     {
         var terminalCalls = 0;
-        RequestHandlerDelegate<AllocCommand, int> terminal = (_, _) =>
+        HandlerDelegate<AllocCommand, int> terminal = (_, _) =>
         {
             terminalCalls++;
             return new ValueTask<int>(1);
@@ -355,7 +355,7 @@ public class BranchCoverageTests
     // ── Событийные behaviors ───────────────────────────────────────────────────
 
     [Fact]
-    public async Task Event_behaviors_scoped_mode_applied_in_order()
+    public async Task Event_middlewares_scoped_mode_applied_in_order()
     {
         EventOrderingBehavior.Trace = [];
         var sc = new ServiceCollection()
@@ -363,7 +363,7 @@ public class BranchCoverageTests
             .AddScoped<EventOrderingBehavior>()
             .AddMediana(c => c
                 .AddEventHandler<OrderCreated, OrderCreatedAuditHandler>()
-                .AddEventBehavior<OrderCreated, EventOrderingBehavior>());
+                .AddEventMiddleware<OrderCreated, EventOrderingBehavior>());
         var sp = sc.BuildServiceProvider();
         var mediator = sp.GetRequiredService<IMediator>();
 
@@ -378,7 +378,7 @@ public class BranchCoverageTests
             .AddScoped<OrderCreatedAuditHandler>()
             .AddMediana(c => c
                 .AddEventHandler<OrderCreated, OrderCreatedAuditHandler>()
-                .AddEventBehavior<OrderCreated, EventOrderingBehavior>()); // не в DI
+                .AddEventMiddleware<OrderCreated, EventOrderingBehavior>()); // не в DI
         var sp = sc.BuildServiceProvider();
         var mediator = sp.GetRequiredService<IMediator>();
 
@@ -394,7 +394,7 @@ public class BranchCoverageTests
             .AddScoped<EventOrderingBehavior>()
             .AddMediana(c => c
                 .AddEventHandler<OrderCreated, ThrowingEventHandler>()
-                .AddEventBehavior<OrderCreated, EventOrderingBehavior>());
+                .AddEventMiddleware<OrderCreated, EventOrderingBehavior>());
         var sp = sc.BuildServiceProvider();
         var mediator = sp.GetRequiredService<IMediator>();
 
@@ -405,7 +405,7 @@ public class BranchCoverageTests
     // ── Singleton event с behaviors ────────────────────────────────────────────
 
     [Fact]
-    public async Task Singleton_event_with_behaviors_zero_di()
+    public async Task Singleton_event_with_middlewares_zero_di()
     {
         EventOrderingBehavior.Trace = [];
         var sc = new ServiceCollection()
@@ -414,7 +414,7 @@ public class BranchCoverageTests
             .AddMediana(c => c
                 .UseSingletonHandlers()
                 .AddEventHandler<OrderCreated, OrderCreatedAuditHandler>()
-                .AddEventBehavior<OrderCreated, EventOrderingBehavior>());
+                .AddEventMiddleware<OrderCreated, EventOrderingBehavior>());
         var sp = sc.BuildServiceProvider();
         var mediator = sp.GetRequiredService<IMediator>();
 

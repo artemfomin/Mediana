@@ -27,7 +27,7 @@ public class AllocationBudgetTests
 
     /// <summary>Бюджет §12.1: Send с 2 behaviors, sync-хендлер — 0 байт в steady state.</summary>
     [Fact]
-    public async Task Send_sync_with_two_behaviors_zero_alloc()
+    public async Task Send_sync_with_two_middlewares_zero_alloc()
     {
         var sc = new ServiceCollection()
             .AddSingleton<AllocCommandHandler>()
@@ -36,8 +36,8 @@ public class AllocationBudgetTests
             .AddMediana(c => c
                 .UseSingletonHandlers()
                 .AddCommandHandler<AllocCommand, int, AllocCommandHandler>()
-                .AddBehavior<AllocCommand, int, AllocBehavior1>()
-                .AddBehavior<AllocCommand, int, AllocBehavior2>());
+                .AddMiddleware<AllocCommand, int, AllocBehavior1>()
+                .AddMiddleware<AllocCommand, int, AllocBehavior2>());
         var sp = sc.BuildServiceProvider();
         var mediator = sp.GetRequiredService<IMediator>();
         var command = (ICommand<int>)new AllocCommand(7);
@@ -93,7 +93,7 @@ public class AllocationBudgetTests
     /// ≤1 малой аллокации на вызов (IAsyncEnumerator) — документированная граница.
     /// </summary>
     [Fact]
-    public async Task Stream_without_behaviors_zero_alloc_per_cursor_move()
+    public async Task Stream_without_middlewares_zero_alloc_per_cursor_move()
     {
         var (mediator, _) = BuildSingletonMediator();
         var query = (IStreamQuery<int>)new SyncRows();
@@ -205,15 +205,15 @@ public class AllocationBudgetTests
 
 // ── Вспомогательные типы для аллокационных тестов ──────────────────────────
 
-public sealed class AllocBehavior1 : Pipeline.IPipelineBehavior<AllocCommand, int>
+public sealed class AllocBehavior1 : Pipeline.IHandlerMiddleware<AllocCommand, int>
 {
-    public ValueTask<int> Handle(AllocCommand request, Pipeline.RequestHandlerDelegate<AllocCommand, int> next, CancellationToken ct)
+    public ValueTask<int> Handle(AllocCommand request, Pipeline.HandlerDelegate<AllocCommand, int> next, CancellationToken ct)
         => next(request, ct);
 }
 
-public sealed class AllocBehavior2 : Pipeline.IPipelineBehavior<AllocCommand, int>
+public sealed class AllocBehavior2 : Pipeline.IHandlerMiddleware<AllocCommand, int>
 {
-    public ValueTask<int> Handle(AllocCommand request, Pipeline.RequestHandlerDelegate<AllocCommand, int> next, CancellationToken ct)
+    public ValueTask<int> Handle(AllocCommand request, Pipeline.HandlerDelegate<AllocCommand, int> next, CancellationToken ct)
         => next(request, ct);
 }
 

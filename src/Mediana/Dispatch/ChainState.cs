@@ -13,9 +13,9 @@ namespace Mediana.Dispatch;
 /// </summary>
 internal sealed class ChainState<TRequest, TResponse> where TRequest : IRequest<TResponse>
 {
-    internal IPipelineBehavior<TRequest, TResponse>[] Behaviors = [];
-    internal RequestHandlerDelegate<TRequest, TResponse> Terminal = null!;
-    internal RequestHandlerDelegate<TRequest, TResponse> NextDelegate = null!;
+    internal IHandlerMiddleware<TRequest, TResponse>[] Behaviors = [];
+    internal HandlerDelegate<TRequest, TResponse> Terminal = null!;
+    internal HandlerDelegate<TRequest, TResponse> NextDelegate = null!;
     internal int Index;
 
     [ThreadStatic]
@@ -27,7 +27,7 @@ internal sealed class ChainState<TRequest, TResponse> where TRequest : IRequest<
         NextDelegate = Next;
     }
 
-    public void Configure(IPipelineBehavior<TRequest, TResponse>[] behaviors, RequestHandlerDelegate<TRequest, TResponse> terminal)
+    public void Configure(IHandlerMiddleware<TRequest, TResponse>[] behaviors, HandlerDelegate<TRequest, TResponse> terminal)
     {
         Behaviors = behaviors;
         Terminal = terminal;
@@ -68,8 +68,8 @@ internal sealed class ChainState<TRequest, TResponse> where TRequest : IRequest<
     /// <summary>Взять состояние из thread-static пула или создать; резолвит behaviors по типам.</summary>
     public static ChainState<TRequest, TResponse> Take(
         IServiceProvider serviceProvider,
-        Type[] behaviorTypes,
-        RequestHandlerDelegate<TRequest, TResponse> terminal)
+        Type[] middlewareTypes,
+        HandlerDelegate<TRequest, TResponse> terminal)
     {
         var state = _pooled;
         if (state is not null)
@@ -82,19 +82,19 @@ internal sealed class ChainState<TRequest, TResponse> where TRequest : IRequest<
             state = new ChainState<TRequest, TResponse>();
         }
 
-        IPipelineBehavior<TRequest, TResponse>[] behaviors;
-        if (behaviorTypes.Length == 0)
+        IHandlerMiddleware<TRequest, TResponse>[] behaviors;
+        if (middlewareTypes.Length == 0)
         {
             behaviors = [];
         }
         else
         {
-            behaviors = new IPipelineBehavior<TRequest, TResponse>[behaviorTypes.Length];
-            for (var i = 0; i < behaviorTypes.Length; i++)
+            behaviors = new IHandlerMiddleware<TRequest, TResponse>[middlewareTypes.Length];
+            for (var i = 0; i < middlewareTypes.Length; i++)
             {
-                behaviors[i] = (IPipelineBehavior<TRequest, TResponse>)(serviceProvider.GetService(behaviorTypes[i])
+                behaviors[i] = (IHandlerMiddleware<TRequest, TResponse>)(serviceProvider.GetService(middlewareTypes[i])
                     ?? throw new MediatorConfigurationException(
-                        $"Behavior {behaviorTypes[i]} is not registered in the service provider."));
+                        $"Behavior {middlewareTypes[i]} is not registered in the service provider."));
             }
         }
 

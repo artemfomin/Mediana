@@ -33,9 +33,9 @@ public sealed class AotEventHandler : IEventHandler<AotEvent>
     }
 }
 
-public sealed class AotBehavior : IPipelineBehavior<AotCommand, string>
+public sealed class AotBehavior : IHandlerMiddleware<AotCommand, string>
 {
-    public ValueTask<string> Handle(AotCommand request, RequestHandlerDelegate<AotCommand, string> next, CancellationToken ct)
+    public ValueTask<string> Handle(AotCommand request, HandlerDelegate<AotCommand, string> next, CancellationToken ct)
         => next(request, ct);
 }
 
@@ -53,7 +53,7 @@ public static class Program
                 .AddCommandHandler<AotCommand, string, AotCommandHandler>()
                 .AddQueryHandler<AotQuery, int, AotQueryHandler>()
                 .AddEventHandler<AotEvent, AotEventHandler>()
-                .AddBehavior<AotCommand, string, AotBehavior>());
+                .AddMiddleware<AotCommand, string, AotBehavior>());
         var sp = sc.BuildServiceProvider();
         var mediator = sp.GetRequiredService<IMediator>();
 

@@ -35,9 +35,9 @@ public class MutationKillerTests
         }
     }
 
-    private sealed class MKBeh : IPipelineBehavior<MK, int>
+    private sealed class MKBeh : IHandlerMiddleware<MK, int>
     {
-        public ValueTask<int> Handle(MK r, RequestHandlerDelegate<MK, int> next, CancellationToken ct) => next(r, ct);
+        public ValueTask<int> Handle(MK r, HandlerDelegate<MK, int> next, CancellationToken ct) => next(r, ct);
     }
 
     private sealed class MSH : Handlers.IStreamHandler<MS, int>
@@ -98,7 +98,7 @@ public class MutationKillerTests
     {
         var cfg = new MedianaConfiguration()
             .AddCommandHandler<MK, int, MKH>()
-            .AddBehavior<MK, int, MKBeh>();
+            .AddMiddleware<MK, int, MKBeh>();
         var sc = new ServiceCollection().AddScoped<MKH>(); // behavior намеренно НЕ в DI
         var mediator = new Mediator(cfg.Freeze(), sc.BuildServiceProvider());
 
@@ -211,8 +211,8 @@ public class MutationKillerTests
     [Fact]
     public async Task ChainState_reconfiguration_after_return()
     {
-        Pipeline.RequestHandlerDelegate<MK, int> t1 = (_, _) => new ValueTask<int>(1);
-        Pipeline.RequestHandlerDelegate<MK, int> t2 = (_, _) => new ValueTask<int>(2);
+        Pipeline.HandlerDelegate<MK, int> t1 = (_, _) => new ValueTask<int>(1);
+        Pipeline.HandlerDelegate<MK, int> t2 = (_, _) => new ValueTask<int>(2);
         var sp = new ServiceCollection().BuildServiceProvider();
 
         var s = ChainState<MK, int>.Take(sp, [], t1);

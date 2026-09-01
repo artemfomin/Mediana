@@ -111,10 +111,10 @@ public sealed class SlowEventHandler : IEventHandler<OrderCreated>
 
 // ── Behaviors ────────────────────────────────────────────────────────────────
 
-public sealed class OrderingBehavior : IPipelineBehavior<CreateOrder, OrderCreated>
+public sealed class OrderingBehavior : IHandlerMiddleware<CreateOrder, OrderCreated>
 {
     public static List<string> Trace = [];
-    public ValueTask<OrderCreated> Handle(CreateOrder request, RequestHandlerDelegate<CreateOrder, OrderCreated> next, CancellationToken ct)
+    public ValueTask<OrderCreated> Handle(CreateOrder request, HandlerDelegate<CreateOrder, OrderCreated> next, CancellationToken ct)
     {
         Trace.Add("behavior:before");
         var result = next(request, ct);
@@ -123,25 +123,25 @@ public sealed class OrderingBehavior : IPipelineBehavior<CreateOrder, OrderCreat
     }
 }
 
-public sealed class SecondBehavior : IPipelineBehavior<CreateOrder, OrderCreated>
+public sealed class SecondBehavior : IHandlerMiddleware<CreateOrder, OrderCreated>
 {
-    public ValueTask<OrderCreated> Handle(CreateOrder request, RequestHandlerDelegate<CreateOrder, OrderCreated> next, CancellationToken ct)
+    public ValueTask<OrderCreated> Handle(CreateOrder request, HandlerDelegate<CreateOrder, OrderCreated> next, CancellationToken ct)
     {
         OrderingBehavior.Trace.Add("second:before");
         return next(request, ct);
     }
 }
 
-public sealed class CancellationBehavior : IPipelineBehavior<GetOrder, OrderDto>
+public sealed class CancellationBehavior : IHandlerMiddleware<GetOrder, OrderDto>
 {
-    public ValueTask<OrderDto> Handle(GetOrder request, RequestHandlerDelegate<GetOrder, OrderDto> next, CancellationToken ct)
+    public ValueTask<OrderDto> Handle(GetOrder request, HandlerDelegate<GetOrder, OrderDto> next, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
         return next(request, ct);
     }
 }
 
-public sealed class EventOrderingBehavior : IEventPipelineBehavior<OrderCreated>
+public sealed class EventOrderingBehavior : IEventMiddleware<OrderCreated>
 {
     public static List<string> Trace = [];
     public ValueTask Handle(OrderCreated @event, EventHandlerDelegate<OrderCreated> next, CancellationToken ct)
@@ -153,7 +153,7 @@ public sealed class EventOrderingBehavior : IEventPipelineBehavior<OrderCreated>
     }
 }
 
-public sealed class StreamFilterBehavior : IStreamPipelineBehavior<SearchOrders, OrderDto>
+public sealed class StreamFilterBehavior : IStreamMiddleware<SearchOrders, OrderDto>
 {
     public ValueTask<IAsyncEnumerable<OrderDto>>? Observed;
     public IAsyncEnumerable<OrderDto> Handle(SearchOrders query, StreamHandlerDelegate<SearchOrders, OrderDto> next, CancellationToken ct)

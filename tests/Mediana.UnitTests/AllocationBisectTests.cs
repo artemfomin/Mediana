@@ -22,9 +22,9 @@ public class AllocationBisectTests
         public ValueTask<int> Handle(Echo command, CancellationToken ct) => new(command.Value * 2);
     }
 
-    internal sealed class PassBehavior : IPipelineBehavior<Echo, int>
+    internal sealed class PassBehavior : IHandlerMiddleware<Echo, int>
     {
-        public ValueTask<int> Handle(Echo request, RequestHandlerDelegate<Echo, int> next, CancellationToken ct)
+        public ValueTask<int> Handle(Echo request, HandlerDelegate<Echo, int> next, CancellationToken ct)
             => next(request, ct);
     }
 
@@ -48,7 +48,7 @@ public class AllocationBisectTests
             .AddSingleton<PassBehavior>()
             .AddMediana(c => c.UseSingletonHandlers()
                 .AddCommandHandler<Echo, int, EchoHandler>()
-                .AddBehavior<Echo, int, PassBehavior>());
+                .AddMiddleware<Echo, int, PassBehavior>());
         var sp = sc.BuildServiceProvider();
         var mediator = (Mediator)sp.GetRequiredService<IMediator>();
         var command = (ICommand<int>)new Echo(21);

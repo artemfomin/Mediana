@@ -13,12 +13,12 @@ internal sealed class StreamCallSite<TQuery, TRow, THandler>
     where TQuery : IStreamQuery<TRow>
     where THandler : IStreamHandler<TQuery, TRow>
 {
-    private readonly Type[] _behaviorTypes;
+    private readonly Type[] _middlewareTypes;
     private readonly bool _singleton;
 
-    public StreamCallSite(Type[] behaviorTypes, bool singleton)
+    public StreamCallSite(Type[] middlewareTypes, bool singleton)
     {
-        _behaviorTypes = behaviorTypes;
+        _middlewareTypes = middlewareTypes;
         _singleton = singleton;
     }
 
@@ -29,17 +29,17 @@ internal sealed class StreamCallSite<TQuery, TRow, THandler>
             ?? throw new MediatorConfigurationException(
                 $"Stream handler {typeof(THandler)} is not registered in the service provider."));
 
-        if (_behaviorTypes.Length == 0)
+        if (_middlewareTypes.Length == 0)
         {
             return handler.Handle(query, cancellationToken);
         }
 
-        var behaviors = new IStreamPipelineBehavior<TQuery, TRow>[_behaviorTypes.Length];
-        for (var i = 0; i < _behaviorTypes.Length; i++)
+        var behaviors = new IStreamMiddleware<TQuery, TRow>[_middlewareTypes.Length];
+        for (var i = 0; i < _middlewareTypes.Length; i++)
         {
-            behaviors[i] = (IStreamPipelineBehavior<TQuery, TRow>)(serviceProvider.GetService(_behaviorTypes[i])
+            behaviors[i] = (IStreamMiddleware<TQuery, TRow>)(serviceProvider.GetService(_middlewareTypes[i])
                 ?? throw new MediatorConfigurationException(
-                    $"Stream behavior {_behaviorTypes[i]} is not registered in the service provider."));
+                    $"Stream behavior {_middlewareTypes[i]} is not registered in the service provider."));
         }
 
         StreamHandlerDelegate<TQuery, TRow> chain = (r, ct) => handler.Handle(r, ct);
