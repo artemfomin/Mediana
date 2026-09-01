@@ -27,6 +27,7 @@ Mediana — библиотека паттерна медиатор для .NET 1
 | D2 | **Обе версии — полные**: net10.0 и netstandard2.1 реализуются параллельно для всех пакетов (где позволяет клиентская библиотека, см. D13), с идентичной API-поверхностью, одинаковыми namespace и именами типов; распространяются как мульти-таргет ассеты внутри **одних и тех же NuGet-пакетов** (единые ID) | Разные проекты команды используют разные рантаймы; net10.0-ассет задействует все доступные оптимизации (FrozenDictionary — ~47% быстрее lookup чем Dictionary, System.Threading.Lock, GetAlternateLookup, R2R), ns2.1-ассет — рукописные эквиваленты там, где API нет. Одинаковые имена пакетов и типов = максимальная совместимость: отдельные ID на TFM создавали бы конфликт типов при сборке двух веток в один граф зависимостей. Замечание о «40+%»: это микро-бенчмарк lookup'а; на end-to-end Send выигрыш скромнее, т.к. source-gen диспетч убирает lookup с горячего пути; net10-ассет дополнительно выигрывает на fallback-путях, async-инфраструктуре и startup (R2R) |
 | D13 | Транспортные/хранящие пакеты мульти-таргетятся с закреплением мажоров клиентских библиотек per TFM: RabbitMQ — net10.0: RabbitMQ.Client 7.x, ns2.1: 6.x (различие API — тонкий слой адаптации внутри пакета); Kafka — Confluent.Kafka единый API (мажор проверить в плане); MassTransit 8.x — поддерживает ns2.1-хосты; Dapper/Mongo — ns2.1 ок; **EF Core-провайдер — net10.0-only** (EF Core 6+ не таргетирует ns2.1; ns2.1-потребители outbox используют Dapper/Mongo-провайдеры) | Полный охват «обеих версий» без жертвы совместимости API; единственное исключение (EF) задокументировано явно |
 | D14 | **Минимум сторонних библиотек — вторая метрика после north star.** Ядро (Abstractions, Mediana, Transport.Abstractions, Generators, релей-логика Outbox) — только собственный код; внешние зависимости ядра ограничены пакетами Microsoft и только там, где это структурно неизбежно (MEDI-абстракции для DI, Roslyn для генератора, STJ как сериализатор по умолчанию). Всё стороннее допускается только в спутниковых пакетах, где SDK и есть суть пакета (клиенты очередей, DB-провайдеры, сериализатор-провайдеры MessagePack/protobuf) | Контролируемая поверхность риска и перф: ноль транзитивных сюрпризов в ядре. Собственные реализации: retry-политики и backoff (не Polly), пулы объектов/IVTS (не ObjectPooling), UUIDv7 на ns2.1 (на net10.0 — `Guid.CreateVersion7`), планировщик relay. Метрика автоматизирована CI-гейтом (§12.6) |
+| D15 | **Полная OTLP-телеметрия.** Инструментация — в ядре, через BCL (`ActivitySource("Mediana")`, `Meter("Mediana")`, `ILogger`), ноль зависимостей и ноль затрат при выключенном сборщике (no-op Activity/Meter API). Готовый OTLP-экспорт — спутниковый пакет `Mediana.Telemetry.OpenTelemetry` (net10.0 + ns2.1): один вызов включает OTel SDK для всех трёх сигналов (traces + metrics + logs) с OTLP-экспортёром; атрибуты соответствуют OTel messaging semantic conventions; настройка — `OTEL_EXPORTER_OTLP_*` env + fluent-опции. Телеметрия согласована с north star: sampling-хуки, no-op путь без аллокаций | Готовая полная телеметрия из коробки без нарушения D14; стандартная совместимость с коллекторами (Tempo/Jaeger/OTel Collector) |
 | D3 | Интеграция с очередями: явная политика роутинга (локально / очередь / оба) + подключаемые транспорт-провайдеры; MassTransit — и как транспорт, и как мост | Предсказуемость + расширяемость |
 | D4 | Полный стек надёжности в v1: retry, DLQ, poison detection, inbox — в транспортном уровне ядра; **outbox — opt-in через отдельные NuGet-пакеты** | Ядро без зависимостей на БД; transactional-гарантии — осознанный выбор потребителя (по требованию пользователя) |
 | D5 | Функциональный объём ядра: parity MediatR + стриминг (`IAsyncEnumerable`), без саг | Стриминг дёшев на ns2.1+, саги — дублирование компетенции MassTransit |
@@ -67,6 +68,8 @@ Mediana.sln
 │   ├── Mediana.Outbox.EFCore/           # net10.0-only (EF Core 6+ не таргетирует ns2.1; D13).
 │   ├── Mediana.Outbox.Dapper/           # net10.0 + ns2.1. Dapper/SQL провайдер (opt-in).
 │   ├── Mediana.Outbox.MongoDB/          # net10.0 + ns2.1. MongoDB провайдер (opt-in).
+│   ├── Mediana.Telemetry.OpenTelemetry/ # net10.0 + ns2.1. Готовый OTLP-экспорт: OTel SDK для
+│   │                                    #   traces/metrics/logs Mediana, семантические конвенции.
 │   └── Mediana.MediatR/                 # net10.0 + ns2.1. Адаптер MediatR 12.x контрактов.
 ├── tests/
 │   ├── Mediana.UnitTests/               # ядро, реестр, пайплайны, конверт, retry-политики
@@ -344,12 +347,51 @@ public interface ITransportPublisher
 
 ---
 
-## 11. Наблюдаемость и семантика ошибок
+## 11. Наблюдаемость и семантика ошибок (D15 — полная OTLP-телеметрия)
 
-- `ActivitySource("Mediana")`: spans `dispatch`, `publish`, `consume`, `outbox.relay`, `request.reply`; `traceparent` в конверте — сквозная трассировка локальный→очередь→хендлер.
-- `Meter("Mediana")`: dispatch duration histogram, in-flight, consumer lag, outbox lag/age, retries, DLQ rate, poison count.
-- Ошибки: локальный Send — как есть; удалённый Send — `RemoteExecutionException { RemoteErrorType, Message, Details, Envelope }`; события — Fault-событие (в т.ч. MassTransit Fault-формат) + retry-контур.
-- `ILogger` семантические ключи: `message.type`, `message.id`, `correlation.id`, `causation.id`, `transport`, `endpoint`.
+### 11.1 Инструментация ядра (ноль зависимостей, ноль затрат при выключенном сборщике)
+
+Все сигналы через BCL API (`ActivitySource`/`Meter`/`ILogger`): без слушателей `Activity` API — no-op без аллокаций (гарантия north star); метрики пишутся через reusable теги-объекты.
+
+**Трейсы (ActivitySource "Mediana") — полный инвентарь:**
+
+| Span | Где | Ключевые атрибуты (OTel messaging semconv) |
+|------|-----|--------------------------------------------|
+| `dispatch {MessageType}` | локальный Send/Stream | `messaging.message.id`, `messaging.system`="inproc" |
+| `publish {MessageType}` | публикация (direct или через outbox) | `messaging.destination.name`, `messaging.system`, partition key |
+| `consume {MessageType}` | приём и диспетч хендлером | + `messaging.destination.name` очереди/топика |
+| `request.send {MessageType}` | удалённый Send, сторона клиента | correlation, destination, timeout |
+| `request.handle {MessageType}` | удалённый Send, сторона консьюмера | связан через traceparent конверта |
+| `outbox.relay` | батч relay | batch size, taken/sent/skipped |
+| `inbox.dedup` | проверка дедупликации | hit/miss |
+
+Сквозная трассировка: `traceparent` (W3C TraceContext) в конверте — локальный→очередь→хендлер цепочка одним trace; `CorrelationId`/`CausationId` в атрибутах каждого span'а.
+
+**Метрики (Meter "Mediana"):** dispatch duration histogram (по видам command/query/event/stream), in-flight count, publish/consume duration, consumer lag, retry attempts counter (по контурам), DLQ rate, `mediana_poison_total`, outbox lag/age/batch size, request/reply duration + timeout counter, stream rows counter.
+
+**Логи:** `ILogger` с семантическими ключами `message.type`, `message.id`, `correlation.id`, `causation.id`, `transport`, `endpoint`; ambient log-scope из конверта.
+
+### 11.2 Пакет Mediana.Telemetry.OpenTelemetry (готовый OTLP-экспорт)
+
+```csharp
+builder.Services.AddMedianaOpenTelemetry(otel => {
+    otel.WithOtlpExporter()                    // gRPC/HTTP, env OTEL_EXPORTER_OTLP_ENDPOINT/*
+        .WithTraces(t => t.SetSampler(new ParentBasedTraceIdRatio(0.1)))
+        .WithMetrics(m => m.AddDeltaTemporality())
+        .WithLogs();                           // bridge ILogger → OTLP logs
+});
+```
+
+- Подключает OTel SDK только к сигналам Mediana (не захватывает чужие источники — их приложение добавляет само); либо режим `AddToExisting(sdk)` для композиции с уже настроенным OTel.
+- Атрибуты уже соответствуют OTel messaging semantic conventions — коллекторы и дашборды понимают без маппинга.
+- OTLP exporter: env-конфигурация стандартная (`OTEL_EXPORTER_OTLP_ENDPOINT`, `..._PROTOCOL`, `..._HEADERS`), ресурсы — `OTEL_SERVICE_NAME` + `service.namespace`/`service.version` по умолчанию из хоста.
+- Зависимость OpenTelemetry SDK — только в этом спутниковом пакете (D14 не нарушен).
+
+### 11.3 Семантика ошибок
+
+- Локальный `Send` — исключение летит вызывающему как есть (ожидание MediatR-пользователей); span получает status=ERROR + `exception.*` события.
+- Удалённый `Send` — `RemoteExecutionException { RemoteErrorType, Message, Details, Envelope }`.
+- События — Fault-событие (в т.ч. MassTransit Fault-формат) + retry-контур; DLQ-события несут fingerprint ошибки в атрибутах.
 
 ---
 
@@ -372,6 +414,7 @@ public interface ITransportPublisher
 
 - **Unit** (≥90% ядра): диспетч, реестр (включая copy-on-write гонки — stress-тесты), пайплайны, конверт, retry-политики, poison detection. TDD: RED→GREEN для ядра диспетча и пайплайнов.
 - **Integration** (Testcontainers): RabbitMQ/Kafka — топология, request/reply, retry/DLQ, inbox против двойной доставки; outbox против Postgres/SQL Server/Mongo — атомарность, relay, SKIP LOCKED конкурентность.
+- **Телеметрия**: интеграционный тест с in-process OTLP-приёмником (test HTTP/gRPC endpoint) — полный обход трейса локальный→очередь→хендлер одним trace, наличие всех span'ов §11.1, метрики после сбора, no-op путь без слушателей (аллокационный тест телеметрии).
 - **Интероп**: Mediana⇄MassTransit обе стороны; MassTransit-envelope режим; адаптер MediatR-хендлеров.
 - **AOT/trimming**: NativeAOT publish smoke + `TreatWarningsAsErrors` на trimming-аннотациях; оба ассета.
 - **ContractTests.Ns21**: (а) набор тестов ядра исполняется против ns2.1-ассета (включая reflection-free сценарии); (б) контрактный тест идентичности публичной API-поверхности двух ассетов (сравнение экспортированных типов/членов через reflection на собранных сборках).
