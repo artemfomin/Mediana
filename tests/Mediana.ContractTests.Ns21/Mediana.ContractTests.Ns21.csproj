@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Принудительно берём ns2.1-ассеты ядра и сверяем публичную поверхность с net10.0-ассетами -->
+    <ProjectReference Include="..\..\src\Mediana.Abstractions\Mediana.Abstractions.csproj" SetTargetFramework="TargetFramework=netstandard2.1" />
+    <ProjectReference Include="..\..\src\Mediana\Mediana.csproj" SetTargetFramework="TargetFramework=netstandard2.1" />
+    <ProjectReference Include="..\..\src\Mediana.Transport.Abstractions\Mediana.Transport.Abstractions.csproj" SetTargetFramework="TargetFramework=netstandard2.1" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+</Project>

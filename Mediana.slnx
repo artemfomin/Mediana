@@ -1,0 +1,28 @@
+<Solution>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/Mediana.Benchmarks/Mediana.Benchmarks.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Mediana.Abstractions/Mediana.Abstractions.csproj" />
+    <Project Path="src/Mediana.Generators/Mediana.Generators.csproj" />
+    <Project Path="src/Mediana.Kafka/Mediana.Kafka.csproj" />
+    <Project Path="src/Mediana.MassTransit/Mediana.MassTransit.csproj" />
+    <Project Path="src/Mediana.MediatR/Mediana.MediatR.csproj" />
+    <Project Path="src/Mediana.Outbox.Dapper/Mediana.Outbox.Dapper.csproj" />
+    <Project Path="src/Mediana.Outbox.EFCore/Mediana.Outbox.EFCore.csproj" />
+    <Project Path="src/Mediana.Outbox.MongoDB/Mediana.Outbox.MongoDB.csproj" />
+    <Project Path="src/Mediana.Outbox/Mediana.Outbox.csproj" />
+    <Project Path="src/Mediana.RabbitMQ/Mediana.RabbitMQ.csproj" />
+    <Project Path="src/Mediana.Telemetry.OpenTelemetry/Mediana.Telemetry.OpenTelemetry.csproj" />
+    <Project Path="src/Mediana.Transport.Abstractions/Mediana.Transport.Abstractions.csproj" />
+    <Project Path="src/Mediana/Mediana.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Mediana.AotTests/Mediana.AotTests.csproj" />
+    <Project Path="tests/Mediana.ContractTests.Ns21/Mediana.ContractTests.Ns21.csproj" />
+    <Project Path="tests/Mediana.GeneratorTests/Mediana.GeneratorTests.csproj" />
+    <Project Path="tests/Mediana.IntegrationTests/Mediana.IntegrationTests.csproj" />
+    <Project Path="tests/Mediana.InteropTests/Mediana.InteropTests.csproj" />
+    <Project Path="tests/Mediana.UnitTests/Mediana.UnitTests.csproj" />
+  </Folder>
+</Solution>

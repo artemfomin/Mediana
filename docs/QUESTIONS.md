@@ -1,0 +1,25 @@
+# Вопросы к пользователю (копятся в период автономной реализации)
+
+> Отвечай, когда будет возможность. Ответы повлияют на доработку; до ответа действуют описанные дефолты.
+
+## Q1. Интеграционные тесты (Testcontainers) — есть ли Docker на машине?
+**Контекст:** спека требует интеграционных тестов с реальными RabbitMQ/Kafka/SQL/Mongo через Testcontainers.
+**Дефолт до ответа:** пишу и запускаю unit/generator/interop-тесты (in-memory/in-process); контейнерные тесты пишу и помечаю `[Trait("Category","RequiresDocker")]` с авто-скипом при недоступном Docker-демоне.
+**Статус:** обнаружу при первом прогоне.
+
+## Q2. Место хранения CI (GitHub Actions?)
+**Контекст:** спека фиксирует CI-гейты (coverage/mutation/benchmark-diff/dependency-audit).
+**Дефолт:** `.github/workflows/ci.yml` + локальный скрипт `scripts/verify.ps1` с теми же гейтами.
+
+## Q3. Целевые СУБД для outbox-провайдеров в v1
+**Спека:** EF Core (net10-only), Dapper (Postgres/SQL Server диалекты), MongoDB.
+**Дефолт:** Dapper-провайдер реализует Postgres + SQL Server; при необходимости добавим диалекты.
+
+## Q4. Публичный namespace для конверта: `Mediana` или `Mediana.Messaging`?
+**Дефолт:** `Mediana.Messaging` (конверт), `Mediana` (медиатор), `Mediana.Transports.*` (провайдеры).
+
+## Q5. Мутационное тестирование: полный Stryker-прогон всех пакетов долгий.
+**Дефолт:** Stryker по ядру (Abstractions+Mediana+Transport.Abstractions+Outbox) с порогом score ≥90%; транспорты/адаптеры — в основном integration-покрытии; конфиг расширяется одной строкой.
+
+## Q6. Версии NuGet-пакетов фиксирую по актуальным стабильным на 2026-09-01.
+Если нужны другие нижние границы (напр., MassTransit фикс. минор) — скорректирую.

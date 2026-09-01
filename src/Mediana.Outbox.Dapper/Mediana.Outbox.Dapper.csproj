@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net10.0;netstandard2.1</TargetFrameworks>
+    <Description>Mediana outbox Dapper storage provider (ADO-agnostic: user supplies DbConnection factory; Postgres/SQL Server dialects).</Description>
+    <IsPackable>true</IsPackable>
+    <PackageId>Mediana.Outbox.Dapper</PackageId>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Mediana.Outbox\Mediana.Outbox.csproj" />
+    <PackageReference Include="Dapper" />
+  </ItemGroup>
+</Project>

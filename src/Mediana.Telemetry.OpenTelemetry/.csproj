@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Mediana full OTLP telemetry: OTel SDK wiring for traces, metrics, logs; async non-blocking pipeline.</Description>
+    <IsPackable>true</IsPackable>
+    <PackageId>Mediana.Telemetry.OpenTelemetry</PackageId>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Mediana\Mediana.csproj" />
+    <ProjectReference Include="..\Mediana.Transport.Abstractions\Mediana.Transport.Abstractions.csproj" />
+    <PackageReference Include="OpenTelemetry" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+  </I

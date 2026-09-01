@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net10.0;netstandard2.1</TargetFrameworks>
+    <Description>Adapter: run existing MediatR handlers (IRequestHandler, INotificationHandler, IPipelineBehavior) on Mediana.</Description>
+    <IsPackable>true</IsPackable>
+    <PackageId>Mediana.MediatR</PackageId>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Mediana\Mediana.csproj" />
+    <PackageReference Include="MediatR" />
+  </ItemGroup>
+</Project>

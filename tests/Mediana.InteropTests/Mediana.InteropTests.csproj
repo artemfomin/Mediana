@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Mediana.MassTransit\Mediana.MassTransit.csproj" />
+    <ProjectReference Include="..\..\src\Mediana.MediatR\Mediana.MediatR.csproj" />
+    <ProjectReference Include="..\..\src\Mediana.Telemetry.OpenTelemetry\Mediana.Telemetry.OpenTelemetry.csproj" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="MassTransit" />
+    <PackageReference Include="MassTransit.TestFramework" />
+    <PackageReference Include="MediatR" />
+    <PackageReference Include="OpenTelemetry" />
+  </ItemGroup>
+</Project>

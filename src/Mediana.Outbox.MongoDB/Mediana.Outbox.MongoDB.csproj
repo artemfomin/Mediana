@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net10.0;netstandard2.1</TargetFrameworks>
+    <Description>Mediana outbox MongoDB storage provider (lease-based relay).</Description>
+    <IsPackable>true</IsPackable>
+    <PackageId>Mediana.Outbox.MongoDB</PackageId>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Mediana.Outbox\Mediana.Outbox.csproj" />
+    <PackageReference Include="MongoDB.Driver" />
+  </ItemGroup>
+</Project>

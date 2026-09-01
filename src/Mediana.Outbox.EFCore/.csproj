@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Description>Mediana outbox EF Core storage provider (net10.0-only: EF Core 6+ does not target netstandard2.1).</Description>
+    <IsPackable>true</IsPackable>
+    <PackageId>Mediana.Outbox.EFCore</PackageId>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Mediana.Outbox\Mediana.Outbox.csproj" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+  </ItemGroup>
+</Project>
