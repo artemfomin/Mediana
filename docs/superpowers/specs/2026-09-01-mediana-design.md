@@ -24,7 +24,8 @@ Mediana — библиотека паттерна медиатор для .NET 1
 | # | Решение | Обоснование |
 |---|---------|-------------|
 | D1 | Собственный API + отдельный пакет `Mediana.MediatR` (адаптер MediatR-хендлеров) | Свобода оптимизаций без наследования компромиссов MediatR; миграция существующего кода без изменений |
-| D2 | TFM: `net10.0` для всего; `netstandard2.1` — доп. ассет только ядра (Abstractions + диспетчер) | North star на современных хостах; охват Unity/legacy-core ядром. Ассессмент: деградация ns2.1-ассета на современном хосте — единицы процентов при source-gen диспетче; FrozenDictionary на ns2.1 вырождается в обычный Dictionary (проверено), `ManualResetValueTaskSourceCore` в ns2.1 есть (проверено) |
+| D2 | **Обе версии — полные**: net10.0 и netstandard2.1 реализуются параллельно для всех пакетов (где позволяет клиентская библиотека, см. D13), с идентичной API-поверхностью, одинаковыми namespace и именами типов; распространяются как мульти-таргет ассеты внутри **одних и тех же NuGet-пакетов** (единые ID) | Разные проекты команды используют разные рантаймы; net10.0-ассет задействует все доступные оптимизации (FrozenDictionary — ~47% быстрее lookup чем Dictionary, System.Threading.Lock, GetAlternateLookup, R2R), ns2.1-ассет — рукописные эквиваленты там, где API нет. Одинаковые имена пакетов и типов = максимальная совместимость: отдельные ID на TFM создавали бы конфликт типов при сборке двух веток в один граф зависимостей. Замечание о «40+%»: это микро-бенчмарк lookup'а; на end-to-end Send выигрыш скромнее, т.к. source-gen диспетч убирает lookup с горячего пути; net10-ассет дополнительно выигрывает на fallback-путях, async-инфраструктуре и startup (R2R) |
+| D13 | Транспортные/хранящие пакеты мульти-таргетятся с закреплением мажоров клиентских библиотек per TFM: RabbitMQ — net10.0: RabbitMQ.Client 7.x, ns2.1: 6.x (различие API — тонкий слой адаптации внутри пакета); Kafka — Confluent.Kafka единый API (мажор проверить в плане); MassTransit 8.x — поддерживает ns2.1-хосты; Dapper/Mongo — ns2.1 ок; **EF Core-провайдер — net10.0-only** (EF Core 6+ не таргетирует ns2.1; ns2.1-потребители outbox используют Dapper/Mongo-провайдеры) | Полный охват «обеих версий» без жертвы совместимости API; единственное исключение (EF) задокументировано явно |
 | D3 | Интеграция с очередями: явная политика роутинга (локально / очередь / оба) + подключаемые транспорт-провайдеры; MassTransit — и как транспорт, и как мост | Предсказуемость + расширяемость |
 | D4 | Полный стек надёжности в v1: retry, DLQ, poison detection, inbox — в транспортном уровне ядра; **outbox — opt-in через отдельные NuGet-пакеты** | Ядро без зависимостей на БД; transactional-гарантии — осознанный выбор потребителя (по требованию пользователя) |
 | D5 | Функциональный объём ядра: parity MediatR + стриминг (`IAsyncEnumerable`), без саг | Стриминг дёшев на ns2.1+, саги — дублирование компетенции MassTransit |
@@ -48,35 +49,37 @@ Mediana — библиотека паттерна медиатор для .NET 1
 ```
 Mediana.sln
 ├── src/
-│   ├── Mediana.Abstractions/            # ns2.1 + net10.0. Контракты сообщений/хендлеров,
+│   ├── Mediana.Abstractions/            # net10.0 + ns2.1. Контракты сообщений/хендлеров,
 │   │                                    #   envelope, метаданные. Ноль внешних зависимостей.
-│   ├── Mediana/                         # ns2.1 + net10.0. In-process диспетчер, пайплайны,
+│   ├── Mediana/                         # net10.0 + ns2.1. In-process диспетчер, пайплайны,
 │   │                                    #   runtime-регистрация, DI-интеграция, роутинг-ядро.
 │   ├── Mediana.Generators/              # netstandard2.0 (генераторы так таргетятся).
 │   │                                    #   Incremental source generator + анализаторы.
-│   ├── Mediana.Transport.Abstractions/  # net10.0. SPI транспортов: ITransport, publisher/
-│   │                                    #   consumer, топология, capabilities.
-│   ├── Mediana.RabbitMQ/                # net10.0. RabbitMQ.Client 7.x.
-│   ├── Mediana.Kafka/                   # net10.0. Confluent.Kafka.
-│   ├── Mediana.MassTransit/             # net10.0. MassTransit как транспорт + мост в обе
-│   │                                    #   стороны + MassTransit-envelope режим.
-│   ├── Mediana.Outbox/                  # net10.0. Ядро transactional outbox + relay (opt-in).
-│   │                                    #   Inbox: контракт IInboxStore живёт в Transport.Abstractions,
-│   │                                    #   in-memory реализация — там же; DB-реализации — в пакетах ниже.
-│   ├── Mediana.Outbox.EFCore/           # net10.0. EF Core провайдер хранилища (opt-in).
-│   ├── Mediana.Outbox.Dapper/           # net10.0. Dapper/SQL провайдер (opt-in).
-│   ├── Mediana.Outbox.MongoDB/          # net10.0. MongoDB провайдер (opt-in).
-│   └── Mediana.MediatR/                 # ns2.1 + net10.0. Адаптер MediatR 12.x контрактов.
+│   ├── Mediana.Transport.Abstractions/  # net10.0 + ns2.1. SPI транспортов: ITransport,
+│   │                                    #   publisher/consumer, топология, capabilities,
+│   │                                    #   IInboxStore + in-memory реализация.
+│   ├── Mediana.RabbitMQ/                # net10.0 (клиент 7.x) + ns2.1 (клиент 6.x, слой адаптации).
+│   ├── Mediana.Kafka/                   # net10.0 + ns2.1 (Confluent.Kafka, мажор — в плане).
+│   ├── Mediana.MassTransit/             # net10.0 + ns2.1 (MassTransit 8.x).
+│   ├── Mediana.Outbox/                  # net10.0 + ns2.1. Ядро transactional outbox + relay
+│   │                                    #   (opt-in); DB-реализации inbox/outbox — в пакетах ниже.
+│   ├── Mediana.Outbox.EFCore/           # net10.0-only (EF Core 6+ не таргетирует ns2.1; D13).
+│   ├── Mediana.Outbox.Dapper/           # net10.0 + ns2.1. Dapper/SQL провайдер (opt-in).
+│   ├── Mediana.Outbox.MongoDB/          # net10.0 + ns2.1. MongoDB провайдер (opt-in).
+│   └── Mediana.MediatR/                 # net10.0 + ns2.1. Адаптер MediatR 12.x контрактов.
 ├── tests/
 │   ├── Mediana.UnitTests/               # ядро, реестр, пайплайны, конверт, retry-политики
 │   ├── Mediana.IntegrationTests/        # Testcontainers: RabbitMQ, Kafka, SQL, Mongo
 │   ├── Mediana.InteropTests/            # Mediana ⇄ MassTransit, MassTransit-envelope
 │   ├── Mediana.AotTests/                # NativeAOT publish + trimming smoke
-│   └── Mediana.ContractTests.Ns21/      # тот же набор тестов ядра против ns2.1-ассета
+│   └── Mediana.ContractTests.Ns21/      # контрактные тесты идентичности API-поверхности
+│                                        #   обоих ассетов + тесты ядра против ns2.1-ассета
 ├── benchmarks/
 │   └── Mediana.Benchmarks/              # BenchmarkDotNet: dispatch, serialization, e2e
 └── docs/
 ```
+
+Правила multi-target (D2/D13): каждый пакет собирается одним csproj'ом в два ассета; публичная API-поверхность ассетов идентична (проверяется контрактным тестом на публичные типы/члены); выбор оптимизаций — через `#if NET10_0` внутри реализации, не через раздельные типы. Хост-приложение всегда получает один ассет — конфликтов типов в графе зависимостей нет.
 
 Правила зависимостей: `Abstractions` не ссылается ни на что; `Mediana` ссылается только на `Abstractions` (+ MEDI); транспортные пакеты ссылаются на `Mediana.Transport.Abstractions`; outbox-пакеты ссылаются на `Mediana.Transport.Abstractions` и соответствующий DB SDK. Пакет `Mediana.Outbox` (и его DB-провайдеры) **не требуется** для работы без transactional-гарантий: без него удалённая публикация идёт напрямую в транспорт с retry/DLQ, но без атомарности с бизнес-транзакцией.
 
@@ -369,7 +372,7 @@ public interface ITransportPublisher
 - **Integration** (Testcontainers): RabbitMQ/Kafka — топология, request/reply, retry/DLQ, inbox против двойной доставки; outbox против Postgres/SQL Server/Mongo — атомарность, relay, SKIP LOCKED конкурентность.
 - **Интероп**: Mediana⇄MassTransit обе стороны; MassTransit-envelope режим; адаптер MediatR-хендлеров.
 - **AOT/trimming**: NativeAOT publish smoke + `TreatWarningsAsErrors` на trimming-аннотациях; оба ассета.
-- **ContractTests.Ns21**: набор тестов ядра исполняется против ns2.1-ассета (включая reflection-free сценарии).
+- **ContractTests.Ns21**: (а) набор тестов ядра исполняется против ns2.1-ассета (включая reflection-free сценарии); (б) контрактный тест идентичности публичной API-поверхности двух ассетов (сравнение экспортированных типов/членов через reflection на собранных сборках).
 - Событийная конкурентность: детерминированные тесты Parallel/Sequential политик с virtual time для retry.
 
 ---
@@ -402,7 +405,8 @@ Incremental source generator (netstandard2.0, регистрация как anal
 | Гонки copy-on-write реестра | Stress-тесты + модель review; immutable snapshot семантика |
 | ns2.1-деградация на легаси-хостах (Unity/Mono) | Честная документация; benchmark-запуск на соответствующих хостах вне CI-гейтов (best effort) |
 | MassTransit envelope-режим: тонкости формата | Интероп-тесты против реального MassTransit контракта; фикстуры с образцами конвертов |
-| Диапазоны версий клиентских библиотек | Решение фиксируется в плане реализации |
+| Диапазоны версий клиентских библиотек | Решение фиксируется в плане реализации (D13 — рамки уже заданы) |
+| Расхождение API RabbitMQ.Client 6.x/7.x — дублирование транспортного кода на ns2.1-ассете | Тонкий слой адаптации внутри Mediana.RabbitMQ: вся логика протокола/топологии/retry общая, per-TFM только обёртки клиента; контрактные тесты идентичны поведения |
 
 Открытые вопросы к плану реализации: точные нижние версии клиентских библиотек; схема SQL-таблиц outbox/inbox (миграции EF); политика cleanup relay; поддержка `required`-членов в ns2.1-ассете (избегаем в public API).
 
@@ -410,7 +414,7 @@ Incremental source generator (netstandard2.0, регистрация как anal
 
 ## 17. Вехи v1 (порядок реализации детализируется в плане)
 
-1. **M1 Ядро**: Abstractions + диспетчер (source-gen + runtime), пайплайны, DI, бенчмарк-каркас, бюджеты §12.
+1. **M1 Ядро**: Abstractions + диспетчер (source-gen + runtime), пайплайны, DI, бенчмарк-каркас, бюджеты §12. Каждый milestone закрывает **оба ассета** (net10.0 и ns2.1) одновременно, включая контрактный тест идентичности API-поверхности.
 2. **M2 Роутинг и конверт**: роутинг-политики, конверт, STJ source-gen, сериализаторный SPI.
 3. **M3 Транспортный SPI + RabbitMQ**: publisher/consumer, топология, retry/DLQ, request/reply, streaming, in-memory inbox.
 4. **M4 Kafka**: топики, retry-топики, ordering.
