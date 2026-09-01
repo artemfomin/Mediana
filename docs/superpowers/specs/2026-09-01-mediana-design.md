@@ -465,4 +465,4 @@ Incremental source generator (netstandard2.0, регистрация как anal
 4. **M4 Kafka**: топики, retry-топики, ordering.
 5. **M5 MassTransit**: транспорт, мост, envelope-режим, интероп-тесты.
 6. **M6 Надёжность**: poison detection, DB-backed inbox, opt-in Outbox + EF/Dapper/Mongo провайдеры, relay.
-7. **M7 MediatR-адаптер, наблюдаемость, документация, релизная подготовка**.
+7. **M7 MediatR-адаптер, OTLP-пакет телеметрии, документация, релизная подготовка**. (Инструментация ядра §11.1 поставляется инкрементально вместе с M1–M6, не откладывается на M7.)
