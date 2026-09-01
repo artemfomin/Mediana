@@ -60,7 +60,9 @@ Mediana.sln
 │   ├── Mediana.Kafka/                   # net10.0. Confluent.Kafka.
 │   ├── Mediana.MassTransit/             # net10.0. MassTransit как транспорт + мост в обе
 │   │                                    #   стороны + MassTransit-envelope режим.
-│   ├── Mediana.Outbox/                  # net10.0. Ядро outbox/inbox + relay (opt-in пакет).
+│   ├── Mediana.Outbox/                  # net10.0. Ядро transactional outbox + relay (opt-in).
+│   │                                    #   Inbox: контракт IInboxStore живёт в Transport.Abstractions,
+│   │                                    #   in-memory реализация — там же; DB-реализации — в пакетах ниже.
 │   ├── Mediana.Outbox.EFCore/           # net10.0. EF Core провайдер хранилища (opt-in).
 │   ├── Mediana.Outbox.Dapper/           # net10.0. Dapper/SQL провайдер (opt-in).
 │   ├── Mediana.Outbox.MongoDB/          # net10.0. MongoDB провайдер (opt-in).
@@ -134,6 +136,7 @@ public interface IMediator
     IAsyncEnumerable<TRow> Stream<TRow>(IStreamQuery<TRow> query, CancellationToken ct = default);
 
     // Zero-boxing escape hatch для struct-сообщений на горячих путях
+    // (симметричная перегрузка есть и для IQuery<TResponse>)
     ValueTask<TResponse> SendExact<TCommand, TResponse>(TCommand command, CancellationToken ct = default)
         where TCommand : ICommand<TResponse>;
 }
@@ -156,12 +159,19 @@ public interface IPipelineBehavior<TRequest, TResponse> where TRequest : IReques
 
 public delegate ValueTask<TResponse> RequestHandlerDelegate<in TRequest, TResponse>(TRequest request, CancellationToken ct);
 
+// Пайплайн событий (IEvent не имеет ответа — отдельный контракт)
+public interface IEventPipelineBehavior<in TEvent> where TEvent : IEvent
+{
+    ValueTask Handle(TEvent @event, EventHandlerDelegate next, CancellationToken ct);
+}
+public delegate ValueTask EventHandlerDelegate<in TEvent>(TEvent @event, CancellationToken ct) where TEvent : IEvent;
+
 // Сахар, реализованный сам как behavior (нулевая цена композиции)
 public interface IPreProcessor<in TRequest> where TRequest : IRequest { ValueTask Process(TRequest r, CancellationToken ct); }
 public interface IPostProcessor<in TRequest, in TResponse> where TRequest : IRequest<TResponse> { ValueTask Process(TRequest r, TResponse response, CancellationToken ct); }
 ```
 
-Порядок: глобальные behaviors (регистрация по порядку) → per-message behaviors → pre-processors → handler → post-processors. Порядок фиксирован на сборке реестра; пайплайн сшивается в один статический делегат (§5.2). Behaviors применяются и к локальному диспетчу, и к консьюмеру из очереди (единая семантика кросс-каттинга).
+Порядок: глобальные behaviors (регистрация по порядку) → per-message behaviors → pre-processors → handler → post-processors. Для событий — аналогичная цепочка из `IEventPipelineBehavior` (порядок: глобальные → per-event → хендлеры). Порядок фиксирован при построении реестра; пайплайн сшивается в один статический делегат через scoped-фабрики один раз, не на вызове (§5.1). Behaviors применяются и к локальному диспетчу, и к консьюмеру из очереди (единая семантика кросс-каттинга).
 
 Стриминг: behaviors для `IStreamQuery` — отдельный контракт `IStreamPipelineBehavior<TQuery, TRow>` (композиция через `IAsyncEnumerable`, обёртки не аллоцируют при синхронном движении курсора).
 
@@ -175,13 +185,13 @@ public interface IPostProcessor<in TRequest, in TResponse> where TRequest : IReq
 
 - `MedianaRegistrar` — partial-методы регистрации хендлеров в DI (без рефлексии);
 - switch-диспетчер по точному типу сообщения: `RuntimeTypeHandle`-switch → прямые вызовы зарегистрированных фабрик. O(1) без хэширования строк, инлайнится JIT;
-- сшитые пайплайны per (сообщение × хендлер): behaviors разрешаются в делегат-цепочку один раз при построении скоупа-пула (§5.3), не на вызове;
+- сшитые пайплайны per (сообщение × хендлер): behaviors разрешаются в делегат-цепочку один раз при построении реестра (через scoped-фабрики), не на каждом вызове;
 - конфигурацию топологий из атрибутов роутинга (§6) — JSON-манифест для `ITransport.BuildTopology`;
 - STJ source-gen контексты для конверта и payload-контрактов.
 
 ### 5.2 Runtime-регистрация (opt-in escape hatch)
 
-`cfg.AddRuntimeHandlers(assemblies)` — явное включение. Принцип freeze-on-first-dispatch, copy-on-write: реестр иммутабелен; добавление строит новую копию и публикует через `Volatile.Write`; читатели никогда не лочатся. Runtime-ветка использует generic-активацию без Reflection.Emit (совместимо с AOT, но помечена как «динамический режим» в доках; при недоступности Roslyn-компиляции делегатов — fallback на открытую generic-диспетчеризацию).
+`cfg.AddRuntimeHandlers(assemblies)` — явное включение. Принцип freeze-on-first-dispatch, copy-on-write: реестр иммутабелен; добавление строит новую копию и публикует через `Volatile.Write`; читатели никогда не лочатся. AOT-статус сформулирован явно: runtime-режим не использует Reflection.Emit; диспетчеризация через открытые generic-типы работает под NativeAOT при `DynamicallyAccessedMemberTypes`-аннотациях на сборках-плагинах (требование документируется); Roslyn-компиляция делегатов — необязательное ускорение, только на JIT-хостах.
 
 ### 5.3 Аллокационная модель (бюджет: 0 байт на локальном Send)
 
@@ -347,7 +357,7 @@ public interface ITransportPublisher
 2. In-process `Send` (async handler): 0 байт в steady state (пул IVTS), латентность не хуже MediatR; цель ≥2× throughput на высококонкурентных async-путях.
 3. Десериализация + диспетч консьюмера: бюджет ≤ 1.2× стоимости сериализации payload.
 4. Outbox-путь: конверт + буферы ≤ 1 KB baseline аллокаций на сообщение.
-5. CI-гейт: benchmark-диф между main и PR; регрессия > 5% на любом зафiksированном бюджете → red build; аллокационные бюджеты — абсолютный гейт.
+5. CI-гейт: benchmark-диф между main и PR; регрессия > 5% на любом зафиксированном бюджете → red build; аллокационные бюджеты — абсолютный гейт.
 
 Бенчмарк-матрица: dispatch (vs MediatR 12.x), publish fan-out, сериализация (STJ/MessagePack), конверт, e2e через Testcontainers-RabbitMQ (throughput конкурентных консьюмеров).
 
@@ -392,7 +402,7 @@ Incremental source generator (netstandard2.0, регистрация как anal
 | Гонки copy-on-write реестра | Stress-тесты + модель review; immutable snapshot семантика |
 | ns2.1-деградация на легаси-хостах (Unity/Mono) | Честная документация; benchmark-запуск на соответствующих хостах вне CI-гейтов (best effort) |
 | MassTransit envelope-режим: тонкости формата | Интероп-тесты против реального MassTransit контракта; фикстуры с образцами конвертов |
-| Диапазоны версий клиентских библиотек | Решение в плане реализации (D-15 в плане) |
+| Диапазоны версий клиентских библиотек | Решение фиксируется в плане реализации |
 
 Открытые вопросы к плану реализации: точные нижние версии клиентских библиотек; схема SQL-таблиц outbox/inbox (миграции EF); политика cleanup relay; поддержка `required`-членов в ns2.1-ассете (избегаем в public API).
 
@@ -402,8 +412,8 @@ Incremental source generator (netstandard2.0, регистрация как anal
 
 1. **M1 Ядро**: Abstractions + диспетчер (source-gen + runtime), пайплайны, DI, бенчмарк-каркас, бюджеты §12.
 2. **M2 Роутинг и конверт**: роутинг-политики, конверт, STJ source-gen, сериализаторный SPI.
-3. **M3 Транспортный SPI + RabbitMQ**: publisher/consumer, топология, retry/DLQ, request/reply, streaming.
+3. **M3 Транспортный SPI + RabbitMQ**: publisher/consumer, топология, retry/DLQ, request/reply, streaming, in-memory inbox.
 4. **M4 Kafka**: топики, retry-топики, ordering.
 5. **M5 MassTransit**: транспорт, мост, envelope-режим, интероп-тесты.
-6. **M6 Надёжность**: inbox, poison, затем opt-in Outbox + EF/Dapper/Mongo провайдеры, relay.
+6. **M6 Надёжность**: poison detection, DB-backed inbox, opt-in Outbox + EF/Dapper/Mongo провайдеры, relay.
 7. **M7 MediatR-адаптер, наблюдаемость, документация, релизная подготовка**.
