@@ -1,4 +1,5 @@
 using Mediana.Messaging;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Mediana.Transports;
 
@@ -97,8 +98,10 @@ public interface ITransport
     /// <summary>Идемпотентный declare топологии из манифеста.</summary>
     ValueTask BuildTopology(TopologyManifest manifest, CancellationToken cancellationToken);
 
+    [RequiresDynamicCode("Реализация может использовать reflection-based JSON; для NativeAOT подключите source-gen сериализатор.")]
     ValueTask<ITransportPublisher> CreatePublisher(CancellationToken cancellationToken);
 
+    [RequiresDynamicCode("Реализация может использовать reflection-based JSON; для NativeAOT подключите source-gen сериализатор.")]
     IConsumerHostFactory CreateConsumerHosts();
 }
 
