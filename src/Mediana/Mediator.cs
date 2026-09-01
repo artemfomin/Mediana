@@ -51,6 +51,11 @@ public sealed class Mediator : IMediator
 
         // ref-ответ: non-generic static хоп (canon-generic контекст аллоцирует на любом invoke — измерено;
         // цепочка canon → non-generic static → interface = ноль, см. PublishSequential)
+        if (entry.ResponseType != typeof(TResponse))
+        {
+            return ThrowResponseTypeMismatch<TResponse>(entry, typeof(TResponse));
+        }
+
         if (entry.CommandCallSite is IUntypedCallSite any)
         {
             return CastBack<TResponse>(UntypedCommandHop(any, command, _serviceProvider, cancellationToken));
@@ -75,6 +80,11 @@ public sealed class Mediator : IMediator
                 return typed.Invoke(query, _serviceProvider, cancellationToken);
             }
 
+            return ThrowResponseTypeMismatch<TResponse>(entry, typeof(TResponse));
+        }
+
+        if (entry.ResponseType != typeof(TResponse))
+        {
             return ThrowResponseTypeMismatch<TResponse>(entry, typeof(TResponse));
         }
 
