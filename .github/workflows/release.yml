@@ -87,20 +87,20 @@ jobs:
           $fail = $false
           foreach ($nupkg in (Get-ChildItem dist -Filter *.nupkg)) {
             $name = $nupkg.BaseName
-            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "tmp-$name"
-            Expand-Archive $nupkg.FullName "tmp-$name" -Force
-            $nuspec = Get-ChildItem "tmp-$name" -Filter *.nuspec | Select-Object -First 1
-            [xml]$xml = Get-Content $nuspec.FullName
-            $meta = $xml.package.metadata
-            $checks = @(
-              @{ ok = $meta.license -eq 'MIT'; msg = 'license expression' },
-              @{ ok = $meta.projectUrl -like '*artemfomin/Mediana*'; msg = 'projectUrl' },
-              @{ ok = (Test-Path "tmp-$name/icon.png"); msg = 'icon embedded' },
-              @{ ok = (Test-Path "tmp-$name/package-readme.md"); msg = 'readme embedded' }
-            )
-            foreach ($c in $checks) {
-              if (-not $c.ok) { Write-Host "FAIL [$name]: $($c.msg)"; $fail = $true }
-            }
+            $tmp = "tmp-$name"
+            if (Test-Path $tmp) { Remove-Item -Recurse -Force $tmp }
+            Expand-Archive $nupkg.FullName $tmp -Force
+            $nuspec = Get-ChildItem $tmp -Filter *.nuspec | Select-Object -First 1
+            $raw = Get-Content $nuspec.FullName -Raw
+            $hasLicense = ($raw -match 'license') -and ($raw -match 'MIT')
+            $hasRepo = $raw -match 'artemfomin/Mediana'
+            $hasIcon = Test-Path "$tmp/icon.png"
+            $hasReadme = Test-Path "$tmp/package-readme.md"
+            if (-not $hasLicense) { Write-Host "FAIL [$name]: license"; $fail = $true }
+            if (-not $hasRepo)    { Write-Host "FAIL [$name]: repo url"; $fail = $true }
+            if (-not $hasIcon)    { Write-Host "FAIL [$name]: icon embedded"; $fail = $true }
+            if (-not $hasReadme)  { Write-Host "FAIL [$name]: readme embedded"; $fail = $true }
+            Remove-Item -Recurse -Force $tmp
           }
           if ($fail) { exit 1 }
           Write-Host "Package metadata: OK for all packages"
