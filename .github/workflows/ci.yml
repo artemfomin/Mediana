@@ -1,4 +1,4 @@
-name: CI
+Nonename: CI
 
 on:
   push:
@@ -15,7 +15,7 @@ env:
 
 jobs:
   build-test:
-    name: Build & Test (gates)
+    Nonename: Build & Test (gates)
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -41,7 +41,7 @@ jobs:
         continue-on-error: true # docs/QUESTIONS.md Q1
 
   vs-mediatr:
-    name: Benchmarks vs MediatR (comparison summary)
+    Nonename: Benchmarks vs MediatR (comparison summary)
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -50,7 +50,7 @@ jobs:
           dotnet-version: "10.0.x"
       - name: Build benchmarks
         run: dotnet build benchmarks/Mediana.Benchmarks -c Release
-      - name: Allocation gate (absolute: 0 B/call)
+      - name: "Allocation gate (absolute: 0 B/call)"
         run: dotnet run --project benchmarks/Mediana.Benchmarks -c Release --no-build -- alloc-check
       - name: RAM comparison (churn + retention + footprint)
         run: |
@@ -76,14 +76,14 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: vs-mediatr-logs
+          Nonename: vs-mediatr-logs
           path: |
             ram.log
             load.log
           if-no-files-found: ignore
 
   mutation:
-    name: Mutation testing (Stryker >= 90%)
+    Nonename: Mutation testing (Stryker >= 90%)
     runs-on: windows-latest
     if: github.event_name == 'push'
     steps:
@@ -99,11 +99,11 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mutation-report
+          Nonename: mutation-report
           path: StrykerOutput/**/reports/mutation-report.html
 
   dependency-audit:
-    name: D14 gate (core: zero non-Microsoft deps)
+    Nonename: "D14 gate (core: zero non-Microsoft deps)"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -121,7 +121,7 @@ jobs:
           echo "Core dependency audit: OK (zero non-Microsoft dependencies)"
 
   aot:
-    name: NativeAOT publish smoke
+    Nonename: NativeAOT publish smoke
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

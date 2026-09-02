@@ -224,3 +224,189 @@ InvalidOperationException and ArgumentException are routinely thrown for transie
 - Or replace System.Random with RandomNumberGenerator.GetInt32 for extra safety.
 
 ---
+
+## T-13 [Medium] RabbitMQ Stop misuses SemaphoreSlim.WaitAsync(int) as permit count — treats as millisecond timeout; connection close is fire-and-forget
+
+**Location:** src/Mediana.RabbitMQ/RabbitMqConsumer.cs:64-79.
+
+**Description.**
+- :72 `await _handlerLimiter.WaitAsync(endpoint.MaxConcurrency).ConfigureAwait(false);` — the int overload of WaitAsync is a MILLISECOND TIMEOUT, not a permit count. If MaxConcurrency=1, Stop waits 1 ms for one permit and continues regardless of in-flight handlers. If MaxConcurrency=10, it waits 10 ms. Graceful drain is not actually performed.
+- :78 `_connection?.CloseAsync();` — Task returned by CloseAsync is discarded (not awaited). Connection may still be open when DisposeAsync runs `_connection.DisposeAsync()` on :87, potentially racing.
+
+**Exploit / impact.** In-flight messages get the channel closed under them during shutdown, become unacked and are requeued (possibly leading to duplicate processing, or piling up if combined with T-02). Not directly exploitable but worsens availability under normal restart/deploy scenarios.
+
+**Recommendation.**
+- To drain, acquire all permits explicitly: loop MaxConcurrency times calling WaitAsync with a real CancellationToken and reasonable timeout.
+- Await the CloseAsync task: `await _connection.CloseAsync(...).ConfigureAwait(false);`.
+
+---
+
+## T-14 [Medium] MassTransit fault leaks Environment.MachineName, exception type FullName, and exception message onto the bus
+
+**Location:** src/Mediana.MassTransit/MassTransitTransport.cs:111-131.
+
+**Description.** ToMassTransitFault constructs a dictionary intended to be published to a bus consumed by potentially untrusted peers on shared MassTransit infrastructure:
+- `machineName = Environment.MachineName` (:128) discloses internal hostname (infrastructure enumeration).
+- `exceptionType = exception.GetType().FullName` (:122) discloses namespaces and internal type names.
+- `message = exception.Message` (:123) often contains stack context, connection strings (Cannot connect to server 10.0.1.5:5432 with user X), file paths, PII from request payloads.
+- faultedMessageId and faultMessageType.FullName are also leaked.
+
+**Exploit / impact.** Information disclosure on a multi-tenant bus: internal topology, credentials in DB error messages, filesystem paths, and internal type names help attackers plan follow-up attacks.
+
+**Recommendation.**
+- Do not include MachineName (or provide an opt-in IncludeHostInfo flag defaulting to false).
+- Sanitize exception.Message (truncate + strip patterns matching connection strings / paths / IPs) or replace with a canonical short reason + correlationId to look up in server-side logs.
+- Emit only exception.GetType().Name (not FullName), or a stable classification code.
+
+---
+
+## T-15 [Medium] Correlation / traceparent / arbitrary header values are propagated verbatim from untrusted envelope into logs and downstream (log/trace injection)
+
+**Location:** src/Mediana.Transport.Abstractions/Messaging/Envelope.cs:32-47; src/Mediana.RabbitMQ/RabbitMqTransport.cs:213-234 (writes to AMQP BasicProperties.Headers); src/Mediana.Kafka/KafkaTransport.cs:84-94; src/Mediana.Transport.Abstractions/Consuming/ConsumerPipeline.cs:40,:56 (log format strings interpolate {MessageId} — the only field that is currently a Guid).
+
+**Description.**
+- Envelope.TraceParent is a nullable string with no format validation; W3C tracecontext defines a strict version-traceid-spanid-flags grammar. Passing an arbitrary string into an activity/link may result in a malformed activity being created downstream (STJ preserves it as-is on serialization).
+- Envelope.Headers is `IReadOnlyDictionary<string,string>` with no length limits, no forbidden-character filtering (CR/LF, NUL). When these are copied onto AMQP BasicProperties.Headers (RabbitMqTransport.cs:219-234) or Kafka Headers (KafkaTransport.cs:88-94), a malicious peer can embed CR/LF sequences that appear in downstream broker logs (log injection), and in ILogger structured logs if the app decides to log headers.
+- CorrelationId/CausationId are Guids and thus safe. TraceParent is a string and unsafe. Header keys/values are strings and unsafe.
+- Right now the pipeline only logs {MessageId} at debug/error (ConsumerPipeline.cs:40,:56), so log-injection is not currently exploited inside Mediana, but any consumer telemetry or MassTransit fault map that copies these fields will leak. ToMassTransitFault (T-14) copies MessageType.FullName unfiltered, which is attacker-controlled since the attacker crafts the envelope — a malicious `MessageType.FullName` containing CR/LF ends up in the fault dictionary published to the bus.
+
+**Exploit / impact.** Log/trace injection when Mediana or downstream code eventually logs any of Envelope.TraceParent, Envelope.Headers, MessageType.FullName, or when these are propagated to distributed-tracing backends; low direct risk today, but any future logging change exposes it.
+
+**Recommendation.**
+- Validate TraceParent against the W3C regex `^[0-9a-f]{2}-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$`; reject or drop non-conformant values before publishing/consuming.
+- Enforce max length and forbid CR, LF, NUL in every Headers key and value; enforce total dictionary size bound.
+- Enforce max length + character allowlist `[A-Za-z0-9._+-]` on MessageType.FullName.
+- If logging headers, use structured logging and never format-string interpolate directly.
+
+---
+
+## T-16 [Low] Inbox key uses raw `|` delimiter — collision-prone if handlerIdentity contains `|`
+
+**Location:** src/Mediana.Transport.Abstractions/Inbox/InboxStore.cs:62-63; called from ConsumerPipeline.cs:37.
+
+**Description.** `Key(messageId, handlerIdentity)` = `messageId + "|" + handlerIdentity`. messageId is always a 32-char hex Guid ("N" format) supplied by ConsumerPipeline, so the first component is safe. handlerIdentity is passed by transport-layer callers and is not attacker-controlled today, but the API contract does not forbid `|` in the string. If a future caller passes a handler identity like `A|B` for handler A on delimiter path and `A` for a differently-named handler on subpath `|B`, keys collide -> false-positive dedup -> message drops.
+
+**Exploit / impact.** No current exploit; latent correctness bug becomes relevant if handlerIdentity is ever externally influenced.
+
+**Recommendation.**
+- Use a struct key `(string messageId, string handlerIdentity)` in a `Dictionary<(...)>` instead of concatenation.
+- Or hash both parts (SHA-256) and use the hex digest.
+
+---
+
+## T-17 [Low] Inbox marks message consumed BEFORE handler runs -> handler failure = at-most-once not at-least-once
+
+**Location:** src/Mediana.Transport.Abstractions/Inbox/InboxStore.cs:34-49 (TryBegin adds to _completed immediately); src/Mediana.Transport.Abstractions/Consuming/ConsumerPipeline.cs:37-59.
+
+**Description.** TryBegin inserts the key into _completed on first call and returns true; if the handler then throws (past retries), the key stays in _completed. On the next redelivery (RabbitMQ requeue or Kafka replay after group rebalance) TryBegin returns false, ConsumerPipeline calls Ack on line :41, and the failed message is silently dropped. The pipeline advertises effectively-once but is really at-most-once for failed handlers.
+
+Note also that on Kafka T-05 the message is already lost; on RabbitMQ it goes to DLQ. In-memory inbox is per-process so a process restart clears state — but within a single process lifetime the semantics diverge from the docstring.
+
+**Exploit / impact.** Silent message loss for messages that failed and were later redelivered within the same process. Combined with T-11 (over-broad poison classification), a well-timed InvalidOperationException loses the message AND poisons the inbox against re-processing.
+
+**Recommendation.**
+- Rename TryBegin semantics: only add to _completed on Complete(), and hold an in-flight set to prevent concurrent duplicates. Alternatively, on handler failure, remove the key from _completed.
+- Document the semantics explicitly; add tests.
+
+---
+
+## T-18 [Low] InMemoryInboxStore capacity eviction is FIFO by insertion order — recent messages can be evicted while older ones survive
+
+**Location:** src/Mediana.Transport.Abstractions/Inbox/InboxStore.cs:39-45.
+
+**Description.** Under sustained load >=100 000 messages, eviction begins to drop the oldest inbox keys. If Kafka replay includes messages from before that window (offset reset / rewind / group rebalance), they will be re-processed. Not a security issue directly, but effectively-once becomes effectively-once within a sliding window, which is not documented.
+
+**Recommendation.**
+- Document the retention window in IInboxStore docstring.
+- Consider TTL-based eviction (drop entries older than N minutes) instead of pure size-FIFO.
+- Add a metric on eviction rate so operators know when they need a persistent inbox.
+
+---
+
+## T-19 [Low] Envelope.Version is not enforced on decode — future/unknown wire versions accepted silently
+
+**Location:** src/Mediana.Transport.Abstractions/Messaging/Envelope.cs:4-7,:27; four EnvelopeCodec copies never inspect Version.
+
+**Description.** EnvelopeVersion.Current = 1. Decoded envelopes may declare `Version = 99` and be processed. Only additive evolution is planned per the spec, but there is no forward-compat guard; a future breaking change or a malicious version-0 downgrade could pass silently.
+
+**Recommendation.** In EnvelopeCodec.Decode, reject `envelope.Version < 1 || envelope.Version > EnvelopeVersion.Current`. Route as poison.
+
+---
+
+## T-20 [Low] Kafka RetryTopicName interpolates TimeSpan.TotalMilliseconds as double -> floats/locale drift; topic names not validated
+
+**Location:** src/Mediana.Kafka/KafkaTransport.cs:70-71; also src/Mediana.RabbitMQ/RabbitMqTransport.cs:151-152.
+
+**Description.** `topic + ".retry." + delay.TotalMilliseconds + "ms"` — TotalMilliseconds is a double. Under an unusual current-culture setting or fractional delay values you can produce topic names with `,` or `.` decimal separators and scientific notation (`1E-05`), leading to inconsistent topic naming or Kafka forbidden characters (`[^a-zA-Z0-9._-]` are rejected). Also nothing validates the base topic name is safe against injection (e.g., `topic = "../evil"`).
+
+**Recommendation.** Use `((long)delay.TotalMilliseconds).ToString(CultureInfo.InvariantCulture)`. Validate topic/queue names against a strict regex before building topology.
+
+---
+
+## T-21 [Info] EnvelopeCodec duplicated four times with drift risk
+
+**Location:** src/Mediana.Kafka/KafkaTransport.cs:203-214; src/Mediana.RabbitMQ/RabbitMqTransport.cs:248-259; src/Mediana.MassTransit/MassTransitTransport.cs:139-150; src/Mediana.Outbox/OutboxRelay.cs:79-90.
+
+**Description.** Four independent copies with subtle differences (`byte[]` vs `ReadOnlySpan<byte>`, `body.ToArray()` allocation in Rabbit only). A single behavioral fix (limits, version guard, ContractHash validation) must be applied in four places — easy to skip one, creating an inconsistent security posture across transports.
+
+**Recommendation.** Move the single canonical codec into Mediana.Transport.Abstractions/Messaging and have transports depend on it. Add hardening (max size, max depth, version guard) in one place.
+
+---
+
+## T-22 [Info] RabbitMqTransport.CreateConnection ignores CancellationToken
+
+**Location:** src/Mediana.RabbitMQ/RabbitMqTransport.cs:66-69.
+
+**Description.** `internal ValueTask<IConnection> CreateConnection(CancellationToken cancellationToken)` calls `_factory.CreateConnectionAsync()` without forwarding the token. On slow DNS / TCP handshakes the caller cannot cancel. Not a security bug but hampers graceful shutdown and can extend startup DoS windows.
+
+**Recommendation.** Forward the token: `_factory.CreateConnectionAsync(cancellationToken)` (7.x supports it).
+
+---
+
+# Summary
+
+| ID | Severity | Title |
+|---|---|---|
+| T-01 | Critical | Kafka poll loop dies silently on poison envelope in delivery ctor |
+| T-02 | Critical | RabbitMQ poison envelope -> infinite unacked poison loop, bypasses DLQ |
+| T-03 | Critical | STJ default limits + base64 amplification -> memory DoS on all 4 codec paths |
+| T-04 | Critical | Kafka AdminClient / Consumer drop SASL/SSL config from ProducerConfig |
+| T-05 | High | Kafka Nack commits offset without producing to DLQ (message loss) |
+| T-06 | High | Kafka PollLoop swallows all non-OCE exceptions silently |
+| T-07 | High | Rabbit request/reply: predictable correlationId + unbounded reply decode + spoofable reply |
+| T-08 | High | GuidV7 ns2.1 uses System.Random -> predictable MessageId -> inbox dedup poisoning |
+| T-09 | High | `mediana.destination` header lets attacker route Publish() when DestinationOverride null |
+| T-10 | Medium | ContractHash never computed/verified — type-confusion guard is dead |
+| T-11 | Medium | PoisonDetector treats InvalidOperationException/ArgumentException as poison (loss primitive) |
+| T-12 | Medium | Retry jitter never applied (thundering herd) |
+| T-13 | Medium | RabbitMQ Stop misuses WaitAsync(int) + un-awaited connection close |
+| T-14 | Medium | MassTransit fault leaks MachineName + exception type/message |
+| T-15 | Medium | Envelope headers/TraceParent/MessageType.FullName propagated unvalidated (log/trace injection) |
+| T-16 | Low | Inbox key `|` delimiter collision-prone |
+| T-17 | Low | Inbox marks consumed before handler runs (at-most-once on handler failure) |
+| T-18 | Low | Inbox FIFO capacity eviction can drop still-relevant keys |
+| T-19 | Low | Envelope.Version not enforced on decode |
+| T-20 | Low | Retry-topic name uses TimeSpan.TotalMilliseconds as double (culture/format risk) |
+| T-21 | Info | EnvelopeCodec duplicated 4x — drift risk |
+| T-22 | Info | RabbitMQ CreateConnection ignores CancellationToken |
+
+---
+
+# Checked & OK
+
+- RabbitMQ topology arguments (`x-dead-letter-*`, `x-message-ttl`, `x-queue-mode`) in TopologyProvisioner (RabbitMqTransport.cs:82-165) are hard-coded with values derived from application-supplied TopologyManifest, not from untrusted envelope data. Queue names come from ConsumerEndpoint.Name / PublishDestinations / DeadLetterDestinations — all application-controlled. No injection vector from envelope path.
+- Publisher confirms on RabbitMQ: channel is created with `publisherConfirmationsEnabled: true, publisherConfirmationTrackingEnabled: true` (RabbitMqTransport.cs:55-57); BasicPublishAsync awaits confirmation. Correct for outbox relay durability.
+- Kafka publisher key falls back to `envelope.MessageId.ToString("N")` when neither options.PartitionKey nor envelope.PartitionKey is set (KafkaTransport.cs:86) — sensible; not a security issue.
+- MedianaExchange constant is a fixed literal `"mediana"` (RabbitMqTransport.cs:17), not attacker-influenced.
+- No hardcoded credentials, connection strings, or secrets in any transport source file (confirmed by inspection of all four transport projects).
+- No use of dangerous serializers (BinaryFormatter, Newtonsoft with TypeNameHandling, Json.NET with polymorphism). Only System.Text.Json with reflection-based `Deserialize<Envelope>` — Envelope is a sealed record with concrete typed properties, so no polymorphic gadget-chain risk.
+- No `Type.GetType` / `Assembly.Load` / dynamic type resolution on the transport receive path — `MessageType.FullName` is transported but never resolved to a `System.Type`; there is no reflection-based instantiation from wire data.
+- No user-controlled URLs, no outbound HTTP from transport packages.
+- AMQP MessageId and CorrelationId on RabbitMQ publisher use Guid.ToString() (safe format).
+- Kafka topic creation is idempotent: `CreateTopicsException` with `TopicAlreadyExists` is swallowed only when all results are that error (KafkaTransport.cs:53-56) — correct guard.
+- Ack/Nack methods on both transports do not throw on second call in normal path; concurrent Ack is not possible because deliveries are single-owned by the consumer loop.
+- MassTransit direct publisher (Mode 1) uses MassTransit's own IBus.Publish — inherits MassTransit's security posture for auth/transport (out of scope) and only ships `MedianaWireMessage { MessageId, Destination, Body }`, no unsafe fields.
+- InProcessConsumerHost.Deliver guards against calls before Start() (MassTransitTransport.cs:82-90) — good state check.
+- RouteRegistry stores only application-configured policies (RouteRegistry.cs:88-92); the RemoteAttribute reflection lookup (:102-103) is over application types, not wire data — safe.
+- OutboxRelay.Deliver always sets DestinationOverride from persisted OutboxMessage.Destination (OutboxRelay.cs:181), so the mediana.destination header attack (T-09) does not apply to the only in-repo caller of ITransportPublisher.Publish.
+- Handler dispatch does not use `MessageType.FullName` to resolve a Type via reflection anywhere (grepped: FullName is only written to wire headers and copied into the MassTransit fault dict).

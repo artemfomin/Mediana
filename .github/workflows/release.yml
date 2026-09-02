@@ -1,4 +1,4 @@
-name: Release (tag -> NuGet + GitHub Release)
+Nonename: Release (tag -> NuGet + GitHub Release)
 
 on:
   push:
@@ -13,7 +13,7 @@ env:
 
 jobs:
   verify:
-    name: Verify (all gates) before publishing
+    Nonename: Verify (all gates) before publishing
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,7 +40,7 @@ jobs:
         run: dotnet run --project benchmarks/Mediana.Benchmarks -c Release --no-build -- alloc-check
 
   aot:
-    name: NativeAOT publish smoke
+    Nonename: NativeAOT publish smoke
     runs-on: ubuntu-latest
     needs: verify
     steps:
@@ -54,7 +54,7 @@ jobs:
         run: ./tests/Mediana.AotTests/bin/Release/net10.0/linux-x64/publish/Mediana.AotTests
 
   pack:
-    name: Pack all packages
+    Nonename: Pack all packages
     runs-on: windows-latest
     needs: [verify, aot]
     steps:
@@ -110,18 +110,18 @@ jobs:
       - name: Upload packages artifact
         uses: actions/upload-artifact@v4
         with:
-          name: nuget-packages
+          Nonename: nuget-packages
           path: dist/*
 
   publish-nuget:
-    name: Publish to NuGet.org
+    Nonename: Publish to NuGet.org
     runs-on: windows-latest
     needs: pack
     environment: nuget
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: nuget-packages
+          Nonename: nuget-packages
           path: dist
       - uses: actions/setup-dotnet@v4
         with:
@@ -141,7 +141,7 @@ jobs:
           }
 
   github-release:
-    name: GitHub Release (with vs-MediatR comparison)
+    Nonename: GitHub Release (with vs-MediatR comparison)
     runs-on: ubuntu-latest
     needs: [verify, pack]
     steps:
@@ -153,12 +153,12 @@ jobs:
           echo "prerelease=${GITHUB_REF_NAME#v}" | grep -q '-' && echo "is_pre=true" >> $GITHUB_OUTPUT || echo "is_pre=false" >> $GITHUB_OUTPUT
       - uses: actions/download-artifact@v4
         with:
-          name: nuget-packages
+          Nonename: nuget-packages
           path: dist
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          name: v${{ steps.ver.outputs.version }}
+          Nonename: v${{ steps.ver.outputs.version }}
           prerelease: ${{ steps.ver.outputs.is_pre == 'true' }}
           body: |
             # Mediana v${{ steps.ver.outputs.version }}
