@@ -1,4 +1,4 @@
-Nonename: CI
+name: CI
 
 on:
   push:
@@ -15,7 +15,7 @@ env:
 
 jobs:
   build-test:
-    Nonename: Build & Test (gates)
+    name: Build & Test (gates)
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,7 +26,7 @@ jobs:
         run: dotnet restore
       - name: Build (warnings as errors)
         run: dotnet build -c Release --no-restore
-      - name: Unit tests (both assets) + coverage gate (union branch >= 95%)
+      - name: "Unit tests (both assets) + coverage gate (union branch >= 95%)"
         run: |
           dotnet test tests/Mediana.UnitTests -c Release --no-build --collect:"XPlat Code Coverage" --settings coverlet.runsettings
           dotnet test tests/Mediana.UnitTests.Ns21 -c Release --no-build --collect:"XPlat Code Coverage" --settings coverlet.runsettings
@@ -41,7 +41,7 @@ jobs:
         continue-on-error: true # docs/QUESTIONS.md Q1
 
   vs-mediatr:
-    Nonename: Benchmarks vs MediatR (comparison summary)
+    name: Benchmarks vs MediatR (comparison summary)
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -76,14 +76,14 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          Nonename: vs-mediatr-logs
+          name: vs-mediatr-logs
           path: |
             ram.log
             load.log
           if-no-files-found: ignore
 
   mutation:
-    Nonename: Mutation testing (Stryker >= 90%)
+    name: Mutation testing (Stryker >= 90%)
     runs-on: windows-latest
     if: github.event_name == 'push'
     steps:
@@ -99,11 +99,11 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          Nonename: mutation-report
+          name: mutation-report
           path: StrykerOutput/**/reports/mutation-report.html
 
   dependency-audit:
-    Nonename: "D14 gate (core: zero non-Microsoft deps)"
+    name: "D14 gate (core: zero non-Microsoft deps)"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -121,7 +121,7 @@ jobs:
           echo "Core dependency audit: OK (zero non-Microsoft dependencies)"
 
   aot:
-    Nonename: NativeAOT publish smoke
+    name: NativeAOT publish smoke
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
