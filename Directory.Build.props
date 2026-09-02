@@ -1,6 +1,5 @@
 <Project>
   <PropertyGroup>
-    <!-- TFM задаются явно в каждом csproj (наследование ломало тестовые проекты) -->
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -14,6 +13,9 @@
     <IsPackable>false</IsPackable>
     <RepoRoot>$(MSBuildThisFileDirectory)</RepoRoot>
   </PropertyGroup>
+
+  <!-- OSS-метаданные NuGet: см. Directory.Build.targets (импортируется после csproj,
+       когда IsPackable проектов уже установлен) -->
 
   <!-- Тесты/бенчмарки не нуждаются в анализаторах уровня продукта -->
   <PropertyGroup Condition="'$(IsTestProject)' == 'true' or '$(MSBuildProjectName)' == 'Mediana.Benchmarks'">

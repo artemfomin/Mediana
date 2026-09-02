@@ -2,17 +2,26 @@ name: CI
 
 on:
   push:
-    branches: [main, feature/implementation]
+    branches: [main, "feature/**"]
   pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
   build-test:
+    name: Build & Test (gates)
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: "10.0.x"
       - name: Restore
         run: dotnet restore
       - name: Build (warnings as errors)
@@ -29,47 +38,86 @@ jobs:
           dotnet test tests/Mediana.InteropTests -c Release --no-build
       - name: Integration tests (Testcontainers; Docker required)
         run: dotnet test tests/Mediana.IntegrationTests -c Release --no-build
-        continue-on-error: true # см. docs/QUESTIONS.md Q1
-      - name: AOT publish smoke (linker доступен на windows runner)
+        continue-on-error: true # docs/QUESTIONS.md Q1
+      - name: AOT publish smoke
         run: dotnet publish tests/Mediana.AotTests -c Release
-      - name: Allocation budget check
-        run: dotnet run --project benchmarks/Mediana.Benchmarks -c Release -- alloc-check
+
+  vs-mediatr:
+    name: Benchmarks vs MediatR (comparison summary)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Build benchmarks
+        run: dotnet build benchmarks/Mediana.Benchmarks -c Release
+      - name: Allocation gate (absolute: 0 B/call)
+        run: dotnet run --project benchmarks/Mediana.Benchmarks -c Release --no-build -- alloc-check
+      - name: RAM comparison (churn + retention + footprint)
+        run: |
+          dotnet run --project benchmarks/Mediana.Benchmarks -c Release --no-build -- ram-check all > ram.log 2>&1
+          dotnet run --project benchmarks/Mediana.Benchmarks -c Release --no-build -- ram-check footprint mediatr >> ram.log 2>&1
+          dotnet run --project benchmarks/Mediana.Benchmarks -c Release --no-build -- ram-check footprint mediana >> ram.log 2>&1
+      - name: Load comparison (scaling + tails)
+        if: github.event_name == 'push'
+        run: dotnet run --project benchmarks/Mediana.Benchmarks -c Release --no-build -- load-check all > load.log 2>&1
+      - name: Job summary (vs MediatR)
+        if: always()
+        shell: pwsh
+        run: |
+          $summary = "## Mediana vs MediatR — сравнение (CI)`n"
+          foreach ($f in @("ram.log","load.log")) {
+            if (Test-Path $f) {
+              $summary += "`n### $f`n`````n" + (Get-Content $f -Raw) + "`````n"
+            }
+          }
+          $summary += "`nПолные методики: [benchmarks/RESULTS.md](https://github.com/artemfomin/Mediana/blob/main/benchmarks/RESULTS.md)`n"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value $summary
+      - name: Upload raw logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vs-mediatr-logs
+          path: |
+            ram.log
+            load.log
+          if-no-files-found: ignore
 
   mutation:
+    name: Mutation testing (Stryker >= 90%)
     runs-on: windows-latest
     if: github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
-      - name: Stryker mutation testing (core, score >= 90%)
+          dotnet-version: "10.0.x"
+      - name: Stryker
         run: |
           dotnet tool restore
           dotnet tool run dotnet-stryker
-        continue-on-error: false
+      - name: Upload mutation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-report
+          path: StrykerOutput/**/reports/mutation-report.html
 
   dependency-audit:
+    name: D14 gate (core: zero non-Microsoft deps)
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: D14 gate: ядро — только Microsoft-зависимости
-        run: |
-          # Ядро: Abstractions, Mediana, Transport.Abstractions, Generators, Outbox
-          for p in Mediana.Abstractions Mediana Mediana.Transport.Abstractions Mediana.Outbox; do
-            echo "Auditing $p"
-            dotnet list src/$p/$p.csproj package --include-transitive 2>/dev/null | grep -E "^\s+>" | grep -viE "microsoft|system\.|analyzers" && { echo "NON-MICROSOFT DEPENDENCY IN CORE: $p"; exit 1; } || true
-          done
-          echo "Core dependency audit: OK (zero non-Microsoft dependencies)"
-
-  benchmark-diff:
-    runs-on: windows-latest
-    if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
-      - name: Allocation budgets (absolute gate)
-        run: dotnet run --project benchmarks/Mediana.Benchmarks -c Release -- alloc-check
-      # Полный benchmark-diff (>5% regression gate) подключается после стабилизации baseline (benchmarks/RESULTS.md)
+          dotnet-version: "10.0.x"
+      - name: Audit core packages
+        run: |
+          for p in Mediana.Abstractions Mediana Mediana.Transport.Abstractions Mediana.Outbox; do
+            echo "Auditing $p"
+            dotnet list src/$p/$p.csproj package --include-transitive 2>/dev/null \
+              | grep -E "^\s+>" | grep -viE "microsoft|system\.|analyzers" \
+              && { echo "NON-MICROSOFT DEPENDENCY IN CORE: $p"; exit 1; } || true
+          done
+          echo "Core dependency audit: OK (zero non-Microsoft dependencies)"

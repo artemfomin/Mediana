@@ -1,0 +1,168 @@
+name: Release (tag -> NuGet + GitHub Release)
+
+on:
+  push:
+    tags: ["v*"]
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  verify:
+    name: Verify (all gates) before publishing
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Build (warnings as errors)
+        run: |
+          dotnet restore
+          dotnet build -c Release
+      - name: Tests (all projects, both assets)
+        run: |
+          dotnet test tests/Mediana.UnitTests -c Release --no-build
+          dotnet test tests/Mediana.UnitTests.Ns21 -c Release --no-build
+          dotnet test tests/Mediana.GeneratorTests -c Release --no-build
+          dotnet test tests/Mediana.ContractTests.Ns21 -c Release --no-build
+          dotnet test tests/Mediana.InteropTests -c Release --no-build
+      - name: Coverage gate (union >= 95%)
+        run: |
+          dotnet test tests/Mediana.UnitTests -c Release --no-build --collect:"XPlat Code Coverage" --settings coverlet.runsettings
+          dotnet test tests/Mediana.UnitTests.Ns21 -c Release --no-build --collect:"XPlat Code Coverage" --settings coverlet.runsettings
+          powershell -File scripts/check-coverage.ps1
+      - name: Allocation gate (0 B/call)
+        run: dotnet run --project benchmarks/Mediana.Benchmarks -c Release --no-build -- alloc-check
+      - name: AOT publish smoke
+        run: dotnet publish tests/Mediana.AotTests -c Release
+
+  pack:
+    name: Pack all packages
+    runs-on: windows-latest
+    needs: verify
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Extract version from tag
+        id: ver
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $version = $tag.TrimStart('v')
+          $prerelease = $version.Contains('-')
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "prerelease=$prerelease" >> $env:GITHUB_OUTPUT
+      - name: Pack (version from tag, symbols snupkg)
+        run: |
+          $v = "${{ steps.ver.outputs.version }}"
+          $projects = Get-ChildItem src -Filter *.csproj -Recurse | Where-Object {
+            (Select-Xml -Path $_.FullName -XPath "//IsPackable").Node.InnerText -eq 'true'
+          }
+          # Сборка сначала (единая версия), затем pack каждого проекта
+          dotnet build -c Release -p:Version=$v
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          foreach ($p in $projects) {
+            dotnet pack $p.FullName -c Release --no-build -p:Version=$v -o dist
+          }
+          Get-ChildItem dist
+      - name: Verify package metadata (license/icon/readme embedded)
+        shell: pwsh
+        run: |
+          $fail = $false
+          foreach ($nupkg in (Get-ChildItem dist -Filter *.nupkg)) {
+            $name = $nupkg.BaseName
+            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "tmp-$name"
+            Expand-Archive $nupkg.FullName "tmp-$name" -Force
+            $nuspec = Get-ChildItem "tmp-$name" -Filter *.nuspec | Select-Object -First 1
+            [xml]$xml = Get-Content $nuspec.FullName
+            $meta = $xml.package.metadata
+            $checks = @(
+              @{ ok = $meta.license -eq 'MIT'; msg = 'license expression' },
+              @{ ok = $meta.projectUrl -like '*artemfomin/Mediana*'; msg = 'projectUrl' },
+              @{ ok = (Test-Path "tmp-$name/icon.png"); msg = 'icon embedded' },
+              @{ ok = (Test-Path "tmp-$name/package-readme.md"); msg = 'readme embedded' }
+            )
+            foreach ($c in $checks) {
+              if (-not $c.ok) { Write-Host "FAIL [$name]: $($c.msg)"; $fail = $true }
+            }
+          }
+          if ($fail) { exit 1 }
+          Write-Host "Package metadata: OK for all packages"
+      - name: Upload packages artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages
+          path: dist/*
+
+  publish-nuget:
+    name: Publish to NuGet.org
+    runs-on: windows-latest
+    needs: pack
+    environment: nuget
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: nuget-packages
+          path: dist
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Push nupkg + snupkg
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrEmpty($env:NUGET_API_KEY)) {
+            Write-Warning "NUGET_API_KEY secret не задан — публикация пропущена (пакеты доступны в артефакте nuget-packages)."
+            exit 0
+          }
+          foreach ($pkg in (Get-ChildItem dist -Include *.nupkg,*.snupkg -Recurse)) {
+            Write-Host "Push $($pkg.Name)"
+            dotnet nuget push $pkg.FullName --source https://api.nuget.org/v3/index.json --api-key $env:NUGET_API_KEY --skip-duplicate
+          }
+
+  github-release:
+    name: GitHub Release (with vs-MediatR comparison)
+    runs-on: ubuntu-latest
+    needs: [verify, pack]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract version
+        id: ver
+        run: |
+          echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+          echo "prerelease=${GITHUB_REF_NAME#v}" | grep -q '-' && echo "is_pre=true" >> $GITHUB_OUTPUT || echo "is_pre=false" >> $GITHUB_OUTPUT
+      - uses: actions/download-artifact@v4
+        with:
+          name: nuget-packages
+          path: dist
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: v${{ steps.ver.outputs.version }}
+          prerelease: ${{ steps.ver.outputs.is_pre == 'true' }}
+          body: |
+            # Mediana v${{ steps.ver.outputs.version }}
+
+            **Пакеты опубликованы на [NuGet](https://www.nuget.org/packages/Mediana)** (при заданном `NUGET_API_KEY`).
+
+            ## Mediana vs MediatR — сводка
+
+            | Метрика | MediatR 14.2 | Mediana |
+            |---|---:|---:|
+            | Send (1 поток) | 100.3 ns | **13.6 ns (7.4×)** |
+            | Аллокации | 512 B/оп | **0 B/оп** |
+            | Throughput 64 потока | 24 M ops/s | **710 M ops/s (29×)** |
+            | p99.99 | 21–31 µs | **500 ns (42–61×)** |
+            | GC-паузы | 3.4–3.7% времени | **0.00%** |
+            | RAM удержание/оп | 606 B | **181 B (3.3×)** |
+            | WorkingSet | 79.5 MB | **30.5 MB (−62%)** |
+            | Пакет ядра | 265 KB | **68.5 KB (3.9×)** |
+
+            Полные методики: [`benchmarks/RESULTS.md`](https://github.com/artemfomin/Mediana/blob/main/benchmarks/RESULTS.md).
+            Изменения — в [`CHANGELOG.md`](https://github.com/artemfomin/Mediana/blob/main/CHANGELOG.md).
+          files: dist/*

@@ -1,0 +1,7 @@
+# Normalize line endings; keep binaries binary
+* text=auto eol=lf
+*.png binary
+*.nupkg binary
+*.snupkg binary
+*.exe binary
+*.dll binary

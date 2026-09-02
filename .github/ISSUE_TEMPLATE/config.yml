@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🔒 Уязвимости безопасности
+    url: https://github.com/artemfomin/Mediana/blob/main/SECURITY.md
+    about: "Только приватно по регламенту SECURITY.md — не через issues"
+  - name: 💬 Вопросы и обсуждения
+    url: https://github.com/artemfomin/Mediana/discussions
+    about: "Вопросы использования, идеи, обсуждение дизайна"

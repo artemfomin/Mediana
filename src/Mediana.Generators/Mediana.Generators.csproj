@@ -1,32 +1,25 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;net10.0</TargetFrameworks>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <IsPackable>true</IsPackable>
     <PackageId>Mediana.Generators</PackageId>
     <DevelopmentDependency>true</DevelopmentDependency>
+    <!-- DevelopmentDependency: у потребителей не течёт; lib/ присутствует (валидация NuGet),
+         Roslyn грузит генератор из analyzers/dotnet/cs -->
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     <NoWarn>$(NoWarn);RS1041</NoWarn>
-    <GetTargetPathDependsOn>$(GetTargetPathDependsOn);GetDependencyTargetPaths</GetTargetPathDependsOn>
-    <IncludeBuildOutput>false</IncludeBuildOutput>
     <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
   </ItemGroup>
-  <PropertyGroup>
-    <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);PackBuildOutputs</TargetsForTfmSpecificBuildOutput>
-    <GetTargetPathDependsOn>$(GetTargetPathDependsOn);GetDependencyTargetPaths</GetTargetPathDependsOn>
-  </PropertyGroup>
-  <Target Name="PackBuildOutputs" DependsOnTargets="ResolveProjectReferences" Condition="'$(TargetFramework)' == 'netstandard2.0'">
+  <!-- Roslyn грузит генератор из analyzers/dotnet/cs; lib/netstandard2.0 остаётся для
+       валидации NuGet. Копия выполняется после Build, до Pack -->
+  <Target Name="CopyAnalyzerToPackage" AfterTargets="Build">
     <ItemGroup>
-      <TfmSpecificPackageFile Include="$(OutputPath)\$(AssemblyName).dll" PackagePath="analyzers\dotnet\cs" />
-    </ItemGroup>
-  </Target>
-  <Target Name="GetDependencyTargetPaths" DependsOnTargets="ResolveProjectReferences">
-    <ItemGroup>
-      <TargetPathWithTargetPlatformMoniker Include="@(ReferencePathWithRefAssemblies)" />
+      <None Include="$(OutputPath)$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     </ItemGroup>
   </Target>
 </Project>

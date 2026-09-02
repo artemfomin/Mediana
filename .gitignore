@@ -1,4 +1,24 @@
 # Build artifacts
 bin/
 obj/
+artifacts/
+dist/
 *.user
+*.suo
+
+# Tooling outputs
+StrykerOutput/
+BenchmarkDotNet.Artifacts/
+TestResults/
+*.log
+coverage*.json
+coverage*.xml
+
+# IDE
+.vs/
+.idea/
+*.binlog
+
+# OS
+.DS_Store
+Thumbs.db
