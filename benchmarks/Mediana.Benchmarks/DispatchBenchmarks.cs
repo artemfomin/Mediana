@@ -173,6 +173,22 @@ public static class Program
             return;
         }
 
+        if (args.Length > 0 && args[0] == "load-check")
+        {
+            var scenario = args.Length > 1 ? args[1] : "all";
+            if (scenario is "all" or "scaling")
+            {
+                LoadCheck.Scaling();
+            }
+
+            if (scenario is "all" or "tails")
+            {
+                LoadCheck.Tails();
+            }
+
+            return;
+        }
+
         if (args.Length > 0 && args[0] == "ram-check")
         {
             var scenario = args.Length > 1 ? args[1] : "all";
