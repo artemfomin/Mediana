@@ -5,6 +5,9 @@
     <IsPackable>false</IsPackable>
     <PublishAot>true</PublishAot>
     <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- AOT-анализатор выдаёт предупреждения по зависимостям (MEDI и пр.) — smoke-проект
+         проверяет компиляцию/запуск, а не чистоту анализа продукта -->
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Mediana\Mediana.csproj" />
