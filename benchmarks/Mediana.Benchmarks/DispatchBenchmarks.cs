@@ -173,6 +173,27 @@ public static class Program
             return;
         }
 
+        if (args.Length > 0 && args[0] == "ram-check")
+        {
+            var scenario = args.Length > 1 ? args[1] : "all";
+            if (scenario is "all" or "churn")
+            {
+                RamCheck.Churn();
+            }
+
+            if (scenario is "all" or "retention")
+            {
+                RamCheck.Retention();
+            }
+
+            if (scenario is "all" or "footprint" && args.Length > 2)
+            {
+                RamCheck.Footprint(args[2]);
+            }
+
+            return;
+        }
+
         BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);
     }
 }
