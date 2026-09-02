@@ -36,7 +36,7 @@ jobs:
       - name: Allocation gate (0 B/call)
         run: dotnet run --project benchmarks/Mediana.Benchmarks -c Release --no-build -- alloc-check
       - name: AOT publish smoke
-        run: dotnet publish tests/Mediana.AotTests -c Release
+        run: dotnet publish tests/Mediana.AotTests -c Release -r win-x64 --self-contained true
 
   pack:
     name: Pack all packages

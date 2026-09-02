@@ -1,10 +1,27 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
   <title id="title">Mediana</title>
   <desc id="desc">Two interlocking angular links representing mediation between components.</desc>
-  <rect x="16" y="16" width="480" height="480" rx="96" fill="#18191B"/>
-  <g fill="none" stroke-width="52" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M 280 208 L 216 144 L 192 136 L 168 144 L 96 232 L 88 256 L 96 280 L 168 368 L 192 376 L 216 368 L 280 304" stroke="#AEF500"/>
-    <path d="M 232 304 L 296 368 L 320 376 L 344 368 L 416 280 L 424 256 L 416 232 L 344 144 L 320 136 L 296 144 L 232 208" stroke="#A6A8AB"/>
-    <path d="M 216 368 L 280 304" stroke="#AEF500"/>
+  <defs>
+    <radialGradient id="background" cx="36%" cy="30%" r="88%">
+      <stop offset="0" stop-color="#2A2C30"/>
+      <stop offset="1" stop-color="#141517"/>
+    </radialGradient>
+    <linearGradient id="lime" x1="88" y1="152" x2="424" y2="360" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#C4FF12"/>
+      <stop offset="0.5" stop-color="#AEF500"/>
+      <stop offset="1" stop-color="#8CCB00"/>
+    </linearGradient>
+    <linearGradient id="gray" x1="88" y1="152" x2="424" y2="360" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#C6C8CC"/>
+      <stop offset="0.5" stop-color="#A6A8AB"/>
+      <stop offset="1" stop-color="#777A80"/>
+    </linearGradient>
+  </defs>
+  <rect x="16" y="16" width="480" height="480" rx="96" fill="url(#background)"/>
+  <g fill="none" stroke-width="58" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 88 236 L 176 160 L 192 152 L 208 160 L 296 248" stroke="url(#lime)"/>
+    <path d="M 216 248 L 304 160 L 320 152 L 336 160 L 424 236" stroke="url(#gray)"/>
+    <path d="M 88 276 L 176 352 L 192 360 L 208 352 L 296 264" stroke="url(#gray)"/>
+    <path d="M 216 264 L 304 352 L 320 360 L 336 352 L 424 276" stroke="url(#lime)"/>
   </g>
 </svg>

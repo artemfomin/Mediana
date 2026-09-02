@@ -20,48 +20,29 @@ BACKGROUND = "#18191B"
 LIME = "#AEF500"
 GRAY = "#A6A8AB"
 
-BACKGROUND_RGBA = (24, 25, 27, 255)
-LIME_RGBA = (174, 245, 0, 255)
-GRAY_RGBA = (166, 168, 171, 255)
+BACKGROUND_LIGHT_RGBA = (42, 44, 48, 255)
+BACKGROUND_DARK_RGBA = (20, 21, 23, 255)
+LIME_LIGHT_RGBA = (196, 255, 18, 255)
+LIME_DARK_RGBA = (140, 203, 0, 255)
+GRAY_LIGHT_RGBA = (198, 200, 204, 255)
+GRAY_DARK_RGBA = (119, 122, 128, 255)
 
-STROKE_WIDTH = 52.0
+STROKE_WIDTH = 58.0
 BACKGROUND_BOX = (16.0, 16.0, 496.0, 496.0)
 BACKGROUND_RADIUS = 96.0
 
-# Two open diamond loops interlock at the centre. Gray passes over lime at
-# the upper crossing, while the lime overlay passes over gray at the lower.
-LIME_LINK = (
-    (280.0, 208.0),
-    (216.0, 144.0),
-    (192.0, 136.0),
-    (168.0, 144.0),
-    (96.0, 232.0),
-    (88.0, 256.0),
-    (96.0, 280.0),
-    (168.0, 368.0),
-    (192.0, 376.0),
-    (216.0, 368.0),
-    (280.0, 304.0),
-)
-GRAY_LINK = (
-    (232.0, 304.0),
-    (296.0, 368.0),
-    (320.0, 376.0),
-    (344.0, 368.0),
-    (416.0, 280.0),
-    (424.0, 256.0),
-    (416.0, 232.0),
-    (344.0, 144.0),
-    (320.0, 136.0),
-    (296.0, 144.0),
-    (232.0, 208.0),
-)
-LIME_OVERLAY = ((216.0, 368.0), (280.0, 304.0))
+# Four continuous angular ribbons reproduce concept 12 from the palette board.
+# Their inner ends overlap in the middle instead of terminating as visible dots.
+LIME_TOP = ((88.0, 236.0), (176.0, 160.0), (192.0, 152.0), (208.0, 160.0), (296.0, 248.0))
+GRAY_TOP = ((216.0, 248.0), (304.0, 160.0), (320.0, 152.0), (336.0, 160.0), (424.0, 236.0))
+GRAY_BOTTOM = ((88.0, 276.0), (176.0, 352.0), (192.0, 360.0), (208.0, 352.0), (296.0, 264.0))
+LIME_BOTTOM = ((216.0, 264.0), (304.0, 352.0), (320.0, 360.0), (336.0, 352.0), (424.0, 276.0))
 
 PAINT_ORDER = (
-    (LIME_RGBA, LIME_LINK),
-    (GRAY_RGBA, GRAY_LINK),
-    (LIME_RGBA, LIME_OVERLAY),
+    ("lime", LIME_TOP),
+    ("gray", GRAY_TOP),
+    ("gray", GRAY_BOTTOM),
+    ("lime", LIME_BOTTOM),
 )
 
 
@@ -76,11 +57,28 @@ def make_svg() -> str:
     return f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {SIZE} {SIZE}" role="img" aria-labelledby="title desc">
   <title id="title">Mediana</title>
   <desc id="desc">Two interlocking angular links representing mediation between components.</desc>
-  <rect x="16" y="16" width="480" height="480" rx="96" fill="{BACKGROUND}"/>
+  <defs>
+    <radialGradient id="background" cx="36%" cy="30%" r="88%">
+      <stop offset="0" stop-color="#2A2C30"/>
+      <stop offset="1" stop-color="#141517"/>
+    </radialGradient>
+    <linearGradient id="lime" x1="88" y1="152" x2="424" y2="360" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#C4FF12"/>
+      <stop offset="0.5" stop-color="{LIME}"/>
+      <stop offset="1" stop-color="#8CCB00"/>
+    </linearGradient>
+    <linearGradient id="gray" x1="88" y1="152" x2="424" y2="360" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#C6C8CC"/>
+      <stop offset="0.5" stop-color="{GRAY}"/>
+      <stop offset="1" stop-color="#777A80"/>
+    </linearGradient>
+  </defs>
+  <rect x="16" y="16" width="480" height="480" rx="96" fill="url(#background)"/>
   <g fill="none" stroke-width="{STROKE_WIDTH:g}" stroke-linecap="round" stroke-linejoin="round">
-    <path d="{svg_path(LIME_LINK)}" stroke="{LIME}"/>
-    <path d="{svg_path(GRAY_LINK)}" stroke="{GRAY}"/>
-    <path d="{svg_path(LIME_OVERLAY)}" stroke="{LIME}"/>
+    <path d="{svg_path(LIME_TOP)}" stroke="url(#lime)"/>
+    <path d="{svg_path(GRAY_TOP)}" stroke="url(#gray)"/>
+    <path d="{svg_path(GRAY_BOTTOM)}" stroke="url(#gray)"/>
+    <path d="{svg_path(LIME_BOTTOM)}" stroke="url(#lime)"/>
   </g>
 </svg>
 '''
@@ -118,13 +116,32 @@ def inside_rounded_rect(px: float, py: float) -> bool:
     return dx * dx + dy * dy <= BACKGROUND_RADIUS * BACKGROUND_RADIUS
 
 
+def interpolate_color(
+    start: tuple[int, int, int, int], end: tuple[int, int, int, int], amount: float
+) -> tuple[int, int, int, int]:
+    amount = min(1.0, max(0.0, amount))
+    return tuple(round(left + (right - left) * amount) for left, right in zip(start, end))  # type: ignore[return-value]
+
+
+def background_color(px: float, py: float) -> tuple[int, int, int, int]:
+    distance = math.hypot(px - 184.0, py - 154.0) / 450.0
+    return interpolate_color(BACKGROUND_LIGHT_RGBA, BACKGROUND_DARK_RGBA, distance)
+
+
+def stroke_color(kind: str, px: float, py: float) -> tuple[int, int, int, int]:
+    amount = ((px - 88.0) + (py - 152.0)) / 544.0
+    if kind == "lime":
+        return interpolate_color(LIME_LIGHT_RGBA, LIME_DARK_RGBA, amount)
+    return interpolate_color(GRAY_LIGHT_RGBA, GRAY_DARK_RGBA, amount)
+
+
 def sample(px: float, py: float) -> tuple[int, int, int, int]:
     if not inside_rounded_rect(px, py):
         return (0, 0, 0, 0)
-    color = BACKGROUND_RGBA
-    for candidate, points in PAINT_ORDER:
+    color = background_color(px, py)
+    for kind, points in PAINT_ORDER:
         if hits_stroke(px, py, points):
-            color = candidate
+            color = stroke_color(kind, px, py)
     return color
 
 

@@ -40,7 +40,7 @@ jobs:
         run: dotnet test tests/Mediana.IntegrationTests -c Release --no-build
         continue-on-error: true # docs/QUESTIONS.md Q1
       - name: AOT publish smoke
-        run: dotnet publish tests/Mediana.AotTests -c Release
+        run: dotnet publish tests/Mediana.AotTests -c Release -r win-x64 --self-contained true
 
   vs-mediatr:
     name: Benchmarks vs MediatR (comparison summary)
