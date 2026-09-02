@@ -35,13 +35,25 @@ jobs:
           powershell -File scripts/check-coverage.ps1
       - name: Allocation gate (0 B/call)
         run: dotnet run --project benchmarks/Mediana.Benchmarks -c Release --no-build -- alloc-check
-      - name: AOT publish smoke
-        run: dotnet publish tests/Mediana.AotTests -c Release -r win-x64 --self-contained true
+
+  aot:
+    name: NativeAOT publish smoke
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Publish NativeAOT (linux-x64)
+        run: dotnet publish tests/Mediana.AotTests -c Release -r linux-x64 --self-contained true
+      - name: Run AOT binary
+        run: ./tests/Mediana.AotTests/bin/Release/net10.0/linux-x64/publish/Mediana.AotTests
 
   pack:
     name: Pack all packages
     runs-on: windows-latest
-    needs: verify
+    needs: [verify, aot]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
