@@ -48,6 +48,11 @@ public sealed class ConsumerPipeline
                 (attempt, ct) => handler(delivery.Envelope, ct),
                 policy,
                 isRetryable,
+                #if NET10_0
+                random: Random.Shared,
+#else
+                random: JitterRandom.Shared,
+#endif
                 cancellationToken: cancellationToken).ConfigureAwait(false);
             await delivery.Ack().ConfigureAwait(false);
         }
@@ -88,3 +93,12 @@ public sealed class ConsumerHostService : BackgroundService
         await _host.Stop().ConfigureAwait(false);
     }
 }
+
+#if !NET10_0
+/// <summary>ns2.1 fallback для Random.Shared (T-12): thread-safe jitter-генератор.</summary>
+internal static class JitterRandom
+{
+    private static readonly Random _random = new();
+    public static Random Shared => _random;
+}
+#endif

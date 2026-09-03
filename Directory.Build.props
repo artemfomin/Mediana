@@ -7,6 +7,9 @@
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisLevel>latest</AnalysisLevel>
     <Deterministic>true</Deterministic>
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <NuGetAuditLevel>low</NuGetAuditLevel>
     <AccelerateBuildsInVisualStudio>true</AccelerateBuildsInVisualStudio>
     <!-- Trimming/AOT дружелюбие: публичные API без рефлексии -->
     <EnableAotAnalyzer Condition="'$(TargetFramework)' == 'net10.0'">true</EnableAotAnalyzer>

@@ -61,7 +61,7 @@ MediatR handlers with zero code changes.
   scoped (pooled chain state); struct messages via `SendExact` without boxing
 - **Transports**: RabbitMQ (DLX-cycle retries, direct reply-to, publisher confirms),
   Kafka (retry topics, partition ordering), MassTransit (transport + bridge + Fault format)
-- **Reliability**: inbox deduplication, retry engine with backoff+jitter (our own, not Polly),
+- **Reliability**: inbox deduplication, retry engine with backoff (our own, not Polly),
   poison detection → DLQ, **opt-in transactional outbox** (EF Core/Dapper/MongoDB + lease-based relay)
 - **Full OTLP telemetry**: traces + metrics + logs in a single call; non-blocking log pipeline
   (bounded channels, drops are counted)

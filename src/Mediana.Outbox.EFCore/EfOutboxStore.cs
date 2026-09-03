@@ -27,6 +27,8 @@ public sealed class OutboxEntry
     public DateTimeOffset? DeliveredAt { get; set; }
 
     public string? LastError { get; set; }
+
+    public bool Parked { get; set; }
 }
 
 /// <summary>DbContext-расширение: ToTable + interceptor регистрации конвертов.</summary>
@@ -127,7 +129,7 @@ public sealed class EfOutboxStore(Func<DbContext> contextFactory) : IOutboxStore
         var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var rows = await context.Set<OutboxEntry>()
             .FromSqlRaw(
-                "SELECT * FROM mediana_outbox WHERE delivered_at IS NULL AND lease_until < {0} ORDER BY sequence LIMIT {1} FOR UPDATE SKIP LOCKED",
+                "SELECT * FROM mediana_outbox WHERE delivered_at IS NULL AND parked = false AND lease_until < {0} ORDER BY sequence LIMIT {1} FOR UPDATE SKIP LOCKED",
                 now, batchSize)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
@@ -152,13 +154,20 @@ public sealed class EfOutboxStore(Func<DbContext> contextFactory) : IOutboxStore
 
     public async ValueTask MarkFailed(OutboxMessage message, string error, CancellationToken cancellationToken)
     {
+        // OB-08 fix: экспоненциальный backoff; OB-02 fix: парковка при исчерпании попыток
+        var truncatedError = error is { Length: > 4000 } ? error[..4000] : error;
+        var backoffMs = Math.Min(Math.Pow(2, message.DeliveryAttempts) * 1000, 300_000);
+        var leaseUntil = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + (long)backoffMs;
+        var parked = message.DeliveryAttempts >= 10;
+
         await using var context = contextFactory();
         await context.Set<OutboxEntry>()
             .Where(e => e.Sequence == message.Sequence)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(e => e.DeliveryAttempts, e => e.DeliveryAttempts + 1)
-                .SetProperty(e => e.LastError, error)
-                .SetProperty(e => e.LeaseUntil, 0), cancellationToken)
+                .SetProperty(e => e.LastError, truncatedError)
+                .SetProperty(e => e.LeaseUntil, leaseUntil)
+                .SetProperty(e => e.Parked, parked), cancellationToken)
             .ConfigureAwait(false);
     }
 

@@ -41,9 +41,10 @@ public sealed class DapperOutboxStore : IOutboxStore
                    lease_until BIGINT NOT NULL DEFAULT 0,
                    delivery_attempts INT NOT NULL DEFAULT 0,
                    delivered_at TIMESTAMPTZ,
-                   last_error TEXT
+                   last_error TEXT,
+                   parked BOOLEAN NOT NULL DEFAULT FALSE
                );
-               CREATE INDEX IF NOT EXISTS idx_{table}_lease ON {table} (lease_until) WHERE delivered_at IS NULL;
+               CREATE INDEX IF NOT EXISTS idx_{table}_lease ON {table} (lease_until) WHERE delivered_at IS NULL AND parked = FALSE;
                """
             : $"""
                IF OBJECT_ID(N'{table}', N'U') IS NULL
@@ -57,7 +58,8 @@ public sealed class DapperOutboxStore : IOutboxStore
                    lease_until BIGINT NOT NULL DEFAULT 0,
                    delivery_attempts INT NOT NULL DEFAULT 0,
                    delivered_at DATETIMEOFFSET NULL,
-                   last_error NVARCHAR(MAX)
+                   last_error NVARCHAR(4000),
+                   parked BIT NOT NULL DEFAULT 0
                );
                """;
     }
@@ -89,8 +91,8 @@ public sealed class DapperOutboxStore : IOutboxStore
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
 
         var lockingSelect = _dialect == SqlDialect.Postgres
-            ? "SELECT * FROM mediana_outbox WHERE delivered_at IS NULL AND lease_until < @now FOR UPDATE SKIP LOCKED LIMIT @batch"
-            : "SELECT TOP (@batch) * FROM mediana_outbox WITH (READPAST, UPDLOCK) WHERE delivered_at IS NULL AND lease_until < @now";
+            ? "SELECT * FROM mediana_outbox WHERE delivered_at IS NULL AND parked = FALSE AND lease_until < @now FOR UPDATE SKIP LOCKED LIMIT @batch"
+            : "SELECT TOP (@batch) * FROM mediana_outbox WITH (READPAST, UPDLOCK) WHERE delivered_at IS NULL AND parked = 0 AND lease_until < @now";
 
         var rows = (await connection.QueryAsync<OutboxRow>(
             new CommandDefinition(
@@ -127,12 +129,22 @@ public sealed class DapperOutboxStore : IOutboxStore
 
     public async ValueTask MarkFailed(OutboxMessage message, string error, CancellationToken cancellationToken)
     {
+        // OB-08 fix: экспоненциальный backoff вместо lease_until=0 (tight loop fix)
+        // OB-02 fix: парковка при исчерпании MaxDeliveryAttempts (default 10)
+        var truncatedError = error is { Length: > 4000 } ? error[..4000] : error;
+        var backoffMs = Math.Min(Math.Pow(2, message.DeliveryAttempts) * 1000, 300_000);
+        var leaseUntil = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + (long)backoffMs;
+        var parked = message.DeliveryAttempts >= 10;
+
         await using var connection = _connectionFactory();
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
         await connection.ExecuteAsync(
             new CommandDefinition(
-                "UPDATE mediana_outbox SET delivery_attempts = delivery_attempts + 1, last_error = @error, lease_until = 0 WHERE sequence = @sequence",
-                new { error, sequence = message.Sequence },
+                "UPDATE mediana_outbox SET delivery_attempts = delivery_attempts + 1, " +
+                "last_error = @truncatedError, lease_until = @leaseUntil, " +
+                "parked = @parked " +
+                "WHERE sequence = @sequence",
+                new { truncatedError, leaseUntil, parked, sequence = message.Sequence },
                 cancellationToken: cancellationToken)).ConfigureAwait(false);
     }
 
@@ -172,5 +184,6 @@ public sealed class DapperOutboxStore : IOutboxStore
         public long lease_until { get; set; }
         public int delivery_attempts { get; set; }
         public string? last_error { get; set; }
+        public bool parked { get; set; }
     }
 }

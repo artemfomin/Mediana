@@ -36,7 +36,18 @@ public sealed class MediatRBridge
     [RequiresUnreferencedCode("Сканирование MediatR-хендлеров: для AOT регистрируйте вручную.")]
     private void Scan(Assembly assembly)
     {
-        foreach (var type in assembly.GetTypes())
+        Type[] types;
+        try
+        {
+            types = assembly.GetTypes();
+        }
+        catch (ReflectionTypeLoadException ex)
+        {
+            // H-7 fix: plugin-сценарии — частично загруженные сборки
+            types = ex.Types.Where(t => t is not null).Select(t => t!).ToArray();
+        }
+
+        foreach (var type in types)
         {
             if (type is not { IsAbstract: false, IsInterface: false, IsGenericTypeDefinition: false })
             {
@@ -72,7 +83,10 @@ public sealed class MediatRBridge
         }
     }
 
-    /// <summary>Выполнить MediatR-запрос через Mediana-мост (резолв закрытого хендлера по runtime-типу).</summary>
+    // H-8/M-13/M-15 fix: кэш типизированных делегатов вместо reflection на каждый вызов
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Type RequestType, Type ResponseType), Func<object, object, CancellationToken, Task>> HandleCache = new();
+
+    /// <summary>Выполнить MediatR-запрос через Mediana-мост (кэш делегатов, исключения as-is).</summary>
     [RequiresDynamicCode("MakeGenericType: для AOT регистрируйте хендлеры явно.")]
     [RequiresUnreferencedCode("Рефлексивный резолв хендлеров: для trimming — явная регистрация.")]
     public async ValueTask<TResponse> Send<TResponse>(global::MediatR.IRequest<TResponse> request, CancellationToken cancellationToken = default)
@@ -88,22 +102,54 @@ public sealed class MediatRBridge
                 "Register IRequestHandler<" + requestType.Name + ", TResponse> in DI.");
         }
 
-        var handleMethod = handlerType.GetMethod("Handle")
-            ?? throw new MediatorConfigurationException("Handle method not found on " + handlerType + ".");
-        var result = handleMethod.Invoke(handler, new object[] { request, cancellationToken })
-            ?? throw new MediatorConfigurationException("Handle returned null for " + handlerType + ".");
+        var invoke = HandleCache.GetOrAdd((requestType, typeof(TResponse)), static key =>
+        {
+            // M-15 fix: точный overload через параметр-типы
+            var closedInterface = typeof(global::MediatR.IRequestHandler<,>).MakeGenericType(key.RequestType, key.ResponseType);
+            var method = closedInterface.GetMethod("Handle", new[] { key.RequestType, typeof(CancellationToken) });
+            if (method is null)
+            {
+                throw new MediatorConfigurationException("Handle method not found for " + key.RequestType + ".");
+            }
+
+            // H-8 fix: делегат (request, ct) => Task<TResponse> — bound to handler instance
+            var delegateType = typeof(Func<,,>).MakeGenericType(
+                key.RequestType,
+                typeof(CancellationToken),
+                typeof(Task<>).MakeGenericType(key.ResponseType));
+            return (h, r, ct) =>
+            {
+                var d = method.CreateDelegate(delegateType, h);
+                return (Task)d.DynamicInvoke(r, ct)!;
+            };
+        });
+
+        var result = invoke(handler, request, cancellationToken);
         return await (Task<TResponse>)result;
     }
 
-    /// <summary>Опубликовать MediatR-уведомление всем хендлерам из DI (fan-out).</summary>
+    /// <summary>Опубликовать MediatR-уведомление всем хендлерам; M-12 fix — агрегация ошибок.</summary>
     public async ValueTask Publish<TNotification>(TNotification notification, CancellationToken cancellationToken = default)
         where TNotification : global::MediatR.INotification
     {
         Guard(notification);
         var handlers = _serviceProvider.GetServices<global::MediatR.INotificationHandler<TNotification>>();
+        List<Exception>? errors = null;
         foreach (var handler in handlers)
         {
-            await handler.Handle(notification, cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await handler.Handle(notification, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                (errors ??= []).Add(ex);
+            }
+        }
+
+        if (errors is not null)
+        {
+            throw new AggregateException(errors);
         }
     }
 

@@ -235,31 +235,42 @@ public static class MedianaTelemetryExtensions
 
             if (options.EnableLogs && endpoint is not null)
             {
-                var bridge = new AsyncLogBridge(options, entry => { });
+                // C-1/C-2 fix: реальные OTLP logs через MEL (Microsoft.Extensions.Logging OpenTelemetry)
+                // НЕ подменяем ILoggerFactory — добавляем провайдер как дополнительный sink
+                var bridge = new AsyncLogBridge(options, entry => { }); // счётчики drop работают
                 services.AddSingleton(bridge);
-                services.AddSingleton<ILoggerFactory>(sp => new BridgeLoggerFactory(sp.GetRequiredService<AsyncLogBridge>()));
+                services.AddLogging(b => b.AddOpenTelemetry(o =>
+                {
+                    o.SetResourceBuilder(resourceBuilder);
+                    o.AddOtlpExporter(e =>
+                    {
+                        e.Endpoint = new Uri(endpoint);
+                        e.Protocol = protocol;
+                    });
+                }));
             }
         }
         else
         {
-            // Режим композиции: сигналы Mediana добавляет приложение к своему SDK
+            // H-6 fix: composition-режим — реально подключаем сигналы Mediana к существующему SDK
+            services.ConfigureOpenTelemetryTracerProvider((_, b) => b.AddSource(Mediana.MedianaDiagnostics.ActivitySourceName));
+            services.ConfigureOpenTelemetryMeterProvider((_, b) => b.AddMeter(Mediana.MedianaDiagnostics.MeterName));
+            if (options.EnableLogs && endpoint is not null)
+            {
+                services.AddLogging(b => b.AddOpenTelemetry(o =>
+                {
+                    o.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName));
+                    o.AddOtlpExporter(e =>
+                    {
+                        e.Endpoint = new Uri(endpoint);
+                        e.Protocol = protocol;
+                    });
+                }));
+            }
+
             services.AddSingleton(_ => options);
         }
 
         return services;
-    }
-}
-
-/// <summary>ILoggerFactory поверх BridgeLogger.</summary>
-public sealed class BridgeLoggerFactory(AsyncLogBridge bridge) : ILoggerFactory
-{
-    public ILogger CreateLogger(string categoryName) => new BridgeLogger(categoryName, bridge);
-
-    public void AddProvider(ILoggerProvider provider)
-    {
-    }
-
-    public void Dispose()
-    {
     }
 }

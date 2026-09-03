@@ -10,11 +10,14 @@ permissions:
 env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
+  REF_NAME: "${{ github.ref_name }}"
 
 jobs:
   verify:
-    name: Verify (all gates) before publishing
+    name: "Verify (all gates) before publishing"
     runs-on: windows-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -43,6 +46,8 @@ jobs:
     name: NativeAOT publish smoke
     runs-on: ubuntu-latest
     needs: verify
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -57,27 +62,36 @@ jobs:
     name: Pack all packages
     runs-on: windows-latest
     needs: [verify, aot]
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
-      - name: Extract version from tag
+      - name: Extract version from tag (validated)
         id: ver
         shell: pwsh
         run: |
-          $tag = "${{ github.ref_name }}"
+          $tag = $env:REF_NAME
+          if ($tag -notmatch '^v\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$') {
+            Write-Error "Invalid tag format: $tag"
+            exit 1
+          }
           $version = $tag.TrimStart('v')
-          $prerelease = $version.Contains('-')
           "version=$version" >> $env:GITHUB_OUTPUT
+          $prerelease = $version.Contains('-')
           "prerelease=$prerelease" >> $env:GITHUB_OUTPUT
       - name: Pack (version from tag, symbols snupkg)
+        shell: pwsh
+        env:
+          VER: ${{ steps.ver.outputs.version }}
         run: |
-          $v = "${{ steps.ver.outputs.version }}"
+          $v = $env:VER
+          if (-not $v) { Write-Error "Version not set"; exit 1 }
           $projects = Get-ChildItem src -Filter *.csproj -Recurse | Where-Object {
             (Select-Xml -Path $_.FullName -XPath "//IsPackable").Node.InnerText -eq 'true'
           }
-          # Сборка сначала (единая версия), затем pack каждого проекта
           dotnet build -c Release -p:Version=$v
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           foreach ($p in $projects) {
@@ -116,8 +130,11 @@ jobs:
   publish-nuget:
     name: Publish to NuGet.org
     runs-on: windows-latest
-    needs: pack
+    needs: [verify, aot, pack]
     environment: nuget
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -132,52 +149,63 @@ jobs:
         shell: pwsh
         run: |
           if ([string]::IsNullOrEmpty($env:NUGET_API_KEY)) {
-            Write-Warning "NUGET_API_KEY secret не задан — публикация пропущена (пакеты доступны в артефакте nuget-packages)."
-            exit 0
+            Write-Error "NUGET_API_KEY secret not set — cannot publish. Add it in Settings > Secrets > Actions."
+            exit 1
           }
           foreach ($pkg in (Get-ChildItem dist -Include *.nupkg,*.snupkg -Recurse)) {
             Write-Host "Push $($pkg.Name)"
-            dotnet nuget push $pkg.FullName --source https://api.nuget.org/v3/index.json --api-key $env:NUGET_API_KEY --skip-duplicate
+            dotnet nuget push $pkg.FullName --source https://api.nuget.org/v3/index.json --api-key $env:NUGET_API_KEY
           }
 
   github-release:
-    name: GitHub Release (with vs-MediatR comparison)
+    name: "GitHub Release (with vs-MediatR comparison)"
     runs-on: ubuntu-latest
-    needs: [verify, pack]
+    needs: [verify, aot, pack, publish-nuget]
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
-      - name: Extract version
+      - name: Extract version (validated)
         id: ver
         run: |
-          echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
-          echo "prerelease=${GITHUB_REF_NAME#v}" | grep -q '-' && echo "is_pre=true" >> $GITHUB_OUTPUT || echo "is_pre=false" >> $GITHUB_OUTPUT
+          TAG="$REF_NAME"
+          if ! echo "$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "::error::Invalid tag format: $TAG"; exit 1
+          fi
+          echo "version=${TAG#v}" >> $GITHUB_OUTPUT
+          echo "${TAG#v}" | grep -q '-' && echo "is_pre=true" >> $GITHUB_OUTPUT || echo "is_pre=false" >> $GITHUB_OUTPUT
       - uses: actions/download-artifact@v4
         with:
           name: nuget-packages
           path: dist
-      - name: Create release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: v${{ steps.ver.outputs.version }}
-          prerelease: ${{ steps.ver.outputs.is_pre == 'true' }}
-          body: |
-            # Mediana v${{ steps.ver.outputs.version }}
+      - name: Create release (gh CLI, no third-party action)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.ver.outputs.version }}
+          IS_PRE: ${{ steps.ver.outputs.is_pre }}
+        run: |
+          cat > /tmp/release-notes.md << 'NOTES_EOF'
+          # Mediana vVERSION_PLACEHOLDER
 
-            **Пакеты опубликованы на [NuGet](https://www.nuget.org/packages/Mediana)** (при заданном `NUGET_API_KEY`).
+          **Packages published to [NuGet](https://www.nuget.org/packages/Mediana).**
 
-            ## Mediana vs MediatR — сводка
+          ## Mediana vs MediatR — summary
 
-            | Метрика | MediatR 14.2 | Mediana |
-            |---|---:|---:|
-            | Send (1 поток) | 100.3 ns | **13.6 ns (7.4×)** |
-            | Аллокации | 512 B/оп | **0 B/оп** |
-            | Throughput 64 потока | 24 M ops/s | **710 M ops/s (29×)** |
-            | p99.99 | 21–31 µs | **500 ns (42–61×)** |
-            | GC-паузы | 3.4–3.7% времени | **0.00%** |
-            | RAM удержание/оп | 606 B | **181 B (3.3×)** |
-            | WorkingSet | 79.5 MB | **30.5 MB (−62%)** |
-            | Пакет ядра | 265 KB | **68.5 KB (3.9×)** |
+          | Metric | MediatR 14.2 | Mediana |
+          |---|---:|---:|
+          | Send (1 thread) | 100.3 ns | **13.6 ns (7.4×)** |
+          | Allocations | 512 B/op | **0 B/op** |
+          | Throughput 64 threads | 24 M ops/s | **710 M ops/s (29×)** |
+          | p99.99 | 21–31 µs | **500 ns (42–61×)** |
+          | GC pauses | 3.4–3.7% time | **0.00%** |
+          | RAM retention/op | 606 B | **181 B (3.3×)** |
+          | WorkingSet | 79.5 MB | **30.5 MB (−62%)** |
+          | Core package | 265 KB | **68.5 KB (3.9×)** |
 
-            Полные методики: [`benchmarks/RESULTS.md`](https://github.com/artemfomin/Mediana/blob/main/benchmarks/RESULTS.md).
-            Изменения — в [`CHANGELOG.md`](https://github.com/artemfomin/Mediana/blob/main/CHANGELOG.md).
-          files: dist/*
+          Full methodology: [`benchmarks/RESULTS.md`](https://github.com/artemfomin/Mediana/blob/main/benchmarks/RESULTS.md).
+          Changes — in [`CHANGELOG.md`](https://github.com/artemfomin/Mediana/blob/main/CHANGELOG.md).
+          NOTES_EOF
+          sed -i "s/VERSION_PLACEHOLDER/$VERSION/g" /tmp/release-notes.md
+          PRE_FLAG=""
+          [ "$IS_PRE" = "true" ] && PRE_FLAG="--prerelease"
+          gh release create "$REF_NAME" dist/* --title "v$VERSION" --notes-file /tmp/release-notes.md $PRE_FLAG

@@ -9,6 +9,9 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
@@ -103,22 +106,42 @@ jobs:
           path: StrykerOutput/**/reports/mutation-report.html
 
   dependency-audit:
-    name: "D14 gate (core: zero non-Microsoft deps)"
+    name: "Dependency audit (vulnerable + D14 core purity)"
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
-      - name: Audit core packages
+      - name: Restore
+        run: dotnet restore
+      - name: Vulnerability audit (all projects)
+        shell: bash
         run: |
+          set -euo pipefail
+          out=$(dotnet list Mediana.slnx package --vulnerable --include-transitive 2>&1); echo "$out"
+          if echo "$out" | grep -qE '>\s+\S+\s+[0-9]'; then
+            echo "::error::Vulnerable packages detected"; exit 1
+          fi
+          echo "Vulnerability audit: OK (0 vulnerable packages)"
+      - name: D14 core-purity gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          ALLOW='^(Microsoft\.|System\.|NETStandard\.Library$|NuGet\.FrameworkDepth\.Runner$)'
+          fail=0
           for p in Mediana.Abstractions Mediana Mediana.Transport.Abstractions Mediana.Outbox; do
-            echo "Auditing $p"
-            dotnet list src/$p/$p.csproj package --include-transitive 2>/dev/null \
-              | grep -E "^\s+>" | grep -viE "microsoft|system\.|analyzers" \
-              && { echo "NON-MICROSOFT DEPENDENCY IN CORE: $p"; exit 1; } || true
+            off=$(dotnet list "src/$p/$p.csproj" package --include-transitive \
+              | awk '/^ *> /{print $2}' | sort -u | grep -Ev "$ALLOW" || true)
+            if [ -n "$off" ]; then
+              echo "::error::Non-Microsoft dependency in $p:"
+              echo "$off"
+              fail=1
+            fi
           done
-          echo "Core dependency audit: OK (zero non-Microsoft dependencies)"
+          [ $fail -eq 0 ] && echo "D14 core purity: OK (zero non-Microsoft dependencies)"
 
   aot:
     name: NativeAOT publish smoke

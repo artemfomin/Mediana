@@ -55,6 +55,20 @@ public sealed class RabbitMqConsumerHost(
             var delivery = new RabbitMqDelivery(_channel!, @event);
             await handler(delivery, CancellationToken.None).ConfigureAwait(false);
         }
+        catch (Exception)
+        {
+            // T-02 fix: poison → nack без requeue → DLX (<queue>.dlq), а не бесконечный unacked-цикл
+            try
+            {
+                await _channel!.BasicNackAsync(@event.DeliveryTag, multiple: false, requeue: false, CancellationToken.None)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception nackEx)
+            {
+                // nack сам не должен маскировать исходную ошибку; канал уже мог закрыться
+                System.Diagnostics.Debug.WriteLine($"Mediana: nack-after-poison failed: {nackEx.Message}");
+            }
+        }
         finally
         {
             _handlerLimiter.Release();
@@ -63,19 +77,43 @@ public sealed class RabbitMqConsumerHost(
 
     public async Task Stop()
     {
-        // Graceful drain: отписка → in-flight завершаются (семафор) → закрытие канала
+        // Graceful drain: отписка → in-flight завершаются → закрытие канала
         if (_channel is not null && _consumerTag is not null)
         {
             await _channel.BasicCancelAsync(_consumerTag, noWait: false, CancellationToken.None).ConfigureAwait(false);
         }
 
-        await _handlerLimiter.WaitAsync(endpoint.MaxConcurrency).ConfigureAwait(false);
+        // T-13 fix: корректный drain — ждём освобождения всех permit'ов с реальным timeout
+        var drainTimeout = TimeSpan.FromSeconds(30);
+        using var drainCts = new CancellationTokenSource(drainTimeout);
+        var acquired = 0;
+        try
+        {
+            for (var i = 0; i < endpoint.MaxConcurrency; i++)
+            {
+                await _handlerLimiter.WaitAsync(drainCts.Token).ConfigureAwait(false);
+                acquired++;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // drain timeout — in-flight сообщения будут requeue'иты брокером при закрытии канала
+        }
+
         if (_channel is not null)
         {
             await _channel.CloseAsync(CancellationToken.None).ConfigureAwait(false);
         }
 
-        _connection?.CloseAsync();
+        if (_connection is not null)
+        {
+            await _connection.CloseAsync().ConfigureAwait(false);
+        }
+
+        for (var i = 0; i < acquired; i++)
+        {
+            _handlerLimiter.Release();
+        }
     }
 
     public async ValueTask DisposeAsync()

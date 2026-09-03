@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <IsPackable>true</IsPackable>
     <PackageId>Mediana.Generators</PackageId>
+    <Description>Mediana source generator: reflection-free handler registration, MED001 diagnostics. NativeAOT/trimming friendly.</Description>
     <DevelopmentDependency>true</DevelopmentDependency>
     <!-- DevelopmentDependency: у потребителей не течёт; lib/ присутствует (валидация NuGet),
          Roslyn грузит генератор из analyzers/dotnet/cs -->

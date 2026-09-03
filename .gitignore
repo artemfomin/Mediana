@@ -22,3 +22,6 @@ coverage*.xml
 # OS
 .DS_Store
 Thumbs.db
+
+# Внутренние аудиты и знания — не публикуются до закрытия блокеров
+.knowledge/
