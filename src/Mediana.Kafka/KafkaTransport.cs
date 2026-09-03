@@ -7,9 +7,9 @@ using Mediana.Transports;
 namespace Mediana.Kafka;
 
 /// <summary>
-/// Kafka-транспорт: топики, partition key (ordering per key), consumer groups для команд,
-/// retry-topics (<topic>.retry.<delay> → <topic>.dlq), БЕЗ request/reply и стриминга (D11).
-/// Полный ClientConfig (SASL/SSL) передаётся во все клиентские роли (T-04 fix).
+/// Kafka-: , partition key (ordering per key), consumer groups
+/// retry-topics (<topic>.retry.<delay> → <topic>.dlq), request/reply (D11)
+/// ClientConfig (SASL/SSL) (T-04 fix)
 /// </summary>
 public sealed class KafkaTransport : ITransport
 {
@@ -32,7 +32,7 @@ public sealed class KafkaTransport : ITransport
 
     public async ValueTask BuildTopology(TopologyManifest manifest, CancellationToken cancellationToken)
     {
-        // T-04 fix: полный ClientConfig (SASL/SSL/etc.) — не только BootstrapServers
+        // T-04 fix: ClientConfig (SASL/SSL/etc.) — BootstrapServers
         var adminConfig = new AdminClientConfig(_producerConfig);
         using var admin = new AdminClientBuilder(adminConfig).Build();
 
@@ -47,24 +47,24 @@ public sealed class KafkaTransport : ITransport
             await admin.CreateTopicsAsync(topics.Select(t => new TopicSpecification
             {
                 Name = t,
-                NumPartitions = -1, // default брокера
+                NumPartitions = -1, // default
                 ReplicationFactor = -1,
             }), new CreateTopicsOptions { RequestTimeout = TimeSpan.FromSeconds(10) }).ConfigureAwait(false);
         }
         catch (CreateTopicsException ex) when (ex.Results.All(r => r.Error.Code == ErrorCode.TopicAlreadyExists))
         {
-            // идемпотентность: существующие топики — норма
+            // :
         }
     }
 
-    [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec использует reflection-based JSON.")]
+ [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec reflection-based JSON.")]
     public async ValueTask<ITransportPublisher> CreatePublisher(CancellationToken cancellationToken)
     {
         var producer = new ProducerBuilder<string, byte[]>(_producerConfig).Build();
         return new KafkaPublisher(producer);
     }
 
-    [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec использует reflection-based JSON.")]
+ [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec reflection-based JSON.")]
     public IConsumerHostFactory CreateConsumerHosts()
         => new KafkaConsumerHostFactory(new ConsumerConfig(_producerConfig));
 
@@ -72,8 +72,8 @@ public sealed class KafkaTransport : ITransport
         => topic + ".retry." + delay.TotalMilliseconds + "ms";
 }
 
-/// <summary>Издатель Kafka: ключ = PartitionKey, заголовки = конверт.</summary>
-[System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec использует reflection-based JSON.")]
+/// <summary>Kafka: = PartitionKey, = .</summary>
+[System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec reflection-based JSON.")]
 public sealed class KafkaPublisher(IProducer<string, byte[]> producer) : ITransportPublisher
 {
     public async ValueTask Publish(Envelope envelope, PublishOptions options, CancellationToken cancellationToken)
@@ -98,8 +98,8 @@ public sealed class KafkaPublisher(IProducer<string, byte[]> producer) : ITransp
     }
 }
 
-/// <summary>Фабрика консьюмеров Kafka (consumer groups).</summary>
-[System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec использует reflection-based JSON.")]
+/// <summary>Kafka (consumer groups).</summary>
+[System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec reflection-based JSON.")]
 public sealed class KafkaConsumerHostFactory(ConsumerConfig baseConfig) : IConsumerHostFactory
 {
     public IConsumerHost Create(ConsumerEndpoint endpoint, Func<ITransportDelivery, CancellationToken, ValueTask> handler)
@@ -107,10 +107,10 @@ public sealed class KafkaConsumerHostFactory(ConsumerConfig baseConfig) : IConsu
 }
 
 /// <summary>
-/// Консьюмер Kafka: группа = endpoint.Name, poll-цикл с catch-all (T-01/T-06 fix),
+/// Kafka: = endpoint.Name, poll-catch-all (T-01/T-06 fix)
 /// poison → DLQ + commit (T-01), Nack(requeue:false) → DLQ (T-05), fault-health-monitoring.
 /// </summary>
-[System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec использует reflection-based JSON.")]
+[System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec reflection-based JSON.")]
 public sealed class KafkaConsumerHost(
     ConsumerConfig baseConfig,
     ConsumerEndpoint endpoint,
@@ -121,12 +121,12 @@ public sealed class KafkaConsumerHost(
     private CancellationTokenSource? _cts;
     private Task? _pollLoop;
 
-    /// <summary>Health-probe: true если poll loop жив и не в faulted-состоянии (T-06).</summary>
+    /// <summary>Health-probe: true poll loop faulted-(T-06).</summary>
     public bool IsHealthy => _pollLoop is not null && !_pollLoop.IsFaulted;
 
     public Task Start()
     {
-        // T-04: полный конфиг (SASL/SSL) + consumer-специфика
+        // T-04: (SASL/SSL) + consumer-
         var config = new ConsumerConfig(baseConfig)
         {
             GroupId = endpoint.Name,
@@ -158,8 +158,8 @@ public sealed class KafkaConsumerHost(
             }
             catch (Exception ex)
             {
-                // R4 fix: handler-исключение → commit + continue (не бесконечный re-read)
-                // T-01/T-06: poll loop не умирает
+                // R4 fix: handler-→ commit + continue (re-read)
+                // T-01/T-06: poll loop
                 Console.Error.WriteLine($"Kafka poll cycle failed for {endpoint.Name}: {ex.Message}");
                 if (result is not null)
                 {
@@ -204,10 +204,10 @@ public sealed class KafkaConsumerHost(
 }
 
 /// <summary>
-/// Доставка Kafka: commit = ack; Nack(requeue:false) → publish в <topic>.dlq + commit (T-05 fix).
-/// Envelope лениво декодируется — poison не убивает consumer (T-01 fix).
+/// Kafka: commit = ack; Nack(requeue:false) → publish <topic>.dlq + commit (T-05 fix)
+/// Envelope poison consumer (T-01 fix)
 /// </summary>
-[System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec использует reflection-based JSON.")]
+[System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec reflection-based JSON.")]
 public sealed class KafkaDelivery(
     IConsumer<string, byte[]> consumer,
     IProducer<string, byte[]> dlqProducer,
@@ -225,10 +225,10 @@ public sealed class KafkaDelivery(
         }
         catch
         {
-            // R4 fix: stable MessageId из Kafka offset — детерминирован, дедупликация inbox работает
+            // R4 fix: stable MessageId Kafka offset — , inbox
             return new Envelope
             {
-                MessageId = GuidV7.NewGuid(), // вычисляется один раз и кэшируется в _envelope
+                MessageId = GuidV7.NewGuid(), // _envelope
                 MessageType = new MessageTypeDescriptor
                 {
                     FullName = "mediana.poison",
@@ -248,7 +248,7 @@ public sealed class KafkaDelivery(
 
     public async ValueTask Nack(bool requeue, TimeSpan? redeliveryDelay)
     {
-        // T-05 fix: до commit — publish в DLQ; без этого сообщение терялось навсегда
+        // T-05 fix: commit — publish DLQ
         var dlqTopic = result.Topic + ".dlq";
         var message = new Message<string, byte[]>
         {
@@ -269,8 +269,8 @@ public sealed class KafkaDelivery(
 
 
 /// <summary>
-/// Гвард конфигурации: Query/StreamQuery на kafka-транспорте → NotSupportedException (D11).
-/// Вызывается из MedianaConfiguration при резолве политик.
+/// : Query/StreamQuery kafka-→ NotSupportedException (D11)
+/// MedianaConfiguration
 /// </summary>
 public static class KafkaGuards
 {

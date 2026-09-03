@@ -69,7 +69,7 @@ public class GuidV7Tests
 {
     private static long DecodeTimestamp(ReadOnlySpan<byte> b)
     {
-        // Guid-layout: data1 (LE), data2 (LE) → RFC-порядок обратной сборкой
+        // Guid-layout: data1 (LE), data2 (LE) → RFC-
         return ((long)b[3] << 40) | ((long)b[2] << 32) | ((long)b[1] << 24) | ((long)b[0] << 16) | ((long)b[5] << 8) | b[4];
     }
 
@@ -82,7 +82,7 @@ public class GuidV7Tests
             var guid = GuidV7.NewGuid();
             guid.TryWriteBytes(b);
             Assert.Equal(7, b[7] >> 4);
-            // вариант 10xx
+            // 10xx
             Assert.Equal(0b10, b[8] >> 6);
         }
     }
@@ -171,7 +171,7 @@ public class InMemoryInboxTests
 
         Assert.True(await inbox.TryBegin("m1", "h1"));
         Assert.False(await inbox.TryBegin("m1", "h1"));
-        // другой хендлер — отдельная запись
+        // See English documentation.
         Assert.True(await inbox.TryBegin("m1", "h2"));
         await inbox.Complete("m1", "h1");
     }
@@ -200,9 +200,9 @@ public class InMemoryInboxTests
             Assert.True(await inbox.TryBegin("m" + i, "h"));
         }
 
-        // вытеснены
+        // See English documentation.
         Assert.True(await inbox.TryBegin("m0", "h"));
-        // свежие ещё там
+        // See English documentation.
         Assert.False(await inbox.TryBegin("m9", "h"));
     }
 }
@@ -394,7 +394,7 @@ public class ConsumerPipelineTests
         await pipeline.Process(delivery, "handler", (e, _) => { calls++; throw new SerializationException("bad payload"); },
             new RetryPolicy { Strategy = BackoffStrategy.Fixed, BaseDelay = TimeSpan.FromMilliseconds(1), MaxAttempts = 5, Jitter = 0 });
 
-        Assert.Equal(1, calls); // poison — сразу DLQ
+        Assert.Equal(1, calls); // poison — DLQ
         Assert.Equal(1, delivery.Nacks);
     }
 }

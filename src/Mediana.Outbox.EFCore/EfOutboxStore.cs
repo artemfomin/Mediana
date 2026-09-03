@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Mediana.Outbox.EFCore;
 
-/// <summary>EF Core-провайдер outbox (net10.0-only, D13): SaveChanges-interceptor + SKIP LOCKED relay.</summary>
+/// <summary>EF Core-outbox (net10.0-only, D13): SaveChanges-interceptor + SKIP LOCKED relay.</summary>
 public sealed class OutboxEntry
 {
     public long Sequence { get; set; }
@@ -31,7 +31,7 @@ public sealed class OutboxEntry
     public bool Parked { get; set; }
 }
 
-/// <summary>DbContext-расширение: ToTable + interceptor регистрации конвертов.</summary>
+/// <summary>DbContext-: ToTable + interceptor .</summary>
 public static class OutboxModelBuilderExtensions
 {
     public static ModelBuilder AddMedianaOutbox(this ModelBuilder modelBuilder)
@@ -50,7 +50,7 @@ public static class OutboxModelBuilderExtensions
 }
 
 /// <summary>
-/// Interceptor: исходящие конверты OutboxCollector записываются в ту же транзакцию SaveChanges (§9.4).
+/// Interceptor: OutboxCollector SaveChanges (§9.4)
 /// </summary>
 public sealed class OutboxSaveChangesInterceptor(OutboxCollector collector) : SaveChangesInterceptor
 {
@@ -104,7 +104,7 @@ public sealed class OutboxSaveChangesInterceptor(OutboxCollector collector) : Sa
     }
 }
 
-/// <summary>Хранилище поверх EF Core.</summary>
+/// <summary>EF Core.</summary>
 public sealed class EfOutboxStore(Func<DbContext> contextFactory) : IOutboxStore
 {
     public async ValueTask AddRange(IEnumerable<OutboxMessage> messages, CancellationToken cancellationToken)
@@ -154,11 +154,11 @@ public sealed class EfOutboxStore(Func<DbContext> contextFactory) : IOutboxStore
 
     public async ValueTask MarkFailed(OutboxMessage message, string error, int maxDeliveryAttempts, CancellationToken cancellationToken)
     {
-        // OB-08 fix: экспоненциальный backoff; OB-02 fix: парковка при исчерпании попыток
+        // OB-08 fix: backoff; OB-02 fix:
         var truncatedError = error is { Length: > 4000 } ? error[..4000] : error;
         var backoffMs = Math.Min(Math.Pow(2, message.DeliveryAttempts) * 1000, 300_000);
         var leaseUntil = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + (long)backoffMs;
-        var parked = message.DeliveryAttempts >= maxDeliveryAttempts; // R3: параметр
+        var parked = message.DeliveryAttempts >= maxDeliveryAttempts; // R3:
 
         await using var context = contextFactory();
         await context.Set<OutboxEntry>()

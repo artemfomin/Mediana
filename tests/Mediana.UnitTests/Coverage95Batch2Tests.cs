@@ -11,7 +11,7 @@ using Xunit;
 
 namespace Mediana.UnitTests;
 
-/// <summary>Добор #2 до 95+: query-хвосты, логгер-ветки, null-декод, ctor-опции, scan-комбинации.</summary>
+/// <summary>#2 95+: query-, , null-, ctor-, scan-.</summary>
 public class Coverage95Batch2Tests
 {
     private sealed record BQ(int V) : IQuery<int>;
@@ -22,7 +22,7 @@ public class Coverage95Batch2Tests
         public ValueTask<int> Handle(BQ q, CancellationToken ct) => new(q.V + 1);
     }
 
-    // ── Query: хендлер не в DI (Resolve throw-ветка QueryCallSite) ──
+    // ── Query: DI (Resolve throw-QueryCallSite) ──
 
     [Fact]
     public async Task Query_handler_missing_in_DI_throws()
@@ -35,7 +35,7 @@ public class Coverage95Batch2Tests
         Assert.Contains(typeof(BQH).ToString(), ex.Message);
     }
 
-    // ── Mediator: query-entry без callsite → false-ветки `is`-кастов (Send + SendExact) ──
+    // ── Mediator: query-entry callsite → false-`is`-(Send + SendExact) ──
 
     [Fact]
     public async Task Query_entry_without_callsite_send_and_sendexact_throw()
@@ -50,7 +50,7 @@ public class Coverage95Batch2Tests
             () => mediator.SendExact<BQ, int>(new BQ(1)).AsTask());
     }
 
-    // ── Serialization: ctor с явными опциями (false-ветка ?? Default) ──
+    // ── Serialization: ctor (false-?? Default) ──
 
     [Fact]
     public void Serializer_ctor_with_explicit_options()
@@ -63,7 +63,7 @@ public class Coverage95Batch2Tests
         Assert.Equal("application/json", new SystemTextJsonMessageSerializer().ContentType);
     }
 
-    // ── Outbox: EnvelopeCodec.Decode пустой body → throw ──
+    // ── Outbox: EnvelopeCodec.Decode body → throw ──
 
     [Fact]
     public void Outbox_envelope_codec_decode_null_throws()
@@ -72,7 +72,7 @@ public class Coverage95Batch2Tests
             () => Mediana.Messaging.EnvelopeCodec.Decode("null"u8.ToArray()));
     }
 
-    // ── Outbox: relay С логгером (true-ветка LogError) ──
+    // ── Outbox: relay (true-LogError) ──
 
     private sealed class ThrowingLeaseStore : IOutboxStore
     {
@@ -99,7 +99,7 @@ public class Coverage95Batch2Tests
         relay.Dispose();
     }
 
-    // ── ConsumerPipeline: С логгером — duplicate- и failure-ветки ──
+    // ── ConsumerPipeline: duplicate- failure-──
 
     private sealed class RecDelivery : ITransportDelivery
     {
@@ -126,16 +126,16 @@ public class Coverage95Batch2Tests
     {
         var pipeline = new ConsumerPipeline(new InMemoryInboxStore(), NullLogger.Instance);
 
-        // duplicate-ветка с логгером
+        // duplicate-
         var env = Envelope.Create("App.B2", "1", []);
         var first = new RecDelivery();
-        // используем один и тот же envelope для второго delivery
+        // envelope delivery
         var dup = new DupDelivery(env);
         await pipeline.Process(first, "h", (_, _) => default);
         await pipeline.Process(dup, "h", (_, _) => default);
         Assert.Equal(1, dup.Acks);
 
-        // failure-ветка с логгером
+        // failure-
         var failing = new RecDelivery();
         await pipeline.Process(failing, "h2", (_, _) => throw new TimeoutException(),
             new RetryPolicy { Strategy = BackoffStrategy.Fixed, BaseDelay = TimeSpan.FromMilliseconds(1), MaxAttempts = 2, Jitter = 0 });
@@ -157,7 +157,7 @@ public class Coverage95Batch2Tests
         public ValueTask Nack(bool requeue, TimeSpan? delay) => default;
     }
 
-    // ── Retry: полная матрица poison-рук ──
+    // ── Retry: poison-──
 
     [Fact]
     public void Poison_detector_full_matrix()
@@ -171,7 +171,7 @@ public class Coverage95Batch2Tests
         Assert.False(PoisonDetector.IsPoison(new OperationCanceledException()));
     }
 
-    // ── Scan: generic-interface и abstract-generic комбинации фильтра ──
+    // ── Scan: generic-interface abstract-generic ──
 
     [Fact]
     public void Scan_covers_generic_interface_and_abstract_generic_combinations()
@@ -179,7 +179,7 @@ public class Coverage95Batch2Tests
         // ScanTargets: IGenScanHandler (generic interface), AbstractGenericScanHandler<T>
         var cfg = new MedianaConfiguration()
             .AddHandlersFromAssembly(typeof(ScanTargets.ScanMsg).Assembly);
-        // тестовая сборка содержит дубликат CreateOrder — скан обязан упасть на нём
+        // CreateOrder —
         Assert.Throws<MediatorConfigurationException>(() => cfg.Freeze());
 
         var clean = new MedianaConfiguration()

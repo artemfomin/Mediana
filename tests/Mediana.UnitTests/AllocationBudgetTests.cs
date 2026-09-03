@@ -6,9 +6,9 @@ using Xunit;
 namespace Mediana.UnitTests;
 
 /// <summary>
-/// Аллокационные бюджеты спеки §12 (D16): абсолютные контракты на горячих путях.
-/// Помечены Category=Allocation — CI-гейт. Проверка через GC.GetAllocatedBytesForCurrentThread:
-/// первый прогон разогревает (ленивые композиции singleton-цепочек), второй — измеряет steady state.
+/// §12 (D16):
+/// Category=Allocation — CI-. GC.GetAllocatedBytesForCurrentThread:
+/// (singleton-), steady state
 /// </summary>
 [Trait("Category", "Allocation")]
 public class AllocationBudgetTests
@@ -25,7 +25,7 @@ public class AllocationBudgetTests
         return (sp.GetRequiredService<IMediator>(), sp);
     }
 
-    /// <summary>Бюджет §12.1: Send с 2 behaviors, sync-хендлер — 0 байт в steady state.</summary>
+    /// <summary>§12.1: Send 2 behaviors, sync-0 steady state.</summary>
     [Fact]
     public async Task Send_sync_with_two_middlewares_zero_alloc()
     {
@@ -42,7 +42,7 @@ public class AllocationBudgetTests
         var mediator = sp.GetRequiredService<IMediator>();
         var command = (ICommand<int>)new AllocCommand(7);
 
-        // Разогрев: ленивая композиция singleton-цепочки один раз.
+        // : singleton-
         for (var i = 0; i < 100; i++)
         {
             _ = await mediator.Send(command);
@@ -58,7 +58,7 @@ public class AllocationBudgetTests
         Assert.Equal(0, allocated);
     }
 
-    /// <summary>Бюджет §12.3: Publish sequential, 2 хендлера — 0 байт.</summary>
+    /// <summary>§12.3: Publish sequential, 2 0 .</summary>
     [Fact]
     public async Task Publish_sequential_two_handlers_zero_alloc()
     {
@@ -89,8 +89,8 @@ public class AllocationBudgetTests
     }
 
     /// <summary>
-    /// Бюджет §12.5: Stream без behaviors — 0 байт на движение курсора;
-    /// ≤1 малой аллокации на вызов (IAsyncEnumerator) — документированная граница.
+    /// §12.5: Stream behaviors — 0
+    /// ≤1 (IAsyncEnumerator) —
     /// </summary>
     [Fact]
     public async Task Stream_without_middlewares_zero_alloc_per_cursor_move()
@@ -115,16 +115,16 @@ public class AllocationBudgetTests
         }
 
         var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
-        // 3 строки на вызов; фиксированная стоимость на вызов (энумератор + интерп-машинерия
-        // await foreach): ≤ 96 байт/вызов. Движение курсора между строками — ноль.
+        // 3 ; (+
+        // await foreach): ≤ 96 /
         Assert.True(allocated <= iterations * 96,
             $"Stream path allocated {allocated} bytes for {iterations} calls ({allocated / (double)iterations:F1}/call), budget 96/call.");
     }
 
     /// <summary>
-    /// Бюджет §12.2 (async): аллокации async-пути нормируются к baseline ЧИСТОГО цикла
-    /// Task.Yield этого же процесса — устойчиво к загрузке пула потоков полным прогоном.
-    /// SendAsyncAlloc <= YieldBaseline + 300Б/вызов на накладные диспета (обе платформы).
+    /// §12.2 (async): async-baseline
+    /// Task.Yield
+    /// SendAsyncAlloc <= YieldBaseline + 300/()
     /// </summary>
     [Fact]
     public async Task Send_async_handler_alloc_normalized_to_yield_baseline()
@@ -143,7 +143,7 @@ public class AllocationBudgetTests
             _ = await mediator.Send(command);
         }
 
-        // Прогрев и baseline: чистый Task.Yield-цикл
+        // baseline: Task.Yield-
         for (var i = 0; i < 500; i++)
         {
             await Task.Yield();
@@ -165,8 +165,8 @@ public class AllocationBudgetTests
 
         var sendAlloc = GC.GetTotalAllocatedBytes(precise: true) - before;
 
-        // Нормированный бюджет: надбавка диспета над чистым yield. Фактическая надбавка async-пути
-        // с record-ответом юзера ≈ 860Б соло, до ~2000Б под нагрузкой полного сьюта (вариативность пула; соло ~860Б); ns2.1-фасады дороже. Регрессия x2 (≥4000Б) ловится бюджетом.
+        // : yield. async-
+        // record-≈ 860, ~2000(; ~860); ns2.1-. x2 (≥4000)
         var isNs21 = typeof(Mediator).Assembly.GetReferencedAssemblies().Any(a => a.Name == "netstandard");
         var overheadBudget = isNs21 ? 4000 : 2500;
         Assert.True(
@@ -174,7 +174,7 @@ public class AllocationBudgetTests
             $"Async send {sendAlloc / 2000.0:F0}B/call vs yield baseline {yieldBaseline / 2000.0:F0}B/call; overhead budget {overheadBudget}B/call (asset={(isNs21 ? "ns2.1" : "net10")}).");
     }
 
-    /// <summary>SendExact struct-команда: без боксинга сообщения и ответа.</summary>
+    /// <summary>SendExact struct-: .</summary>
     [Fact]
     public async Task SendExact_struct_command_zero_alloc()
     {
@@ -203,7 +203,7 @@ public class AllocationBudgetTests
     }
 }
 
-// ── Вспомогательные типы для аллокационных тестов ──────────────────────────
+// ── ──────────────────────────
 
 public sealed class AllocBehavior1 : Pipeline.IHandlerMiddleware<AllocCommand, int>
 {
@@ -252,8 +252,8 @@ public sealed class CountingHandler2 : Handlers.IEventHandler<CountedEvent>
 public sealed record SyncRows() : IStreamQuery<int>;
 
 /// <summary>
-/// Полностью синхронный стрим-хендлер с zero-alloc движением курсора:
-/// MoveNextAsync возвращает завершённые ValueTask (никаких async-машин).
+/// zero-alloc :
+/// MoveNextAsync ValueTask (async-)
 /// </summary>
 public sealed class SyncRowsStreamHandler : Handlers.IStreamHandler<SyncRows, int>
 {

@@ -13,16 +13,16 @@ using OpenTelemetry.Trace;
 namespace Mediana.Telemetry;
 
 /// <summary>
-/// Полная OTLP-телеметрия (D15): один вызов включает OTel SDK для traces + metrics + logs.
-/// Конвейер полностью асинхронный (§11.4): логи идут через bounded lock-free канал с фоновым drain,
-/// переполнение — drop без блокировки (DropNewest default), потери считаются; shutdown — flush с таймаутом.
+/// OTLP-(D15): OTel SDK traces + metrics + logs
+/// (§11.4): bounded lock-free drain
+/// drop (DropNewest default), ; shutdown — flush
 /// </summary>
 public sealed class MedianaOpenTelemetryOptions
 {
-    /// <summary>OTLP endpoint (env OTEL_EXPORTER_OTLP_ENDPOINT приоритетнее, если задан).</summary>
+    /// <summary>OTLP endpoint (env OTEL_EXPORTER_OTLP_ENDPOINT , ).</summary>
     public string? Endpoint { get; set; }
 
-    /// <summary>Протокол OTLP (gRPC по умолчанию; env OTEL_EXPORTER_OTLP_PROTOCOL).</summary>
+    /// <summary>OTLP (gRPC ; env OTEL_EXPORTER_OTLP_PROTOCOL).</summary>
     public OtlpExportProtocol Protocol { get; set; } = OtlpExportProtocol.Grpc;
 
     public bool EnableTraces { get; set; } = true;
@@ -31,29 +31,29 @@ public sealed class MedianaOpenTelemetryOptions
 
     public bool EnableLogs { get; set; } = true;
 
-    /// <summary>Sampling для traces (по умолчанию родительский 100%).</summary>
+    /// <summary>Sampling traces (100%).</summary>
     public Sampler? Sampler { get; set; }
 
-    /// <summary>Delta-временная семантика метрик.</summary>
+    /// <summary>Delta-.</summary>
     public bool DeltaTemporality { get; set; }
 
-    /// <summary>Ёмкость bounded-канала логов (переполнение = drop, не блокировка).</summary>
+    /// <summary>bounded-(= drop, ).</summary>
     public int LogChannelCapacity { get; set; } = 10_000;
 
-    /// <summary>Политика потерь при переполнении: true — терять НОВЫЕ (default), false — старые.</summary>
+    /// <summary>: true — (default), false — .</summary>
     public bool DropNewest { get; set; } = true;
 
-    /// <summary>Таймаут финального flush при shutdown.</summary>
+    /// <summary>flush shutdown.</summary>
     public TimeSpan ShutdownFlushTimeout { get; set; } = TimeSpan.FromSeconds(5);
 
-    /// <summary>Сервис-имя ресурса (env OTEL_SERVICE_NAME приоритетнее).</summary>
+    /// <summary>(env OTEL_SERVICE_NAME ).</summary>
     public string ServiceName { get; set; } = "mediana-app";
 
-    /// <summary>Добавить только сигналы Mediana к существующему SDK-провайдеру (режим композиции).</summary>
+    /// <summary>Mediana SDK-().</summary>
     public bool AddToExistingSdk { get; set; }
 }
 
-/// <summary>Метрика потерь телеметрии (§11.4: потери считаются, не скрываются).</summary>
+/// <summary>(§11.4: , ).</summary>
 public static class TelemetryDropCounters
 {
     private static long _droppedLogs;
@@ -69,8 +69,8 @@ public static class TelemetryDropCounters
 }
 
 /// <summary>
-/// Асинхронный мост логов: bounded Channel + фоновый drain в OTLP logger.
-/// Запись НИКОГДА не блокирует вызывающий поток (hot path диспетчера).
+/// : bounded Channel + drain OTLP logger
+/// (hot path )
 /// </summary>
 public sealed class AsyncLogBridge : IDisposable
 {
@@ -109,7 +109,7 @@ public sealed class AsyncLogBridge : IDisposable
         _drainTask = Task.Run(() => DrainLoop(forward, _cts.Token));
     }
 
-    /// <summary>Запись лога: try-write без блокировки; при переполнении — счётчик потерь.</summary>
+    /// <summary>: try-write ; .</summary>
     public void Write(string category, LogLevel level, EventId eventId, string message, Exception? exception = null)
     {
         if (!_channel.Writer.TryWrite(new LogEntryInternal(category, level, eventId, message, exception, null)))
@@ -126,7 +126,7 @@ public sealed class AsyncLogBridge : IDisposable
         }
     }
 
-    /// <summary>Финальный flush: дождаться drain или таймаута (§11.4.5).</summary>
+    /// <summary>flush: drain (§11.4.5).</summary>
     public async Task FlushAsync(TimeSpan timeout)
     {
         _channel.Writer.TryComplete();
@@ -145,7 +145,7 @@ public sealed class AsyncLogBridge : IDisposable
     }
 }
 
-/// <summary>ILogger поверх AsyncLogBridge (no-op при выключенном экспорте).</summary>
+/// <summary>ILogger AsyncLogBridge (no-op ).</summary>
 public sealed class BridgeLogger(string category, AsyncLogBridge bridge) : ILogger
 {
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
@@ -166,8 +166,8 @@ public sealed class BridgeLogger(string category, AsyncLogBridge bridge) : ILogg
 public static class MedianaTelemetryExtensions
 {
     /// <summary>
-    /// Включить полную OTLP-телеметрию Mediana: ActivitySource("Mediana") + Meter("Mediana") + логи.
-    /// Конфигурация из env OTEL_* (приоритет) или опций.
+    /// OTLP-Mediana: ActivitySource("Mediana") + Meter("Mediana") +
+    /// env OTEL_* ()
     /// </summary>
     public static IServiceCollection AddMedianaOpenTelemetry(
         this IServiceCollection services,
@@ -235,8 +235,8 @@ public static class MedianaTelemetryExtensions
 
             if (options.EnableLogs && endpoint is not null)
             {
-                // C-1/C-2 fix: реальные OTLP logs через MEL (Microsoft.Extensions.Logging OpenTelemetry)
-                // НЕ подменяем ILoggerFactory — добавляем провайдер как дополнительный sink
+                // C-1/C-2 fix: OTLP logs MEL (Microsoft.Extensions.Logging OpenTelemetry)
+                // ILoggerFactory — sink
                 services.AddLogging(b => b.AddOpenTelemetry(o =>
                 {
                     o.SetResourceBuilder(resourceBuilder);
@@ -250,7 +250,7 @@ public static class MedianaTelemetryExtensions
         }
         else
         {
-            // H-6 fix: composition-режим — реально подключаем сигналы Mediana к существующему SDK
+            // H-6 fix: composition-Mediana SDK
             services.ConfigureOpenTelemetryTracerProvider((_, b) => b.AddSource(Mediana.MedianaDiagnostics.ActivitySourceName));
             services.ConfigureOpenTelemetryMeterProvider((_, b) => b.AddMeter(Mediana.MedianaDiagnostics.MeterName));
             if (options.EnableLogs && endpoint is not null)

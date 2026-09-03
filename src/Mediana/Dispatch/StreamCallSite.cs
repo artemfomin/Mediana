@@ -5,8 +5,8 @@ using Mediana.Pipeline;
 namespace Mediana.Dispatch;
 
 /// <summary>
-/// Call-site стрим-запроса: стрим-behaviors композируются вокруг enumerable хендлера.
-/// Без behaviors — прямой проброс enumerable хендлера (ноль аллокаций на вызов и на движение курсора).
+/// Call-site : behaviors enumerable
+/// behaviors — enumerable ()
 /// </summary>
 internal sealed class StreamCallSite<TQuery, TRow, THandler>
     : IStreamCallSite<TRow>
@@ -43,9 +43,9 @@ internal sealed class StreamCallSite<TQuery, TRow, THandler>
         }
 
         StreamHandlerDelegate<TQuery, TRow> chain = (r, ct) => handler.Handle(r, ct);
-        // Stryker disable once equality: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once equality: fallback/perf-(. CallSiteBranchTests: fast/slow )
         for (var i = behaviors.Length - 1; i >= 0; i--)
-        // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once block: fallback/perf-(. CallSiteBranchTests: fast/slow )
         {
             var inner = chain;
             var behavior = behaviors[i];

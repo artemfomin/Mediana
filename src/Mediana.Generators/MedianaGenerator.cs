@@ -8,10 +8,10 @@ using Microsoft.CodeAnalysis.Text;
 namespace Mediana.Generators;
 
 /// <summary>
-/// Incremental source generator: находит закрытые реализации ICommandHandler/IQueryHandler/
-/// IEventHandler/IStreamHandler и генерирует MedianaRegistrar.AddGeneratedHandlers() —
-/// регистрацию без рефлексии (AOT-совместимо, D6). Дубликаты command/query/stream хендлеров —
-/// диагностика MED001 на компиляции.
+/// Incremental source generator: ICommandHandler/IQueryHandler/
+/// IEventHandler/IStreamHandler MedianaRegistrar.AddGeneratedHandlers() —
+/// (AOT-, D6). command/query/stream
+/// MED001
 /// </summary>
 [Generator(LanguageNames.CSharp)]
 public sealed class MedianaGenerator : IIncrementalGenerator
@@ -100,11 +100,11 @@ public sealed class MedianaGenerator : IIncrementalGenerator
 
             if (fqn == "Mediana.Handlers.IEventHandler<TEvent>")
             {
-                continue; // arity 2 check выше пропускает события; отдельная ветка ниже
+                continue; // arity 2 check ;
             }
         }
 
-        // события: arity 1
+        // : arity 1
         foreach (var iface in symbol.AllInterfaces)
         {
             if (!iface.IsGenericType || iface.TypeArguments.Length != 1)
@@ -137,7 +137,7 @@ public sealed class MedianaGenerator : IIncrementalGenerator
 
     private static void Emit(SourceProductionContext context, ImmutableArray<HandlerEntry> handlers)
     {
-        // MED001: дубликаты command/query/stream
+        // MED001: command/query/stream
         var reported = new HashSet<(HandlerKind, string)>();
         foreach (var handler in handlers)
         {
@@ -170,10 +170,10 @@ public sealed class MedianaGenerator : IIncrementalGenerator
         sb.AppendLine();
         sb.AppendLine("namespace Mediana.Generated");
         sb.AppendLine("{");
-        sb.AppendLine("    /// <summary>Сгенерированный регистратор хендлеров (без рефлексии, AOT-совместимо).</summary>");
+        sb.AppendLine("    /// <summary>(, AOT-).</summary>");
         sb.AppendLine("    public static class MedianaRegistrar");
         sb.AppendLine("    {");
-        sb.AppendLine("        /// <summary>Добавить все найденные в сборке хендлеры.</summary>");
+        sb.AppendLine("        /// <summary>.</summary>");
         sb.AppendLine("        public static Mediana.MedianaConfiguration AddGeneratedHandlers(this Mediana.MedianaConfiguration configuration)");
         sb.AppendLine("        {");
 

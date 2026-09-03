@@ -4,13 +4,13 @@ using System.Text.Json;
 namespace Mediana.Messaging;
 
 /// <summary>
-/// Единый codec конверта с лимитами защиты от memory-DoS (T-03 fix):
-/// MaxEnvelopeBytes (default 1 MB), MaxDepth=32, лимит заголовков.
-/// Используется всеми транспортами вместо копий.
+/// codec memory-DoS (T-03 fix):
+/// MaxEnvelopeBytes (default 1 MB), MaxDepth=32
+/// See English documentation.
 /// </summary>
 public static class EnvelopeCodec
 {
-    /// <summary>Максимальный размер конверта (T-03): 1 MB по умолчанию.</summary>
+    /// <summary>(T-03): 1 MB .</summary>
     public static int MaxEnvelopeBytes { get; set; } = 1_048_576;
 
     private static readonly JsonSerializerOptions SafeOptions = new(JsonSerializerDefaults.Web)
@@ -20,11 +20,11 @@ public static class EnvelopeCodec
         ReadCommentHandling = JsonCommentHandling.Disallow,
     };
 
-    [RequiresDynamicCode("Reflection-based JSON; для AOT — source-gen.")]
+ [RequiresDynamicCode("Reflection-based JSON; AOT — source-gen.")]
     public static byte[] Encode(Envelope envelope)
         => JsonSerializer.SerializeToUtf8Bytes(envelope, SafeOptions);
 
-    [RequiresDynamicCode("Reflection-based JSON; для AOT — source-gen.")]
+ [RequiresDynamicCode("Reflection-based JSON; AOT — source-gen.")]
     public static Envelope Decode(byte[] body)
     {
         if (body.Length > MaxEnvelopeBytes)

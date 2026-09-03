@@ -6,12 +6,12 @@ using Microsoft.Extensions.Logging;
 
 namespace Mediana.Outbox;
 
-/// <summary>Запись outbox: атомарно с бизнес-транзакцией, доставляется relay.</summary>
+/// <summary>outbox: , relay.</summary>
 public sealed record OutboxMessage
 {
     public long Sequence { get; init; }
 
-    /// <summary>Идентификатор записи в хранилище (ObjectId для MongoDB, sequence для SQL). R1 fix.</summary>
+    /// <summary>(ObjectId MongoDB, sequence SQL). R1 fix.</summary>
     public string? DocumentId { get; init; }
 
     public Guid MessageId { get; init; }
@@ -24,7 +24,7 @@ public sealed record OutboxMessage
 
     public DateTimeOffset CreatedAt { get; init; }
 
-    /// <summary>0 = не доставлено; >0 = lease до (unix-ms) для конкурентных relay.</summary>
+    /// <summary>0 = ; >0 = lease (unix-ms) relay.</summary>
     public long LeaseUntil { get; init; }
 
     public int DeliveryAttempts { get; init; }
@@ -34,27 +34,27 @@ public sealed record OutboxMessage
     public bool Parked { get; init; }
 }
 
-/// <summary>Хранилище outbox: реализуют спутниковые пакеты (EF Core/Dapper/Mongo).</summary>
+/// <summary>outbox: (EF Core/Dapper/Mongo).</summary>
 public interface IOutboxStore
 {
-    /// <summary>Пакетная вставка в бизнес-транзакцию (вызывается из interceptor'а провайдера).</summary>
+    /// <summary>(interceptor').</summary>
     ValueTask AddRange(IEnumerable<OutboxMessage> messages, CancellationToken cancellationToken);
 
-    /// <summary>Взять батч к доставке: FOR UPDATE SKIP LOCKED (SQL) / lease (Mongo).</summary>
+    /// <summary>: FOR UPDATE SKIP LOCKED (SQL) / lease (Mongo).</summary>
     ValueTask<IReadOnlyList<OutboxMessage>> LeaseBatch(int batchSize, long leaseUnixMs, CancellationToken cancellationToken);
 
-    /// <summary>Пометить доставленным.</summary>
+    /// <summary>.</summary>
     ValueTask MarkDelivered(OutboxMessage message, CancellationToken cancellationToken);
 
-    /// <summary>Вернуть lease (ошибка доставки): backoff + парковка при исчерпании maxAttempts (R3).</summary>
+    /// <summary>lease (): backoff + maxAttempts (R3).</summary>
     ValueTask MarkFailed(OutboxMessage message, string error, int maxDeliveryAttempts, CancellationToken cancellationToken);
 
-    /// <summary>Удалить доставленные старше возраста (cleanup-политика).</summary>
+    /// <summary>(cleanup-).</summary>
     ValueTask<int> CleanupOlderThan(TimeSpan age, CancellationToken cancellationToken);
 }
 
-/// <summary>Сборщик исходящих конвертов внутри бизнес-операции (per-scope).</summary>
-[System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec использует reflection-based JSON.")]
+/// <summary>(per-scope).</summary>
+[System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec reflection-based JSON.")]
 public sealed class OutboxCollector
 {
     private readonly List<OutboxMessage> _pending = [];
@@ -82,32 +82,32 @@ public sealed class OutboxCollector
 }
 
 
-/// <summary>Опции relay.</summary>
+/// <summary>relay.</summary>
 public sealed record OutboxRelayOptions
 {
     public int BatchSize { get; init; } = 100;
 
-    /// <summary>Интервал опроса при пустом батче.</summary>
+    /// <summary>.</summary>
     public TimeSpan PollInterval { get; init; } = TimeSpan.FromSeconds(1);
 
-    /// <summary>Lease на запись при доставке (конкурентные relay).</summary>
+    /// <summary>Lease (relay).</summary>
     public TimeSpan LeaseDuration { get; init; } = TimeSpan.FromMinutes(2);
 
-    /// <summary>Максимум попыток доставки до parking (ошибка остаётся в store с LastError).</summary>
+    /// <summary>parking (store LastError).</summary>
     public int MaxDeliveryAttempts { get; init; } = 10;
 
-    /// <summary>Backoff повтора опроса при недоступности транспорта.</summary>
+    /// <summary>Backoff .</summary>
     public TimeSpan FailureBackoff { get; init; } = TimeSpan.FromSeconds(5);
 
-    /// <summary>Cleanup доставленных старше возраста; null — не чистить.</summary>
+    /// <summary>Cleanup ; null — .</summary>
     public TimeSpan? CleanupAge { get; init; } = TimeSpan.FromDays(7);
 }
 
 /// <summary>
-/// Фоновый relay: батч-выборка → издатель транспорта → mark-delivered;
-/// экспоненциальный backoff при недоступности, lease-конкурентность (§9.4).
+/// relay: → → mark-delivered
+/// backoff , lease-(§9.4)
 /// </summary>
-[System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec использует reflection-based JSON.")]
+[System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec reflection-based JSON.")]
 public sealed class OutboxRelay(
     IOutboxStore store,
     Func<CancellationToken, ValueTask<ITransportPublisher>> publisherFactory,
@@ -163,7 +163,7 @@ public sealed class OutboxRelay(
         }
     }
 
-    [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec использует reflection-based JSON.")]
+ [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec reflection-based JSON.")]
     private async ValueTask Deliver(ITransportPublisher publisher, OutboxMessage message, CancellationToken cancellationToken)
     {
         try
@@ -182,7 +182,7 @@ public sealed class OutboxRelay(
     }
 }
 
-/// <summary>Расширения DI для opt-in outbox (D4: без пакета ядро не знает о нём).</summary>
+/// <summary>DI opt-in outbox (D4: ).</summary>
 public static class OutboxServiceCollectionExtensions
 {
     public static IServiceCollection AddMedianaOutbox(

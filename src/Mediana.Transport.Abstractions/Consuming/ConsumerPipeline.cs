@@ -8,8 +8,8 @@ using Microsoft.Extensions.Logging;
 namespace Mediana.Consuming;
 
 /// <summary>
-/// Общий контур приёма: inbox-дедупликация → retry-движок → обработчик.
-/// Транспортные провайдеры оборачивают доставку в этот контур для единообразной семантики (§9).
+/// : inbox-→ retry-→
+/// (§9)
 /// </summary>
 public sealed class ConsumerPipeline
 {
@@ -22,7 +22,7 @@ public sealed class ConsumerPipeline
         _logger = logger;
     }
 
-    /// <summary>Обработать доставку: дедуп → retry → handler → ack/nack/DLQ.</summary>
+    /// <summary>: → retry → handler → ack/nack/DLQ.</summary>
     public async ValueTask Process(
         ITransportDelivery delivery,
         string handlerIdentity,
@@ -36,7 +36,7 @@ public sealed class ConsumerPipeline
 
         if (!await _inbox.TryBegin(delivery.Envelope.MessageId.ToString("N"), handlerIdentity).ConfigureAwait(false))
         {
-            // Дубликат доставки: skip + ack (at-least-once → effectively-once, §9.4)
+            // : skip + ack (at-least-once → effectively-once, §9.4)
             _logger?.LogDebug("Duplicate delivery {MessageId} skipped", delivery.Envelope.MessageId);
             await delivery.Ack().ConfigureAwait(false);
             return;
@@ -59,15 +59,15 @@ public sealed class ConsumerPipeline
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Handler failed for {MessageId} after retries", delivery.Envelope.MessageId);
-            // nack без requeue → dead-letter нативным механизмом транспорта (fingerprint в заголовках добавляет провайдер)
+            // nack requeue → dead-letter (fingerprint )
             await delivery.Nack(requeue: false, redeliveryDelay: null).ConfigureAwait(false);
         }
     }
 }
 
 /// <summary>
-/// Хост консьюмеров поверх BackgroundService: bounded Channel для backpressure,
-/// семафор параллельности, graceful drain при остановке (§5.3).
+/// BackgroundService: bounded Channel backpressure
+/// graceful drain (§5.3)
 /// </summary>
 public sealed class ConsumerHostService : BackgroundService
 {
@@ -87,7 +87,7 @@ public sealed class ConsumerHostService : BackgroundService
         }
         catch (OperationCanceledException)
         {
-            // остановка: graceful drain внутри Stop
+            // : graceful drain Stop
         }
 
         await _host.Stop().ConfigureAwait(false);
@@ -95,10 +95,10 @@ public sealed class ConsumerHostService : BackgroundService
 }
 
 #if !NET10_0
-/// <summary>ns2.1 fallback для Random.Shared (T-12): thread-safe jitter-генератор.</summary>
+/// <summary>ns2.1 fallback Random.Shared (T-12): thread-safe jitter-.</summary>
 internal static class JitterRandom
 {
-    // R7 fix: thread-safe через ThreadLocal (System.Random не потокобезопасен на ns2.1)
+    // R7 fix: thread-safe ThreadLocal (System.Random ns2.1)
     [ThreadStatic]
     private static Random? _random;
     public static Random Shared => _random ??= new Random();

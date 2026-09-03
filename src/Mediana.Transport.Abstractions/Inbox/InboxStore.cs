@@ -3,21 +3,21 @@ using Mediana.Transports;
 namespace Mediana.Inbox;
 
 /// <summary>
-/// Inbox: дедупликация по (MessageId, HandlerIdentity) — всегда включён для remote-консюмеров (§9.1).
-/// In-memory реализация — default (не переживает рестарт; DB-реализации — в outbox-пакетах).
+/// Inbox: (MessageId, HandlerIdentity) — remote-(§9.1)
+/// In-memory default (; DB-outbox-)
 /// </summary>
 public interface IInboxStore
 {
-    /// <summary>Попытаться начать обработку: true — первый раз (можно выполнять), false — дубликат.</summary>
+    /// <summary>: true — (), false — .</summary>
     ValueTask<bool> TryBegin(string messageId, string handlerIdentity);
 
-    /// <summary>Пометить обработку завершённой (для диагностики/очистки).</summary>
+    /// <summary>(/).</summary>
     ValueTask Complete(string messageId, string handlerIdentity);
 }
 
 /// <summary>
-/// Потокобезопасный in-memory inbox с вытеснением по размеру (защита от роста).
-/// Гонки двойной доставки побеждаются атомарным TryAdd.
+/// in-memory inbox ()
+/// TryAdd
 /// </summary>
 public sealed class InMemoryInboxStore : IInboxStore
 {
@@ -53,7 +53,7 @@ public sealed class InMemoryInboxStore : IInboxStore
     {
         lock (_lock)
         {
-            // запись уже в _completed после TryBegin; метод оставлен для симметрии контракта
+            // _completed TryBegin
         }
 
         return default;

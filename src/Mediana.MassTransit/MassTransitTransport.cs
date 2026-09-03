@@ -6,8 +6,8 @@ using Mediana.Transports;
 namespace Mediana.MassTransit;
 
 /// <summary>
-/// Режим 1 — MassTransit как транспорт: Mediana-конверты публикуются через IBus.
-/// Пользователь получает saga-экосистему и конфигурацию MassTransit (§8.3).
+/// 1 — MassTransit : Mediana-IBus
+/// saga-MassTransit (§8.3)
 /// </summary>
 public sealed class MassTransitTransport(IBus bus) : ITransport
 {
@@ -22,17 +22,17 @@ public sealed class MassTransitTransport(IBus bus) : ITransport
     };
 
     public ValueTask BuildTopology(TopologyManifest manifest, CancellationToken cancellationToken)
-        => default; // топологией управляет MassTransit (конфигурация эндпоинтов потребителя)
+        => default; // MassTransit ()
 
-    [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec использует reflection-based JSON.")]
+ [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec reflection-based JSON.")]
     public async ValueTask<ITransportPublisher> CreatePublisher(CancellationToken cancellationToken)
         => await Task.FromResult<ITransportPublisher>(new MassTransitPublisher(bus)).ConfigureAwait(false);
 
-    [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec использует reflection-based JSON.")]
+ [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec reflection-based JSON.")]
     public IConsumerHostFactory CreateConsumerHosts()
         => new MassTransitConsumerHostFactory();
 
-    [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec использует reflection-based JSON.")]
+ [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec reflection-based JSON.")]
     public static async ValueTask PublishEnvelope(IBus bus, Envelope envelope, string? destination, CancellationToken cancellationToken)
     {
         var message = new MedianaWireMessage
@@ -46,7 +46,7 @@ public sealed class MassTransitTransport(IBus bus) : ITransport
 
 }
 
-/// <summary>Wire-сообщение для публикации через MassTransit (конверт внутри).</summary>
+/// <summary>Wire-MassTransit ().</summary>
 public sealed record MedianaWireMessage
 {
     public Guid MessageId { get; init; }
@@ -56,8 +56,8 @@ public sealed record MedianaWireMessage
     public byte[] Body { get; init; } = [];
 }
 
-/// <summary>Издатель через MassTransit IBus.</summary>
-[System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec использует reflection-based JSON.")]
+/// <summary>MassTransit IBus.</summary>
+[System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec reflection-based JSON.")]
 public sealed class MassTransitPublisher(IBus bus) : ITransportPublisher
 {
     public async ValueTask Publish(Envelope envelope, PublishOptions options, CancellationToken cancellationToken)
@@ -65,20 +65,20 @@ public sealed class MassTransitPublisher(IBus bus) : ITransportPublisher
             .ConfigureAwait(false);
 }
 
-/// <summary>Фабрика хостов (режим 2 — мост): консьюмеры MassTransit диспатчат в Mediana-пайплайн.</summary>
+/// <summary>(2 — ): MassTransit Mediana-.</summary>
 public sealed class MassTransitConsumerHostFactory : IConsumerHostFactory
 {
     public IConsumerHost Create(ConsumerEndpoint endpoint, Func<ITransportDelivery, CancellationToken, ValueTask> handler)
         => new InProcessConsumerHost(handler);
 }
 
-/// <summary>Хост, управляемый MassTransit receive-endpoint'ами (стартует вместе с хостом MassTransit).</summary>
+/// <summary>, MassTransit receive-endpoint'(MassTransit).</summary>
 public sealed class InProcessConsumerHost(
     Func<ITransportDelivery, CancellationToken, ValueTask> handler) : IConsumerHost
 {
     private volatile bool _started;
 
-    /// <summary>Мост для MassTransit-консюмеров: доставка в Mediana-пайплайн (режим 2).</summary>
+    /// <summary>MassTransit-: Mediana-(2).</summary>
     public async ValueTask Deliver(ITransportDelivery delivery, CancellationToken cancellationToken)
     {
         if (!_started)
@@ -104,10 +104,10 @@ public sealed class InProcessConsumerHost(
     public ValueTask DisposeAsync() => default;
 }
 
-/// <summary>Режим 3 — MassTransit-envelope совместимость: нативный формат Fault/конвертов.</summary>
+/// <summary>3 — MassTransit-envelope : Fault/.</summary>
 public static class MassTransitEnvelopeMapper
 {
-    /// <summary>Собрать MassTransit-совместимый fault-конверт для события-ошибки (§8.3).</summary>
+    /// <summary>MassTransit-fault-(§8.3).</summary>
     public static Dictionary<string, object> ToMassTransitFault(Envelope envelope, Exception exception)
     {
         return new Dictionary<string, object>
@@ -130,18 +130,18 @@ public static class MassTransitEnvelopeMapper
         };
     }
 
-    /// <summary>Декодировать Mediana-конверт из wire-сообщения.</summary>
-    [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec использует reflection-based JSON.")]
+    /// <summary>Mediana-wire-.</summary>
+ [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec reflection-based JSON.")]
     public static Envelope FromWireMessage(MedianaWireMessage message)
         => EnvelopeCodec.Decode(message.Body);
 }
 
 
 /// <summary>
-/// Режим 2 — мост: MassTransit-консюмер Mediana-сообщений, диспатчит в локальный пайплайн Mediana.
-/// Регистрируется на receive endpoint: cfg.ReceiveEndpoint("orders", e => e.Consumer(() => new MedianaDispatchBridge(...))).
+/// 2 — : MassTransit-Mediana-, Mediana
+/// receive endpoint: cfg.ReceiveEndpoint("orders", e => e.Consumer(() => new MedianaDispatchBridge(...)))
 /// </summary>
-[System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec использует reflection-based JSON.")]
+[System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec reflection-based JSON.")]
 public sealed class MedianaDispatchBridge(Func<Envelope, CancellationToken, ValueTask> dispatch) : IConsumer<MedianaWireMessage>
 {
     public async Task Consume(ConsumeContext<MedianaWireMessage> context)

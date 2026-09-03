@@ -5,9 +5,9 @@ using MongoDB.Driver;
 namespace Mediana.Outbox.MongoDb;
 
 /// <summary>
-/// MongoDB-провайдер outbox: lease-based relay (§9.4), фоновые индексы.
-/// R1 fix: корреляция Mark* по ObjectId через DocumentId (строковое представление) —
-/// не восстанавливаем _id из Sequence (это не работает: ObjectId 12 байт ≠ long 8 байт).
+/// MongoDB-outbox: lease-based relay (§9.4)
+/// R1 fix: Mark* ObjectId DocumentId () —
+/// _id Sequence (: ObjectId 12 ≠ long 8 )
 /// </summary>
 public sealed class MongoOutboxStore(IMongoDatabase database, string collectionName = "mediana_outbox") : IOutboxStore
 {
@@ -114,7 +114,7 @@ public sealed class MongoOutboxStore(IMongoDatabase database, string collectionN
         var truncatedError = error is { Length: > 4000 } ? error[..4000] : error;
         var backoffMs = Math.Min(Math.Pow(2, message.DeliveryAttempts) * 1000, 300_000);
         var leaseUntil = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + (long)backoffMs;
-        var parked = message.DeliveryAttempts >= maxDeliveryAttempts; // R3: опция, не хардкод
+        var parked = message.DeliveryAttempts >= maxDeliveryAttempts; // R3: ,
 
         await _collection.UpdateOneAsync(
             d => d.Id == objectId,
@@ -149,8 +149,8 @@ public sealed class MongoOutboxStore(IMongoDatabase database, string collectionN
     private static OutboxMessage ToMessage(OutboxDocument document)
         => new()
         {
-            Sequence = 0, // Sequence не используется для Mongo
-            DocumentId = document.Id.ToString(), // R1 fix: точная корреляция по ObjectId
+            Sequence = 0, // Sequence Mongo
+            DocumentId = document.Id.ToString(), // R1 fix: ObjectId
             MessageId = document.MessageId,
             Destination = document.Destination,
             Transport = document.Transport,

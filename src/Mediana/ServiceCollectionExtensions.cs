@@ -5,26 +5,26 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Mediana;
 
-/// <summary>DI-интеграция медиатора.</summary>
+/// <summary>DI-.</summary>
 public static class MedianaServiceCollectionExtensions
 {
     /// <summary>
-    /// Регистрирует IMediator. Хендлеры регистрируются как scoped (или singleton при UseSingletonHandlers).
-    /// cfg.UseGeneratedRegistrar() (Mediana.Generators) подключает source-gen регистрацию без рефлексии.
+    /// IMediator. scoped (singleton UseSingletonHandlers)
+    /// cfg.UseGeneratedRegistrar() (Mediana.Generators) source-gen
     /// </summary>
     public static IServiceCollection AddMediana(
         this IServiceCollection services,
         Action<MedianaConfiguration> configure)
     {
-        // Stryker disable once statement: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once statement: fallback/perf-(. CallSiteBranchTests: fast/slow )
         Guard.NotNull(services, nameof(services));
-        // Stryker disable once statement: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once statement: fallback/perf-(. CallSiteBranchTests: fast/slow )
         Guard.NotNull(configure, nameof(configure));
 
         var configuration = new MedianaConfiguration();
         configure(configuration);
 
-        // Регистрация хендлеров в DI: lifetime по политике конфигурации.
+        // DI: lifetime
         foreach (var handlerType in configuration.HandlerTypes)
         {
             if (configuration.IsSingleton)
@@ -39,7 +39,7 @@ public static class MedianaServiceCollectionExtensions
 
         var registry = configuration.Freeze();
 
-        // Mediator — scoped: резолвит хендлеры из текущего scope (семантика scoped-зависимостей).
+        // Mediator — scoped: scope (scoped-)
         services.TryAddScoped<IMediator>(sp => new Mediator(registry, sp));
         services.AddSingleton(registry);
         return services;

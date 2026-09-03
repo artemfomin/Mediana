@@ -1,6 +1,6 @@
 namespace Mediana.Generators;
 
-/// <summary>Диагностики генератора Mediana.</summary>
+/// <summary>Mediana.</summary>
 public static class MedianaDiagnostics
 {
     public const string DuplicateHandlerId = "MED001";

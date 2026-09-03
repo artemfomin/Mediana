@@ -7,8 +7,8 @@ using RabbitMQ.Client.Events;
 
 namespace Mediana.RabbitMq;
 
-/// <summary>Фабрика хостов консьюмеров RabbitMQ.</summary>
-[System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec использует reflection-based JSON.")]
+/// <summary>RabbitMQ.</summary>
+[System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec reflection-based JSON.")]
 public sealed class RabbitMqConsumerHostFactory(RabbitMqTransport transport) : IConsumerHostFactory
 {
     public IConsumerHost Create(ConsumerEndpoint endpoint, Func<ITransportDelivery, CancellationToken, ValueTask> handler)
@@ -16,10 +16,10 @@ public sealed class RabbitMqConsumerHostFactory(RabbitMqTransport transport) : I
 }
 
 /// <summary>
-/// Хост консьюмера: prefetch = MaxConcurrency, AsyncEventingBasicConsumer,
-/// обработка через ConsumerPipeline (inbox-дедуп + retry + poison), ack/nack.
+/// : prefetch = MaxConcurrency, AsyncEventingBasicConsumer
+/// ConsumerPipeline (inbox-+ retry + poison), ack/nack
 /// </summary>
-[System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec использует reflection-based JSON.")]
+[System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec reflection-based JSON.")]
 public sealed class RabbitMqConsumerHost(
     RabbitMqTransport transport,
     ConsumerEndpoint endpoint,
@@ -57,7 +57,7 @@ public sealed class RabbitMqConsumerHost(
         }
         catch (Exception)
         {
-            // T-02 fix: poison → nack без requeue → DLX (<queue>.dlq), а не бесконечный unacked-цикл
+            // T-02 fix: poison → nack requeue → DLX (<queue>.dlq), unacked-
             try
             {
                 await _channel!.BasicNackAsync(@event.DeliveryTag, multiple: false, requeue: false, CancellationToken.None)
@@ -65,7 +65,7 @@ public sealed class RabbitMqConsumerHost(
             }
             catch (Exception nackEx)
             {
-                // nack сам не должен маскировать исходную ошибку; канал уже мог закрыться
+                // nack
                 System.Diagnostics.Debug.WriteLine($"Mediana: nack-after-poison failed: {nackEx.Message}");
             }
         }
@@ -77,13 +77,13 @@ public sealed class RabbitMqConsumerHost(
 
     public async Task Stop()
     {
-        // Graceful drain: отписка → in-flight завершаются → закрытие канала
+        // Graceful drain: → in-flight →
         if (_channel is not null && _consumerTag is not null)
         {
             await _channel.BasicCancelAsync(_consumerTag, noWait: false, CancellationToken.None).ConfigureAwait(false);
         }
 
-        // T-13 fix: корректный drain — ждём освобождения всех permit'ов с реальным timeout
+        // T-13 fix: drain — permit'timeout
         var drainTimeout = TimeSpan.FromSeconds(30);
         using var drainCts = new CancellationTokenSource(drainTimeout);
         var acquired = 0;
@@ -97,7 +97,7 @@ public sealed class RabbitMqConsumerHost(
         }
         catch (OperationCanceledException)
         {
-            // drain timeout — in-flight сообщения будут requeue'иты брокером при закрытии канала
+            // drain timeout — in-flight requeue'
         }
 
         if (_channel is not null)
@@ -129,8 +129,8 @@ public sealed class RabbitMqConsumerHost(
     }
 }
 
-/// <summary>Доставка RabbitMQ: ack/nack с retry-count заголовком.</summary>
-[System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec использует reflection-based JSON.")]
+/// <summary>RabbitMQ: ack/nack retry-count .</summary>
+[System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec reflection-based JSON.")]
 public sealed class RabbitMqDelivery(IChannel channel, BasicDeliverEventArgs args) : ITransportDelivery
 {
 
@@ -150,7 +150,7 @@ public sealed class RabbitMqDelivery(IChannel channel, BasicDeliverEventArgs arg
 
         if (redeliveryDelay is { } delay)
         {
-            // DLX-cycle: публикуем копию в retry-очередь с TTL, исход ack'аем
+            // DLX-cycle: retry-TTL, ack'
             var retryCount = GetRetryCount() + 1;
             var props = new BasicProperties
             {
@@ -174,7 +174,7 @@ public sealed class RabbitMqDelivery(IChannel channel, BasicDeliverEventArgs arg
             return;
         }
 
-        // Без requeue: nack → DLX переносит в <queue>.dlq (fingerprint в заголовках)
+        // requeue: nack → DLX <queue>.dlq (fingerprint )
         await channel.BasicNackAsync(args.DeliveryTag, multiple: false, requeue: false, CancellationToken.None)
             .ConfigureAwait(false);
     }
@@ -187,10 +187,10 @@ public sealed class RabbitMqDelivery(IChannel channel, BasicDeliverEventArgs arg
             : 0;
 }
 
-/// <summary>Клиент request/reply поверх direct reply-to (§8.1): без временных очередей.</summary>
+/// <summary>request/reply direct reply-to (§8.1): .</summary>
 public sealed class RabbitMqRequestClient(IConnection connection)
 {
-    [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec использует reflection-based JSON.")]
+ [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec reflection-based JSON.")]
     public async ValueTask<Envelope> Request(
         Envelope request,
         string destination,

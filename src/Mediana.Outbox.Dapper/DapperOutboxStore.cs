@@ -5,9 +5,9 @@ using Mediana.Outbox;
 namespace Mediana.Outbox.Dapper;
 
 /// <summary>
-/// Dapper-провайдер outbox: ADO-агностичен (пользователь поставляет фабрику DbConnection:
-/// Npgsql/SqlConnection/...) — ноль ADO-зависимостей (D14). Диалекты: Postgres/SqlServer.
-/// Конкурентные relay: FOR UPDATE SKIP LOCKED (Postgres) / READPAST (SqlServer).
+/// Dapper-outbox: ADO-(DbConnection:
+/// Npgsql/SqlConnection/...) — ADO-(D14). : Postgres/SqlServer
+/// relay: FOR UPDATE SKIP LOCKED (Postgres) / READPAST (SqlServer)
 /// </summary>
 public sealed class DapperOutboxStore : IOutboxStore
 {
@@ -26,8 +26,8 @@ public sealed class DapperOutboxStore : IOutboxStore
         _dialect = dialect;
     }
 
-    /// <summary>DDL создания таблицы outbox (миграции запускает приложение).</summary>
-    /// <summary>R2 fix: DDL миграции для существующих таблиц (parked column, index).</summary>
+    /// <summary>DDL outbox ().</summary>
+    /// <summary>R2 fix: DDL (parked column, index).</summary>
     public string GetMigrationSql(string table = "mediana_outbox")
     {
         return _dialect == SqlDialect.Postgres
@@ -143,7 +143,7 @@ public sealed class DapperOutboxStore : IOutboxStore
 
     public async ValueTask MarkFailed(OutboxMessage message, string error, int maxDeliveryAttempts, CancellationToken cancellationToken)
     {
-        // R3: maxDeliveryAttempts — параметр, не хардкод; OB-08: backoff; OB-02: парковка
+        // R3: maxDeliveryAttempts — , ; OB-08: backoff; OB-02:
         var truncatedError = error is { Length: > 4000 } ? error[..4000] : error;
         var backoffMs = Math.Min(Math.Pow(2, message.DeliveryAttempts) * 1000, 300_000);
         var leaseUntil = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + (long)backoffMs;

@@ -1,6 +1,6 @@
 namespace Mediana;
 
-/// <summary>Ошибка конфигурации графа сообщений (нет хендлера, дубликат, некорректная политика).</summary>
+/// <summary>(, , ).</summary>
 public class MediatorConfigurationException : Exception
 {
     public MediatorConfigurationException(string message)
@@ -15,8 +15,8 @@ public class MediatorConfigurationException : Exception
 }
 
 /// <summary>
-/// Ошибка выполнения удалённого запроса: тип ошибки хоста-обработчика, сериализованные детали и fault-конверт.
-/// Локальный Send исключение прокидывает как есть — этот тип только для remote-путей.
+/// : , fault-
+/// Send remote-
 /// </summary>
 public class RemoteExecutionException : Exception
 {
@@ -35,7 +35,7 @@ public class RemoteExecutionException : Exception
         new Dictionary<string, string?>();
 }
 
-/// <summary>Таймаут удалённого запроса (request/reply поверх транспорта).</summary>
+/// <summary>(request/reply ).</summary>
 public class RemoteTimeoutException : TimeoutException
 {
     public RemoteTimeoutException(string message)

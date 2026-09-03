@@ -6,12 +6,12 @@ using System.Collections.Frozen;
 namespace Mediana.Dispatch;
 
 /// <summary>
-/// Иммутабельный реестр сообщений: RuntimeTypeHandle → <see cref="MessageEntry"/>.
-/// Чисто функциональный copy-on-write: <see cref="Add"/> НЕ мутирует этот экземпляр —
-/// возвращает новую версию на основе его содержимого (последовательность Adds накапливает типы).
-/// Конкурентные добавления из одной версии — под внешней синхронизацией вызывающего (документировано);
-/// чтение всегда без локов и аллокаций.
-/// net10.0 — FrozenDictionary; netstandard2.1 — собственный immutable bucket-массив (D2).
+/// : RuntimeTypeHandle → <see cref="MessageEntry"/>
+/// copy-on-write: <see cref="Add"/>
+/// (Adds )
+/// ()
+/// See English documentation.
+/// net10.0 — FrozenDictionary; netstandard2.1 — immutable bucket-(D2)
 /// </summary>
 public sealed class MessageRegistry
 {
@@ -48,7 +48,7 @@ public sealed class MessageRegistry
     }
 #endif
 
-    /// <summary>Чтение без аллокаций и локов. null — тип не зарегистрирован.</summary>
+    /// <summary>. null — .</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MessageEntry? TryGet(Type messageType)
     {
@@ -72,15 +72,15 @@ public sealed class MessageRegistry
     }
 
     /// <summary>
-    /// Copy-on-write добавление: чистая функция — этот экземпляр неизменен, возвращается новая версия
-    /// со всеми его типами плюс новый. Дубликат — ошибка конфигурации.
+    /// Copy-on-write :
+    /// See English documentation.
     /// </summary>
     public MessageRegistry Add(Type messageType, MessageEntry entry)
     {
         if (TryGet(messageType) is not null)
-        // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once block: fallback/perf-(. CallSiteBranchTests: fast/slow )
         {
-            // Stryker disable once statement: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+            // Stryker disable once statement: fallback/perf-(. CallSiteBranchTests: fast/slow )
             throw new MediatorConfigurationException(
                 $"Message type {messageType} is already registered.");
         }
