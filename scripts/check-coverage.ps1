@@ -1,4 +1,4 @@
-# : UNION branch- (net10 + ns2.1) >= 95%
+# Gate: UNION branch coverage across both assets (net10 + ns2.1) must be >= 95% per core package
 $ErrorActionPreference = "Stop"
 
 $packages = @("Mediana", "Mediana.Abstractions", "Mediana.Transport.Abstractions", "Mediana.Outbox")

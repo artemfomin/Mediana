@@ -6,12 +6,12 @@ using Microsoft.Extensions.Logging;
 
 namespace Mediana.Outbox;
 
-/// <summary>outbox: , relay.</summary>
+/// <summary>Outbox message persisted alongside the business transaction and delivered by the relay.</summary>
 public sealed record OutboxMessage
 {
     public long Sequence { get; init; }
 
-    /// <summary>(ObjectId MongoDB, sequence SQL). R1 fix.</summary>
+    /// <summary>Store-specific identity (MongoDB ObjectId string or SQL sequence). R1 fix.</summary>
     public string? DocumentId { get; init; }
 
     public Guid MessageId { get; init; }
@@ -24,7 +24,7 @@ public sealed record OutboxMessage
 
     public DateTimeOffset CreatedAt { get; init; }
 
-    /// <summary>0 = ; >0 = lease (unix-ms) relay.</summary>
+    /// <summary>0 = not leased; &gt; 0 = lease expiry (unix ms) held by a relay.</summary>
     public long LeaseUntil { get; init; }
 
     public int DeliveryAttempts { get; init; }
@@ -34,26 +34,26 @@ public sealed record OutboxMessage
     public bool Parked { get; init; }
 }
 
-/// <summary>outbox: (EF Core/Dapper/Mongo).</summary>
+/// <summary>Outbox store contract (EF Core / Dapper / MongoDB implementations).</summary>
 public interface IOutboxStore
 {
-    /// <summary>(interceptor').</summary>
+    /// <summary>Enqueues messages atomically with the business transaction (called from an interceptor).</summary>
     ValueTask AddRange(IEnumerable<OutboxMessage> messages, CancellationToken cancellationToken);
 
-    /// <summary>: FOR UPDATE SKIP LOCKED (SQL) / lease (Mongo).</summary>
+    /// <summary>Leases a batch for delivery: FOR UPDATE SKIP LOCKED (SQL) or lease fields (Mongo).</summary>
     ValueTask<IReadOnlyList<OutboxMessage>> LeaseBatch(int batchSize, long leaseUnixMs, CancellationToken cancellationToken);
 
-    /// <summary>.</summary>
+    /// <summary>Marks the message as delivered.</summary>
     ValueTask MarkDelivered(OutboxMessage message, CancellationToken cancellationToken);
 
-    /// <summary>lease (): backoff + maxAttempts (R3).</summary>
+    /// <summary>Marks a failed delivery and releases the lease: backoff plus max-attempts parking (R3).</summary>
     ValueTask MarkFailed(OutboxMessage message, string error, int maxDeliveryAttempts, CancellationToken cancellationToken);
 
-    /// <summary>(cleanup-).</summary>
+    /// <summary>Deletes old delivered messages (called by the periodic cleanup).</summary>
     ValueTask<int> CleanupOlderThan(TimeSpan age, CancellationToken cancellationToken);
 }
 
-/// <summary>(per-scope).</summary>
+/// <summary>Collects pending messages within a scope (per-scope).</summary>
 [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec reflection-based JSON.")]
 public sealed class OutboxCollector
 {
@@ -82,30 +82,30 @@ public sealed class OutboxCollector
 }
 
 
-/// <summary>relay.</summary>
+/// <summary>Relay options.</summary>
 public sealed record OutboxRelayOptions
 {
     public int BatchSize { get; init; } = 100;
 
-    /// <summary>.</summary>
+    /// <summary>Poll interval between lease batches.</summary>
     public TimeSpan PollInterval { get; init; } = TimeSpan.FromSeconds(1);
 
-    /// <summary>Lease (relay).</summary>
+    /// <summary>Lease duration held by a relay.</summary>
     public TimeSpan LeaseDuration { get; init; } = TimeSpan.FromMinutes(2);
 
-    /// <summary>parking (store LastError).</summary>
+    /// <summary>Delivery attempts before parking (LastError is kept in the store).</summary>
     public int MaxDeliveryAttempts { get; init; } = 10;
 
-    /// <summary>Backoff .</summary>
+    /// <summary>Backoff after a failed relay cycle.</summary>
     public TimeSpan FailureBackoff { get; init; } = TimeSpan.FromSeconds(5);
 
-    /// <summary>Cleanup ; null — .</summary>
+    /// <summary>Age threshold for cleanup of delivered messages; null disables cleanup.</summary>
     public TimeSpan? CleanupAge { get; init; } = TimeSpan.FromDays(7);
 }
 
 /// <summary>
-/// relay: → → mark-delivered
-/// backoff , lease-(§9.4)
+/// Background relay: lease batch → publish with confirmation → mark delivered.
+/// Failed cycles back off exponentially; expired leases are re-leased (at-least-once).
 /// </summary>
 [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec reflection-based JSON.")]
 public sealed class OutboxRelay(
@@ -212,7 +212,7 @@ public sealed class OutboxRelay(
     }
 }
 
-/// <summary>DI opt-in outbox (D4: ).</summary>
+/// <summary>DI registration for the opt-in outbox (D4).</summary>
 public static class OutboxServiceCollectionExtensions
 {
     public static IServiceCollection AddMedianaOutbox(

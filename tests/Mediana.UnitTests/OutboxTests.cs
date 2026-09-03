@@ -2,6 +2,7 @@ using Mediana.Messaging;
 using Mediana.Outbox;
 using Mediana.Transports;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace Mediana.UnitTests;
@@ -58,7 +59,12 @@ public class OutboxTests
         public ValueTask<int> CleanupOlderThan(TimeSpan age, CancellationToken ct)
         {
             CleanupCalls++;
-            return new ValueTask<int>(0);
+            if (ThrowOnCleanup)
+            {
+                throw new InvalidOperationException("cleanup store failure");
+            }
+
+            return new ValueTask<int>(CleanupResult);
         }
 
         public List<Guid> Delivered { get; } = [];
@@ -66,6 +72,10 @@ public class OutboxTests
         public List<(Guid, string)> Failed { get; } = [];
 
         public int CleanupCalls;
+
+        public int CleanupResult;
+
+        public bool ThrowOnCleanup;
     }
 
     private sealed class FakePublisher(bool fail = false) : ITransportPublisher
@@ -192,6 +202,99 @@ public class OutboxTests
         await relay.StartAsync(cts.Token);
         await Task.Delay(100);
         await relay.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task Relay_cleanup_removes_stale_messages_and_logs_count_with_logger()
+    {
+        var store = new FakeOutboxStore { CleanupResult = 5 };
+        var relay = new OutboxRelay(
+            store,
+            _ => new ValueTask<ITransportPublisher>(new FakePublisher()),
+            new OutboxRelayOptions { PollInterval = TimeSpan.FromMilliseconds(5) },
+            NullLogger<OutboxRelay>.Instance);
+
+        using var cts = new CancellationTokenSource(600);
+        await relay.StartAsync(cts.Token);
+        await WaitUntil(() => store.CleanupCalls > 0);
+        await relay.StopAsync(CancellationToken.None);
+
+        Assert.False(relay.ExecuteTask!.IsFaulted, "cleanup success must not fault the relay");
+    }
+
+    [Fact]
+    public async Task Relay_cleanup_with_removals_survives_without_logger()
+    {
+        var store = new FakeOutboxStore { CleanupResult = 3 };
+        var relay = new OutboxRelay(
+            store,
+            _ => new ValueTask<ITransportPublisher>(new FakePublisher()),
+            new OutboxRelayOptions { PollInterval = TimeSpan.FromMilliseconds(5) });
+
+        using var cts = new CancellationTokenSource(600);
+        await relay.StartAsync(cts.Token);
+        await WaitUntil(() => store.CleanupCalls > 0);
+        await relay.StopAsync(CancellationToken.None);
+
+        Assert.False(relay.ExecuteTask!.IsFaulted, "cleanup success must not fault the relay");
+    }
+
+    [Fact]
+    public async Task Relay_survives_cleanup_failure_and_logs_with_logger()
+    {
+        var store = new FakeOutboxStore { ThrowOnCleanup = true };
+        var relay = new OutboxRelay(
+            store,
+            _ => new ValueTask<ITransportPublisher>(new FakePublisher()),
+            new OutboxRelayOptions { PollInterval = TimeSpan.FromMilliseconds(5) },
+            NullLogger<OutboxRelay>.Instance);
+
+        using var cts = new CancellationTokenSource(600);
+        await relay.StartAsync(cts.Token);
+        await WaitUntil(() => store.CleanupCalls > 0);
+        await relay.StopAsync(CancellationToken.None);
+
+        Assert.False(relay.ExecuteTask!.IsFaulted, "cleanup failure is non-fatal by design (OB-05)");
+    }
+
+    [Fact]
+    public async Task Relay_survives_cleanup_failure_without_logger()
+    {
+        var store = new FakeOutboxStore { ThrowOnCleanup = true };
+        var relay = new OutboxRelay(
+            store,
+            _ => new ValueTask<ITransportPublisher>(new FakePublisher()),
+            new OutboxRelayOptions { PollInterval = TimeSpan.FromMilliseconds(5) });
+
+        using var cts = new CancellationTokenSource(600);
+        await relay.StartAsync(cts.Token);
+        await WaitUntil(() => store.CleanupCalls > 0);
+        await relay.StopAsync(CancellationToken.None);
+
+        Assert.False(relay.ExecuteTask!.IsFaulted, "cleanup failure is non-fatal by design (OB-05)");
+    }
+
+    [Fact]
+    public async Task Relay_cancellation_during_publish_is_not_counted_as_failure()
+    {
+        var store = new FakeOutboxStore();
+        await store.AddRange([MakeMessage(Guid.NewGuid(), sequence: 4)], default);
+        var relay = new OutboxRelay(
+            store,
+            _ => new ValueTask<ITransportPublisher>(new CancellingOnPublishPublisher()),
+            new OutboxRelayOptions { PollInterval = TimeSpan.FromMilliseconds(10) });
+
+        using var cts = new CancellationTokenSource(200);
+        await relay.StartAsync(cts.Token);
+        await WaitUntil(() => relay.ExecuteTask!.IsCompleted);
+
+        Assert.Empty(store.Failed); // OB-04: shutdown cancellation is not a delivery failure
+    }
+
+    private sealed class CancellingOnPublishPublisher : ITransportPublisher
+    {
+        public ValueTask Publish(Envelope envelope, PublishOptions options, CancellationToken ct)
+            => new(Task.Delay(Timeout.InfiniteTimeSpan, ct));
     }
 
     private static async Task WaitUntil(Func<bool> condition, int timeoutMs = 2000)
