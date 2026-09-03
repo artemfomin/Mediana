@@ -1,32 +1,32 @@
 namespace Mediana.Messaging;
 
-/// <summary>wire-: additive (§15 ).</summary>
+/// <summary>Версия wire-формата конверта: эволюция только additive (§15 спеки).</summary>
 public static class EnvelopeVersion
 {
     public const int Current = 1;
 }
 
-/// <summary>.</summary>
+/// <summary>Дескриптор типа сообщения в конверте.</summary>
 public sealed record MessageTypeDescriptor
 {
     public string FullName { get; init; } = "";
 
-    /// <summary>(semver-).</summary>
+    /// <summary>Версия контракта сообщения (semver-подобная строка).</summary>
     public string TypeVersion { get; init; } = "1.0";
 
-    /// <summary>: (poison).</summary>
+    /// <summary>Хэш контракта: детекция несовместимости на приёме (poison).</summary>
     public string? ContractHash { get; init; }
 }
 
 /// <summary>
-/// (§7 ): UUIDv7 MessageId, /
-/// W3C traceparent, , payload. IMessageSerializer
+/// Транспортно-независимый конверт (§7 спеки): UUIDv7 MessageId, корреляция/каузация,
+/// W3C traceparent, заголовки, payload. Сериализация — IMessageSerializer.
 /// </summary>
 public sealed record Envelope
 {
     public int Version { get; init; } = EnvelopeVersion.Current;
 
-    /// <summary>UUIDv7: sortable, inbox.</summary>
+    /// <summary>UUIDv7: sortable, дедупликация inbox.</summary>
     public Guid MessageId { get; init; }
 
     public Guid? CorrelationId { get; init; }
@@ -37,19 +37,19 @@ public sealed record Envelope
 
     public DateTimeOffset Timestamp { get; init; }
 
-    /// <summary>(endpoint ).</summary>
+    /// <summary>Источник публикации (endpoint приложения).</summary>
     public string? SourceEndpoint { get; init; }
 
-    /// <summary>W3C Trace Context (, D15).</summary>
+    /// <summary>W3C Trace Context (сквозные трейсы, D15).</summary>
     public string? TraceParent { get; init; }
 
-    /// <summary>(partition key, reply-to...).</summary>
+    /// <summary>Пользовательские и системные заголовки (partition key, reply-to...).</summary>
     public IReadOnlyDictionary<string, string> Headers { get; init; } = new Dictionary<string, string>();
 
-    /// <summary>.</summary>
+    /// <summary>Сериализованное тело сообщения.</summary>
     public byte[] Payload { get; init; } = [];
 
-    /// <summary>(ordering per key: Kafka partition, RabbitMQ routing).</summary>
+    /// <summary>Ключ партиционирования (ordering per key: Kafka partition, RabbitMQ routing).</summary>
     public string? PartitionKey
     {
         get => Headers.TryGetValue("mediana.partition-key", out var v) ? v : null;

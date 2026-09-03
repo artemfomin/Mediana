@@ -1,5 +1,5 @@
 #if !NET10_0
-// netstandard2.1-()
+// Полифиллы атрибутов для netstandard2.1-ассета (распознаются компилятором по полным именам).
 namespace System.Runtime.CompilerServices
 {
     internal static class IsExternalInit

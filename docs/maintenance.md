@@ -1,28 +1,48 @@
-# OSS (## issues
+# Цикл поддержки OSS (регламент мейнтейнера)
 
-already `triage`):
+## Триаж issues
 
-| | SLA | |
+Лейблы первого ответа (шаблоны уже ставят `triage`):
+
+| Лейбл | SLA | Действие |
 |---|---|---|
-| `bug` + | 7 on | /→ `confirmed` → in or hotfix |
-| `bug` + not | 2 | `needs-info` → close how `stale` |
-| `enhancement` | 14 | Discussions → `accepted` / `declined` (|
-| `question` | to 7 | → in Discussion |
-| security (| 72 first | SECURITY.md](../SECURITY.md) |
+| `bug` + воспроизводится | 7 дней на ответ | подтвердить/запросить детали → `confirmed` → в бэклог или hotfix |
+| `bug` + не воспроизводится | 2 запроса деталей, 14 дней тишины | `needs-info` → close как `stale` |
+| `enhancement` | 14 дней | обсудить (Discussions предпочтительно) → `accepted` / `declined` (с обоснованием) |
+| `question` | до 7 дней | ответ → конвертация в Discussion |
+| security (приватно) | 72 часа первый ответ | регламент [SECURITY.md](../SECURITY.md) |
 
-security > correctness-/> /CI > features.
+Приоритет: security > correctness-баги (диспетч/маршрутизация) > гейты/CI > фичи.
 
-## dependencies (Dependabot)
+## Зависимости (Dependabot)
 
-- PR (dependabot.yml](../.github/dependabot.yml)).
-- Microsoft/testing-CI.
-- **** (BCL, RabbitMQ.Client, Confluent, MassTransit, STJ): mandatory `alloc-check` (0 B) → `load-check all` (in `benchmarks/RESULTS.md`);
- > 5% — issue to not never: API-+ tests.
+- Еженедельные PR (группировка см. [dependabot.yml](../.github/dependabot.yml)).
+- Обновления Microsoft/testing-группы — мерджатся после зелёного CI.
+- **Перф-чувствительные** (BCL, RabbitMQ.Client, Confluent, MassTransit, STJ): обязательный ручной прогон перед мерджем:
+  `alloc-check` (0 B) → `load-check all` (сравнение с последним зафиксированным в `benchmarks/RESULTS.md`);
+  регрессия > 5% — отдельный issue с разбором до мерджа.
+- Мажоры клиентских библиотек — не автомерж никогда: API-миграция + тесты.
 
-## `alloc/ram/load-check` + on commit.
-2. by job-`vs-mediatr-logs` (each in main).
-3. PR c `perf(...)`, results in `RESULTS.md` (≥3 alloc 0 B, coverage 95, mutation 90) not in without ADR in ## versions and branches
+## Регрессии производительности
 
-- feature-branches → PR in `main`; linear history.
-- releases — only release.md](release.md)).
-- Hotfix/security: branch `support/<major>.x` for on ## CoC — [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md); PR by CONTRIBUTING.md](../CONTRIBUTING.md)); first-time contributors — + ≥3 PR) — in package by ## project (`dotnet list package --vulnerable --include-transitive` by EOL-docs/QUESTIONS.md](QUESTIONS.md) (RESULTS.md on SDK.
+1. Зафиксировать ввод `alloc/ram/load-check` + ссылку на коммит.
+2. Бисект по job-артефактам `vs-mediatr-logs` (каждый пуш в main).
+3. Фикс — обычный PR c `perf(...)`, результаты в `RESULTS.md` (диапазоны ≥3 прогонов).
+4. Бюджет-гейты (alloc 0 B, coverage 95, mutation 90) не пересматриваются в меньшую сторону без явного ADR в спеке.
+
+## Версии и ветки
+
+- Разработка — feature-ветки → PR в `main`; linear history.
+- Релизы — только теги (см. [release.md](release.md)).
+- Hotfix/security: ветка `support/<major>.x` для предыдущего мажора (при необходимости).
+
+## Комьюнити
+
+- CoC — [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md); нарушения — регламент там же.
+- Контрибьюторы: PR по шаблону, гейты локально (см. [CONTRIBUTING.md](../CONTRIBUTING.md)); first-time contributors — приветствие + помощь с гейтами.
+- Значимые контрибьюторы (≥3 принятых PR) — в список авторов пакета по согласию.
+
+## Здоровье проекта (периодический аудит)
+
+- Ежемесячно: `dotnet list package --vulnerable --include-transitive` по всему решению; ревьё EOL-зависимостей.
+- Ежеквартально: ревьё [docs/QUESTIONS.md](QUESTIONS.md) (закрытые — архивировать), обновление сводки RESULTS.md на свежем SDK.

@@ -2,37 +2,37 @@ using Mediana.Messaging;
 
 namespace Mediana.Routing;
 
-/// <summary>(§6 ).</summary>
+/// <summary>Куда направляется сообщение (§6 спеки).</summary>
 public enum RouteTarget
 {
-    /// <summary>(default, ).</summary>
+    /// <summary>Только локальная диспетчеризация (default, без политики).</summary>
     Local,
 
-    /// <summary>.</summary>
+    /// <summary>Только удалённо через транспорт.</summary>
     Remote,
 
-    /// <summary>(natural fan-out; warning ).</summary>
+    /// <summary>Локально И в очередь (для событий — natural fan-out; для команд — warning генератора).</summary>
     LocalAndRemote,
 }
 
-/// <summary>.</summary>
+/// <summary>Политика маршрутизации сообщения.</summary>
 public sealed record RoutePolicy
 {
     public required RouteTarget Target { get; init; }
 
-    /// <summary>("rabbit", "kafka", "masstransit"...).</summary>
+    /// <summary>Имя транспорта ("rabbit", "kafka", "masstransit"...).</summary>
     public string? Transport { get; init; }
 
-    /// <summary>: //exchange.</summary>
+    /// <summary>Цель: имя очереди/топика/exchange.</summary>
     public string? Destination { get; init; }
 
-    /// <summary>topic ("order.{type}").</summary>
+    /// <summary>Паттерн topic для событий ("order.{type}").</summary>
     public string? TopicPattern { get; init; }
 
-    /// <summary>request/reply (default 30s).</summary>
+    /// <summary>Таймаут request/reply для запросов (default 30s).</summary>
     public TimeSpan RequestTimeout { get; init; } = TimeSpan.FromSeconds(30);
 
-    /// <summary>: Direct (outbox-) Outbox (Mediana.Outbox).</summary>
+    /// <summary>Политика доставки: Direct (без outbox-пакета) или Outbox (требует Mediana.Outbox).</summary>
     public DeliveryMode Delivery { get; init; } = DeliveryMode.Direct;
 
     public static RoutePolicy LocalOnly() => new() { Target = RouteTarget.Local };
@@ -52,17 +52,17 @@ public sealed record RoutePolicy
     };
 }
 
-/// <summary>(D4: outbox — opt-in).</summary>
+/// <summary>Режим доставки (D4: outbox — opt-in).</summary>
 public enum DeliveryMode
 {
-    /// <summary>; retry/DLQ , .</summary>
+    /// <summary>Прямая публикация в транспорт; retry/DLQ работают, атомарности с БД нет.</summary>
     Direct,
 
-    /// <summary>transactional outbox (Mediana.Outbox).</summary>
+    /// <summary>Через transactional outbox (требует установленный пакет Mediana.Outbox).</summary>
     Outbox,
 }
 
-/// <summary>remote-(; fluent-).</summary>
+/// <summary>Атрибут remote-маршрутизации сообщения (сахар; источник истины — fluent-конфигурация).</summary>
 [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
 public sealed class RemoteAttribute : Attribute
 {
@@ -79,7 +79,7 @@ public sealed class RemoteAttribute : Attribute
 }
 
 /// <summary>
-/// : → . : fluent > > Local
+/// Реестр политик маршрутизации: тип сообщения → политика. Приоритет: fluent > атрибут > Local.
 /// </summary>
 public sealed class RouteRegistry
 {
@@ -91,7 +91,7 @@ public sealed class RouteRegistry
         return this;
     }
 
-    /// <summary>: fluent-→ Remote → LocalOnly.</summary>
+    /// <summary>Резолв политики: fluent-регистрация → атрибут Remote → LocalOnly.</summary>
     public RoutePolicy Resolve(Type messageType)
     {
         if (_policies.TryGetValue(messageType, out var policy))

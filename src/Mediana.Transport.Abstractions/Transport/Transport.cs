@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Mediana.Transports;
 
-/// <summary>, .</summary>
+/// <summary>Возможности транспорта — провайдер декларирует, конфигурация проверяет.</summary>
 public sealed record TransportCapabilities
 {
     public required string Name { get; init; }
@@ -19,26 +19,26 @@ public sealed record TransportCapabilities
     public bool SupportsFanOut { get; init; }
 }
 
-/// <summary>: /+ .</summary>
+/// <summary>Точка потребления: очередь/топик + параллельность.</summary>
 public sealed record ConsumerEndpoint
 {
     public required string Name { get; init; }
 
-    /// <summary>(prefetch/concurrency).</summary>
+    /// <summary>Максимальная параллельная обработка (prefetch/concurrency).</summary>
     public int MaxConcurrency { get; init; } = 1;
 
-    /// <summary>, endpoint (bindings/).</summary>
+    /// <summary>Типы сообщений, ожидаемые на endpoint (для топологии bindings/подписок).</summary>
     public IReadOnlyList<string> MessageTypes { get; init; } = [];
 }
 
-/// <summary>: .</summary>
+/// <summary>Манифест топологии: идемпотентно декларируется транспортом на старте.</summary>
 public sealed record TopologyManifest
 {
     public required string Transport { get; init; }
 
     public IReadOnlyList<ConsumerEndpoint> Endpoints { get; init; } = [];
 
-    /// <summary>/().</summary>
+    /// <summary>Очереди/топики для публикации (без консьюмеров).</summary>
     public IReadOnlyList<string> PublishDestinations { get; init; } = [];
 
     public IReadOnlyList<(string Queue, TimeSpan Delay)> RetryDestinations { get; init; } = [];
@@ -46,27 +46,27 @@ public sealed record TopologyManifest
     public IReadOnlyList<string> DeadLetterDestinations { get; init; } = [];
 }
 
-/// <summary>.</summary>
+/// <summary>Опции публикации.</summary>
 public sealed record PublishOptions
 {
-    /// <summary>(outbox-).</summary>
+    /// <summary>Ждать подтверждения брокера (обязательно в outbox-режиме).</summary>
     public bool ConfirmDelivery { get; init; }
 
     public string? PartitionKey { get; init; }
 
-    /// <summary>Destination override (/), .</summary>
+    /// <summary>Destination override (очередь/топик), если отличается от политики роутинга.</summary>
     public string? DestinationOverride { get; init; }
 
     public static readonly PublishOptions Default = new();
 }
 
-/// <summary>.</summary>
+/// <summary>Издатель в транспорт.</summary>
 public interface ITransportPublisher
 {
     ValueTask Publish(Envelope envelope, PublishOptions options, CancellationToken cancellationToken);
 }
 
-/// <summary>+ .</summary>
+/// <summary>Доставленное сообщение + подтверждение.</summary>
 public interface ITransportDelivery
 {
     Envelope Envelope { get; }
@@ -76,13 +76,13 @@ public interface ITransportDelivery
     ValueTask Nack(bool requeue, TimeSpan? redeliveryDelay);
 }
 
-/// <summary>.</summary>
+/// <summary>Фабрика хостов консьюмеров.</summary>
 public interface IConsumerHostFactory
 {
     IConsumerHost Create(ConsumerEndpoint endpoint, Func<ITransportDelivery, CancellationToken, ValueTask> handler);
 }
 
-/// <summary>: start/stop graceful drain.</summary>
+/// <summary>Хост консьюмеров: start/stop с graceful drain.</summary>
 public interface IConsumerHost : IAsyncDisposable
 {
     Task Start();
@@ -90,22 +90,22 @@ public interface IConsumerHost : IAsyncDisposable
     Task Stop();
 }
 
-/// <summary>(SPI, §8 ).</summary>
+/// <summary>Транспортный провайдер (SPI, §8 спеки).</summary>
 public interface ITransport
 {
     TransportCapabilities Capabilities { get; }
 
-    /// <summary>declare .</summary>
+    /// <summary>Идемпотентный declare топологии из манифеста.</summary>
     ValueTask BuildTopology(TopologyManifest manifest, CancellationToken cancellationToken);
 
- [RequiresDynamicCode(" reflection-based JSON; NativeAOT source-gen ")]
+    [RequiresDynamicCode("Реализация может использовать reflection-based JSON; для NativeAOT подключите source-gen сериализатор.")]
     ValueTask<ITransportPublisher> CreatePublisher(CancellationToken cancellationToken);
 
- [RequiresDynamicCode(" reflection-based JSON; NativeAOT source-gen ")]
+    [RequiresDynamicCode("Реализация может использовать reflection-based JSON; для NativeAOT подключите source-gen сериализатор.")]
     IConsumerHostFactory CreateConsumerHosts();
 }
 
-/// <summary>.</summary>
+/// <summary>Недоступность транспорта.</summary>
 public class TransportException : Exception
 {
     public TransportException(string message)

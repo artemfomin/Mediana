@@ -4,7 +4,7 @@ using Mediana.Pipeline;
 
 namespace Mediana.UnitTests.TestMessages;
 
-// ── /──────────────────────────────────────────────────────────
+// ── Команды/запросы ──────────────────────────────────────────────────────────
 
 public sealed record CreateOrder(int OrderId) : ICommand<OrderCreated>;
 public sealed record OrderCreated(int OrderId, string Status) : IEvent;
@@ -13,10 +13,10 @@ public sealed record OrderDto(int OrderId, string Status);
 public sealed record SearchOrders(string Filter) : IStreamQuery<OrderDto>;
 public sealed record Ping(Guid Value) : ICommand<string>;
 
-/// <summary>Struct-zero-boxing SendExact.</summary>
+/// <summary>Struct-команда для zero-boxing тестов SendExact.</summary>
 public readonly record struct IncrementCommand(int Delta) : ICommand<int>;
 
-// ── ─────────────────────────────────────────────────────────────────
+// ── Хендлеры ─────────────────────────────────────────────────────────────────
 
 public sealed class CreateOrderHandler : ICommandHandler<CreateOrder, OrderCreated>
 {
@@ -71,7 +71,7 @@ public sealed class IncrementHandler : ICommandHandler<IncrementCommand, int>
         => new(command.Delta + 1);
 }
 
-// ── ─────────────────────────────────────────────────────────
+// ── Хендлеры событий ─────────────────────────────────────────────────────────
 
 public sealed class OrderCreatedAuditHandler : IEventHandler<OrderCreated>
 {

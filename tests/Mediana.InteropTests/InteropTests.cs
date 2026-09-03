@@ -48,7 +48,7 @@ public class MediatRBridgeTests
         var sp = sc.BuildServiceProvider();
         var bridge = sp.GetRequiredService<MediatRBridge>();
 
-        // scoped — scope
+        // хендлер зарегистрирован scoped — резолв через scope
         using var scope = sp.CreateScope();
         var scopedBridge = new MediatRBridge(scope.ServiceProvider, typeof(MediatRBridgeTests).Assembly);
         Assert.Equal(84, await scopedBridge.Send(new MediatRPing(42)));
@@ -112,7 +112,7 @@ public class TelemetryBridgeTests
             logger.LogInformation("message {Number}", i);
         }
 
-        // writer : 100
+        // writer никогда не блокирует: 100 записей мгновенно
         await Task.Delay(100);
         Assert.True(forwarded <= 100);
         Assert.True(TelemetryDropCounters.DroppedLogs >= 0);
@@ -128,7 +128,7 @@ public class TelemetryBridgeTests
 
         var logger = new BridgeLogger("Cat", bridge);
         logger.LogWarning("warn-message");
-        logger.LogTrace("filtered"); // Information — IsEnabled
+        logger.LogTrace("filtered"); // ниже Information — не проходит IsEnabled
 
         await bridge.FlushAsync(TimeSpan.FromSeconds(2));
         Assert.Single(entries);
@@ -159,7 +159,7 @@ public class TelemetryBridgeTests
         Assert.Contains(sc, d => d.ServiceType == typeof(MedianaOpenTelemetryOptions));
     }
 
-    // ═══ R5: MediatR bridge — ═══
+    // ═══ R5: MediatR bridge — синхронные исключения не оборачиваются ═══
 
     private sealed record R5Cmd(int V) : global::MediatR.IRequest<int>;
 
@@ -193,7 +193,7 @@ public class TelemetryBridgeTests
         });
 
         Assert.DoesNotContain(sc, d => d.ServiceType == typeof(Mediana.Telemetry.AsyncLogBridge));
-        // ILoggerFactory AddLogging — ()
-        // BridgeLoggerFactory (R6 fix) —
+        // Стандартный ILoggerFactory регистрируется AddLogging — это правильно (не подменяется).
+        // BridgeLoggerFactory удалён из кодовой базы (R6 fix) — нечего проверять на подмену.
     }
 }

@@ -7,21 +7,21 @@ using Mediana.Pipeline;
 
 namespace Mediana;
 
-/// <summary>Lifetime-(§5.4): singleton — DI-.</summary>
+/// <summary>Lifetime-политика хендлеров (§5.4): singleton — ноль DI-обращений на вызов.</summary>
 public enum HandlerLifetime
 {
-    /// <summary>scope (scoped-).</summary>
+    /// <summary>Хендлер резолвится из текущего scope на каждый вызов (корректно для scoped-зависимостей).</summary>
     Scoped,
 
-    /// <summary>; DI-.</summary>
+    /// <summary>Хендлеры регистрируются как синглтоны; цепочка композируется один раз — ноль DI-обращений и аллокаций.</summary>
     Singleton,
 }
 
 /// <summary>
-/// : , behaviors (= )
-/// Freeze (command/query/stream ) <see cref="MessageRegistry"/>
-/// call sites generic-(AOT-)
-/// <see cref="AddHandlersFromAssembly"/> (runtime escape hatch, NativeAOT)
+/// Конфигурация графа сообщений: хендлеры, behaviors (порядок = порядок регистрации), политики событий.
+/// Freeze валидирует граф (дубликаты command/query/stream хендлеров — ошибка) и строит <see cref="MessageRegistry"/>.
+/// Типизированные регистрации создают call sites через закрытые generic-фабрики без рефлексии (AOT-совместимо);
+/// рефлексия — только в <see cref="AddHandlersFromAssembly"/> (runtime escape hatch, не для NativeAOT).
 /// </summary>
 public sealed class MedianaConfiguration
 {
@@ -31,10 +31,10 @@ public sealed class MedianaConfiguration
     private readonly Dictionary<Type, EventDispatchPolicy> _eventPolicies = [];
     private HandlerLifetime _lifetime = HandlerLifetime.Scoped;
 
-    /// <summary>call-site //: (middlewareTypes, singleton) → call-site.</summary>
+    /// <summary>Фабрика call-site команды/запроса/стрим-запроса: (middlewareTypes, singleton) → call-site.</summary>
     private delegate object RequestCallSiteFactory(Type[] middlewareTypes, bool singleton);
 
-    /// <summary>call-site .</summary>
+    /// <summary>Фабрика call-site события.</summary>
     private delegate IEventCallSite EventCallSiteFactory(Type[] middlewareTypes, bool singleton);
 
     private readonly record struct RequestRegistration(
@@ -42,7 +42,7 @@ public sealed class MedianaConfiguration
 
     private readonly record struct EventRegistration(Type EventType, Type HandlerType, EventCallSiteFactory Factory);
 
-    /// <summary>scoped-: , (D16).</summary>
+    /// <summary>Хендлеры без scoped-зависимостей: синглтоны, цепочки композируются один раз (D16).</summary>
     public MedianaConfiguration UseSingletonHandlers()
     {
         _lifetime = HandlerLifetime.Singleton;
@@ -75,7 +75,7 @@ public sealed class MedianaConfiguration
     {
         _requests.Add(new RequestRegistration(
             HandlerKind.Stream, typeof(TQuery), typeof(TRow), typeof(THandler),
-            // Stryker disable once boolean: fallback/perf-(. CallSiteBranchTests: fast/slow )
+            // Stryker disable once boolean: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
             (behaviors, _) => new StreamCallSite<TQuery, TRow, THandler>(behaviors, singleton: false)));
         return this;
     }
@@ -90,7 +90,7 @@ public sealed class MedianaConfiguration
         return this;
     }
 
-    /// <summary>behaviour /(= ).</summary>
+    /// <summary>Глобальный behaviour команд/запросов (порядок применения = порядок регистрации).</summary>
     public MedianaConfiguration AddMiddleware<TRequest, TResponse, TBehavior>()
         where TRequest : IRequest<TResponse>
         where TBehavior : IHandlerMiddleware<TRequest, TResponse>
@@ -99,7 +99,7 @@ public sealed class MedianaConfiguration
         return this;
     }
 
-    /// <summary>event-behaviour ().</summary>
+    /// <summary>Глобальный event-behaviour (ко всем совместимым событиям).</summary>
     public MedianaConfiguration AddEventMiddleware<TEvent, TBehavior>()
         where TEvent : IEvent
         where TBehavior : IEventMiddleware<TEvent>
@@ -108,17 +108,17 @@ public sealed class MedianaConfiguration
         return this;
     }
 
-    /// <summary>stream-behaviour ().</summary>
+    /// <summary>Глобальный stream-behaviour (ко всем совместимым стрим-запросам).</summary>
     public MedianaConfiguration AddStreamMiddleware<TQuery, TRow, TBehavior>()
         where TQuery : IStreamQuery<TRow>
         where TBehavior : IStreamMiddleware<TQuery, TRow>
     {
-        // Stryker disable once statement: fallback/perf-(. CallSiteBranchTests: fast/slow )
+        // Stryker disable once statement: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
         _middlewares.Add((typeof(TBehavior), typeof(IStreamMiddleware<,>)));
         return this;
     }
 
-    /// <summary>(Sequential).</summary>
+    /// <summary>Политика диспетчеризации события (по умолчанию Sequential).</summary>
     public MedianaConfiguration SetEventPolicy<TEvent>(EventDispatchPolicy policy) where TEvent : IEvent
     {
         _eventPolicies[typeof(TEvent)] = policy;
@@ -126,22 +126,22 @@ public sealed class MedianaConfiguration
     }
 
     /// <summary>
-    /// Runtime-(opt-in escape hatch, §5.2)
-    /// NativeAOT/trimming; AOT Mediana.Generators
+    /// Runtime-сканирование сборки (opt-in escape hatch, §5.2). Использует рефлексию —
+    /// несовместимо с NativeAOT/trimming; для AOT используйте генератор Mediana.Generators.
     /// </summary>
     [RequiresUnreferencedCode("Assembly scanning traverses all types; use the source generator for AOT.")]
     [RequiresDynamicCode("Creates closed generic call sites at runtime; use the source generator for AOT.")]
     public MedianaConfiguration AddHandlersFromAssembly(System.Reflection.Assembly assembly)
     {
-        // Stryker disable once statement: fallback/perf-(. CallSiteBranchTests: fast/slow )
+        // Stryker disable once statement: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
         Guard.NotNull(assembly, nameof(assembly));
 
         foreach (var type in assembly.GetTypes())
         {
             if (type is not { IsAbstract: false, IsInterface: false, IsGenericTypeDefinition: false })
-            // Stryker disable once block: fallback/perf-(. CallSiteBranchTests: fast/slow )
+            // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
             {
-                // Stryker disable once statement: fallback/perf-(. CallSiteBranchTests: fast/slow )
+                // Stryker disable once statement: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
                 continue;
             }
 
@@ -155,41 +155,41 @@ public sealed class MedianaConfiguration
                 var def = iface.GetGenericTypeDefinition();
                 var args = iface.GetGenericArguments();
                 if (def == typeof(ICommandHandler<,>))
-                // Stryker disable once block: fallback/perf-(. CallSiteBranchTests: fast/slow )
+                // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
                 {
-                    // Stryker disable once statement: fallback/perf-(. CallSiteBranchTests: fast/slow )
+                    // Stryker disable once statement: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
                     AddScanned(typeof(CommandCallSite<,,>), args, type, HandlerKind.Command);
                 }
                 else if (def == typeof(IQueryHandler<,>))
-                // Stryker disable once block: fallback/perf-(. CallSiteBranchTests: fast/slow )
+                // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
                 {
-                    // Stryker disable once statement: fallback/perf-(. CallSiteBranchTests: fast/slow )
+                    // Stryker disable once statement: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
                     AddScanned(typeof(QueryCallSite<,,>), args, type, HandlerKind.Query);
                 }
                 else if (def == typeof(IStreamHandler<,>))
-                // Stryker disable once block: fallback/perf-(. CallSiteBranchTests: fast/slow )
+                // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
                 {
-                    // Stryker disable once statement: fallback/perf-(. CallSiteBranchTests: fast/slow )
+                    // Stryker disable once statement: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
                     AddScanned(typeof(StreamCallSite<,,>), args, type, HandlerKind.Stream);
                 }
                 else if (def == typeof(IEventHandler<>))
                 {
                     var callSiteType = typeof(EventCallSite<,>).MakeGenericType(args[0], type);
                     var eventType = args[0];
-                    // Stryker disable once statement: fallback/perf-(. CallSiteBranchTests: fast/slow )
+                    // Stryker disable once statement: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
                     _events.Add(new EventRegistration(
                         eventType, type,
                         (behaviors, singleton) => (IEventCallSite)Activator.CreateInstance(
                             callSiteType, new object[] { behaviors, singleton })!));
                 }
                 else
-                // Stryker disable once block: fallback/perf-(. CallSiteBranchTests: fast/slow )
+                // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
                 {
-                    // Stryker disable once statement: fallback/perf-(. CallSiteBranchTests: fast/slow )
+                    // Stryker disable once statement: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
                     continue;
                 }
 
-                // Stryker disable once statement: fallback/perf-(. CallSiteBranchTests: fast/slow )
+                // Stryker disable once statement: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
                 break;
             }
         }
@@ -208,7 +208,7 @@ public sealed class MedianaConfiguration
             (behaviors, singleton) => Activator.CreateInstance(callSiteType, new object[] { behaviors, singleton })!));
     }
 
-    /// <summary>: request-(Freeze).</summary>
+    /// <summary>Тестовый хук: прямая регистрация request-вида (для защитных веток Freeze).</summary>
     internal MedianaConfiguration AddHandler(HandlerKind kind, Type messageType, Type handlerType)
     {
         _requests.Add(new RequestRegistration(
@@ -313,12 +313,12 @@ public sealed class MedianaConfiguration
         return entry;
     }
 
-    /// <summary>: .</summary>
+    /// <summary>Проверка без динамического кода: поведение реализует закрытый интерфейс с точным совпадением аргументов.</summary>
     private static bool ImplementsClosedInterface(Type behaviorType, Type openInterface, Type arg0, Type? arg1)
     {
         foreach (var iface in behaviorType.GetInterfaces())
         {
-            // Stryker disable once logical: fallback/perf-(. CallSiteBranchTests: fast/slow )
+            // Stryker disable once logical: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
             if (!iface.IsGenericType || iface.GetGenericTypeDefinition() != openInterface)
             {
                 continue;
@@ -330,7 +330,7 @@ public sealed class MedianaConfiguration
                 return args[0] == arg0;
             }
 
-            // Stryker disable once logical: fallback/perf-(. CallSiteBranchTests: fast/slow )
+            // Stryker disable once logical: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
             if (args[0] == arg0 && args[1] == arg1)
             {
                 return true;
@@ -342,7 +342,7 @@ public sealed class MedianaConfiguration
 
     private Type[] CollectMiddlewareTypes(Type requestType, Type responseType, HandlerKind kind)
     {
-        // Stryker disable once conditional: fallback/perf-(. CallSiteBranchTests: fast/slow )
+        // Stryker disable once conditional: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
         var openInterface = kind == HandlerKind.Stream ? typeof(IStreamMiddleware<,>) : typeof(IHandlerMiddleware<,>);
         return [.. _middlewares
             .Where(b => b.OpenInterface == openInterface
@@ -353,8 +353,8 @@ public sealed class MedianaConfiguration
     private Type[] CollectEventBehaviorTypes(Type eventType)
     {
         return [.. _middlewares
-            // Stryker disable once logical: fallback/perf-(. CallSiteBranchTests: fast/slow )
-            // Stryker disable once logical: fallback/perf-(. CallSiteBranchTests: fast/slow )
+            // Stryker disable once logical: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+            // Stryker disable once logical: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
             .Where(b => b.OpenInterface == typeof(IEventMiddleware<>)
                 && ImplementsClosedInterface(b.BehaviorType, typeof(IEventMiddleware<>), eventType, null))
             .Select(b => b.BehaviorType)];

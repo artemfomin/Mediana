@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Mediana.UnitTests;
 
-/// <summary>QueryCallSite: ref-, typed-ref, async-cast, InvokeAny /.</summary>
+/// <summary>Хирургическое закрытие веток QueryCallSite: ref-мост, typed-ref, async-cast, InvokeAny холодный/тёплый.</summary>
 public class QueryFinalBranchTests
 {
     private sealed record RQ(int V) : IQuery<RR>;
@@ -59,9 +59,9 @@ public class QueryFinalBranchTests
         var objectCallSite = (IObjectQueryCallSite<RR>)entry.QueryCallSite!;
         var sp = sc.BuildServiceProvider();
 
-        // : → Slow-
+        // холодный: мост ещё не построен → Slow-компоновка
         Assert.Equal(2, (await objectCallSite.Invoke(new RQ(1), sp, default)).V);
-        // : ref-
+        // тёплый: ref-мост
         Assert.Equal(3, (await objectCallSite.Invoke(new RQ(2), sp, default)).V);
     }
 
@@ -75,9 +75,9 @@ public class QueryFinalBranchTests
         var sc = new ServiceCollection().AddSingleton<RQHandler>();
         var mediator = Build(cfg, sc);
 
-        // object-
+        // object-путь строит корень
         Assert.Equal(2, (await mediator.Send((IQuery<RR>)new RQ(1))).V);
-        // typed fast-path
+        // typed fast-path по построенному корню
         Assert.Equal(3, (await mediator.SendExact<RQ, RR>(new RQ(2))).V);
     }
 
@@ -92,14 +92,14 @@ public class QueryFinalBranchTests
             .AddSingleton<VQAsyncHandler>();
         var mediator = Build(cfg, sc);
 
-        // async ref object-: AwaitCast (CastBoxed async)
+        // async ref через object-путь: AwaitCast (CastBoxed async)
         Assert.Equal(2, (await mediator.Send((IQuery<RR>)new RQ(1))).V);
         Assert.Equal(3, (await mediator.Send((IQuery<RR>)new RQ(2))).V);
 
-        // async value typed: AwaitAndReturn
+        // async value через typed: AwaitAndReturn
         Assert.Equal(4, await mediator.Send((IQuery<int>)new VQ(3)));
 
-        // async ref InvokeAny: AwaitUpcast
+        // async ref через InvokeAny: AwaitUpcast
         var entry = mediator.Registry.TryGet(typeof(RQ))!;
         var any = (IUntypedCallSite)entry.QueryCallSite!;
         var sp = sc.BuildServiceProvider();
@@ -121,10 +121,10 @@ public class QueryFinalBranchTests
         var any = (IUntypedCallSite)entry.QueryCallSite!;
         var sp = sc.BuildServiceProvider();
 
-        // value: → generic slow-(async)
+        // value: моста нет → generic slow-путь с боксингом (async)
         Assert.Equal(6, await any.InvokeAny(new VQ(5), sp, default));
 
-        // typed async
+        // typed async через корень
         Assert.Equal(7, await mediator.SendExact<VQ, int>(new VQ(6)));
     }
 }

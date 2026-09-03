@@ -1,22 +1,53 @@
-# Mediana — without > task implementation — v1.
+# Нагрузочное тестирование Mediana — проработка вариантов (без реализации)
 
-## what goals)
+> Задача пользователя: рассмотреть варианты нагрузочного тестирования. Реализация — отдельным шагом после стабилизации v1.
 
-1. **In-process throughput**: Send/Publish/Stream ops/sec on 1/8/64 scoped vs singleton ****: /and Gen0/1/2 **throughput**: publish/consume RabbitMQ/Kafka (msg/sec), latency p50/p95/p99 end-to-end.
-4. ****: backpressure (bounded channels), draining on shutdown, retry-storm **Outbox-**: relay throughput, lag on relay.
+## Что измеряем (цели)
 
-## ### A. BenchmarkDotNet (already in **what **: goals 1-2 ThreadingDiagnoser for ****: already allocations ****: not ****: level — already `benchmarks/`), ### B. NBomber — NET
-- **what **: goals 1, 3, 4; «HTTP-→ Mediana → queue» ****: NET, latency-RSS-metrics.
-- ****: still dependency (only in not in D14 not ****: for project `loadtests/Mediana.LoadTests.NBomber`.
+1. **In-process throughput**: Send/Publish/Stream ops/sec при 1/8/64 параллельных потоках, scoped vs singleton режимы.
+2. **Аллокационный профиль**: байт/операция и Gen0/1/2 частота под нагрузкой (сквозная связь с бюджетами §12).
+3. **Транспортный throughput**: publish/consume через RabbitMQ/Kafka (msg/sec), латентность p50/p95/p99 end-to-end.
+4. **Устойчивость**: поведение под backpressure (bounded channels), draining при shutdown, retry-storm поведение.
+5. **Outbox-режим**: relay throughput, lag при пике записи, конкурентные relay.
 
-### C. k6 (Grafana) — external **what **: target 3 HTTP-Mediana + metrics from OTLP.
-- ****: JS, integration Grafana; ****: HTTP (not in-process); harness-****: for e2e-«how ».
+## Варианты инструментов
 
-### D. Testcontainers-+ harness
-- **what **: goals 3-5 retry-storm, relay).
-- ****: those what in IntegrationTests; metrics our OTLP-package — «».
-- ****: own ****: how primary for transports: `loadtests/Mediana.LoadTests.Harness` (xUnit-runner + OTLP-metrics).
+### A. BenchmarkDotNet (уже в решении) — микробенчмарки
+- **Что покрывает**: цели 1-2 идеально; ThreadingDiagnoser для конкурентных сценариев.
+- **Плюсы**: уже интегрирован, статистика строгая, аллокации точно.
+- **Минусы**: не тянет транспортные сценарии.
+- **Вердикт**: базовый уровень — уже реализовано (`benchmarks/`), расширить конкурентными конфигурациями.
 
-### E. Crank (Microsoft) — ****: ****: for ****: to open-source ## **** (BenchmarkDotNet-Send/Publish (ThreadingDiagnoser), baseline in `benchmarks/RESULTS.md`.
-2. ****: Testcontainers-harness (D) for RabbitMQ/Kafka throughput+latency k/10k/100k msg.
-3. ****: NBomber-API → mediator → queue → OTLP-****: k6 only if public API-## metrics (GC.GetTotalAllocatedBytes by how and in CI-benchmark-diff (>5%) 
+### B. NBomber — прикладные нагрузочные сценарии .NET
+- **Что покрывает**: цели 1, 3, 4; сценарии «HTTP-эндпоинт → Mediana → очередь» шагами.
+- **Плюсы**: нативно .NET, простые сценарии, отчёты latency-перцентили, RSS-метрики.
+- **Минусы**: ещё одна зависимость (только в отдельном нагрузочном проекте, не в ядре — D14 не нарушается).
+- **Вердикт**: рекомендую для целей 3-4: проект `loadtests/Mediana.LoadTests.NBomber`.
+
+### C. k6 (Grafana) — внешний генератор нагрузки
+- **Что покрывает**: цель 3 через HTTP-шлюз поверх Mediana + метрики из OTLP.
+- **Плюсы**: язык сценариев JS, отличные отчёты, интеграция с Grafana; тестирует ЧЕЛОВЕЧУЮ часть системы.
+- **Минусы**: нагрузка идёт через HTTP (не in-process); требует harness-приложение.
+- **Вердикт**: опционально для e2e-сценариев «как видит пользователь».
+
+### D. Testcontainers-стенд + собственный метрический harness
+- **Что покрывает**: цели 3-5 с реальными брокерами; полный контроль сценариев (retry-storm, конкурентные relay).
+- **Плюсы**: те же контейнеры, что в IntegrationTests; метрики через наш OTLP-пакет — «лечим собой себя».
+- **Минусы**: свой код отчётов; время разработки.
+- **Вердикт**: рекомендую как основной для транспортов: `loadtests/Mediana.LoadTests.Harness` (xUnit-подобный runner + OTLP-метрики).
+
+### E. Crank (Microsoft) — распределённое нагрузочное
+- **Плюсы**: мульти-машины, профилирование.
+- **Минусы**: тяжёлая инфраструктура для текущей стадии.
+- **Вердикт**: отложить до open-source публикации.
+
+## Рекомендация (поэтапно)
+
+1. **Этап 1** (почти бесплатно): расширить BenchmarkDotNet-набор конкурентными Send/Publish (ThreadingDiagnoser), зафиксировать baseline в `benchmarks/RESULTS.md`.
+2. **Этап 2**: Testcontainers-harness (вариант D) для RabbitMQ/Kafka throughput+latency под профилями 1k/10k/100k msg.
+3. **Этап 3**: NBomber-сценарии прикладного уровня (API → медиатор → очередь → консьюмер) с OTLP-дашбордом.
+4. **Этап 4**: k6 только если появится публичный API-сценарий.
+
+## Связь с бюджетами §12
+
+Нагрузочные прогоны обязаны включать аллокационные метрики (GC.GetTotalAllocatedBytes по окнам) — регрессия аллокаций под нагрузкой так же важна, как и в микробенчмарках; CI-гейт benchmark-diff (>5%) применяется к этапу 1.

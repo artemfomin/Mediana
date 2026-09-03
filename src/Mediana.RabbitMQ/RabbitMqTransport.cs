@@ -8,9 +8,9 @@ using RabbitMQ.Client.Events;
 namespace Mediana.RabbitMq;
 
 /// <summary>
-/// RabbitMQ-(net10.0: 7.x; ns2.1: 6.x )
-/// DLX-cycle retry (<q>.retry.<delay>), direct reply-to request/reply
-/// publisher confirms outbox-relay (§8.1 )
+/// RabbitMQ-транспорт (net10.0: клиент 7.x; ns2.1: 6.x через адаптер).
+/// DLX-cycle retry (<q>.retry.<delay>), direct reply-to для request/reply,
+/// publisher confirms для outbox-relay (§8.1 спеки).
 /// </summary>
 public sealed class RabbitMqTransport : ITransport
 {
@@ -43,15 +43,15 @@ public sealed class RabbitMqTransport : ITransport
         await using var channel = await connection.CreateChannelAsync(
             options: null, cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        // : topic — routing key =
+        // Точка обмена: topic — команды по routing key = очередь, события по паттерну
         await TopologyProvisioner.DeclareTopology(channel, manifest, cancellationToken).ConfigureAwait(false);
     }
 
- [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec reflection-based JSON.")]
+        [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec использует reflection-based JSON.")]
     public async ValueTask<ITransportPublisher> CreatePublisher(CancellationToken cancellationToken)
     {
         var connection = await CreateConnection(cancellationToken).ConfigureAwait(false);
-        // 7.x: publisher confirms ; PublishAsync
+        // 7.x: publisher confirms включаются опциями канала; PublishAsync ожидает подтверждение нативно
         var options = new CreateChannelOptions(
             publisherConfirmationsEnabled: true,
             publisherConfirmationTrackingEnabled: true);
@@ -59,7 +59,7 @@ public sealed class RabbitMqTransport : ITransport
         return new RabbitMqPublisher(connection, channel);
     }
 
- [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec reflection-based JSON.")]
+    [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec использует reflection-based JSON.")]
     public IConsumerHostFactory CreateConsumerHosts()
         => new RabbitMqConsumerHostFactory(this);
 
@@ -71,7 +71,7 @@ public sealed class RabbitMqTransport : ITransport
     internal string SourceEndpoint => _sourceEndpoint;
 }
 
-/// <summary>: exchange, , DLX, retry-().</summary>
+/// <summary>Декларация топологии: exchange, очереди, DLX, retry-очереди (идемпотентно).</summary>
 public static class TopologyProvisioner
 {
     public static async Task DeclareTopology(
@@ -126,7 +126,7 @@ public static class TopologyProvisioner
 
         foreach (var (queue, delay) in manifest.RetryDestinations)
         {
-            // Retry-TTL (DLX-cycle, §8.1)
+            // Retry-очередь с TTL и циклом обратно в основную (DLX-cycle, §8.1)
             var args = new Dictionary<string, object?>
             {
                 ["x-dead-letter-exchange"] = RabbitMqTransport.MedianaExchange,
@@ -164,7 +164,7 @@ public static class TopologyProvisioner
             channel.QueueBindAsync(queue + ".dlq", RabbitMqTransport.MedianaExchange, queue + ".dlq", cancellationToken: cancellationToken));
     }
 
-    /// <summary>retry-().</summary>
+    /// <summary>Имена retry-очередей из политики (для манифеста).</summary>
     public static IEnumerable<(string Queue, TimeSpan Delay)> RetryDestinationsFrom(
         IEnumerable<string> queues,
         RetryPolicy policy,
@@ -181,8 +181,8 @@ public static class TopologyProvisioner
     }
 }
 
-/// <summary>: → AMQP-, publisher confirms.</summary>
-[System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec reflection-based JSON.")]
+/// <summary>Издатель: конверт → AMQP-свойства, publisher confirms.</summary>
+[System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec использует reflection-based JSON.")]
 public sealed class RabbitMqPublisher : ITransportPublisher
 {
     private readonly IConnection _connection;
@@ -234,7 +234,7 @@ public sealed class RabbitMqPublisher : ITransportPublisher
         }
 
         var body = new ReadOnlyMemory<byte>(EnvelopeCodec.Encode(envelope));
-        // publisherConfirmationTrackingEnabled: await =
+        // Канал создан с publisherConfirmationTrackingEnabled: await = подтверждение брокера
         await _channel.BasicPublishAsync(
             RabbitMqTransport.MedianaExchange,
             routingKey: destination,

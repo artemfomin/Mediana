@@ -47,7 +47,7 @@ public sealed class PassBehavior2 : IHandlerMiddleware<BenchCommand, int>
         => next(request, ct);
 }
 
-// ── MediatR-──────────────────────────────────────────────────────
+// ── MediatR-эквиваленты ──────────────────────────────────────────────────────
 
 public sealed record MediatRPing(int Value) : global::MediatR.IRequest<int>;
 public sealed record MediatRNotification(int Value) : global::MediatR.INotification;
@@ -146,7 +146,7 @@ public static class Program
     {
         if (args.Length > 0 && args[0] == "alloc-check")
         {
-            // BenchmarkDotNet (CI-friendly)
+            // быстрый аллокационный прогон без BenchmarkDotNet (CI-friendly)
             var benchmarks = new DispatchBenchmarks();
             benchmarks.Setup();
 

@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Mediana.UnitTests;
 
-/// <summary>Command/Query/Event call-site': .</summary>
+/// <summary>Систематический обход веток Command/Query/Event call-site'ов: все режимы и пути.</summary>
 public class CallSiteBranchTests
 {
     private sealed record VCmd(int V) : ICommand<int>;
@@ -94,7 +94,7 @@ public class CallSiteBranchTests
         return new Mediator(registry, sp);
     }
 
-    // ── Command: ───────────────────────────────────────────────
+    // ── Command: матрица путей ───────────────────────────────────────────────
 
     [Fact]
     public async Task Command_value_singleton_with_middlewares_all_paths()
@@ -113,7 +113,7 @@ public class CallSiteBranchTests
             .AddSingleton<RBeh>();
         var mediator = BuildMediator(cfg, services);
 
-        // : Slow-; : /typed fast-path ()
+        // первый вызов: Slow-компоновка; повторные: мост/typed fast-path (инкрементные входы)
         Assert.Equal(2, await mediator.Send((ICommand<int>)new VCmd(1)));
         Assert.Equal(3, await mediator.Send((ICommand<int>)new VCmd(2)));
         Assert.Equal(3, (await mediator.Send((ICommand<RResp>)new RCmd(2))).V);
@@ -201,18 +201,18 @@ public class CallSiteBranchTests
         var rEntry = registry.TryGet(typeof(RCmd))!;
         var rAny = (IUntypedCallSite)rEntry.CommandCallSite!;
 
-        // value-: InvokeAny generic slow-
+        // value-ответ: InvokeAny уходит в generic slow-путь с боксингом
         var boxed = await vAny.InvokeAny(new VCmd(5), sp, default);
         Assert.Equal(6, boxed);
 
-        // ref-: slow
+        // ref-ответ: до компоновки корня — slow; после — мост
         var first = await rAny.InvokeAny(new RCmd(5), sp, default);
         Assert.Equal(6, ((RResp)first!).V);
         var second = await rAny.InvokeAny(new RCmd(6), sp, default);
         Assert.Equal(7, ((RResp)second!).V);
     }
 
-    // ── Query: ────────────────────────────────────────────────
+    // ── Query: та же матрица ────────────────────────────────────────────────
 
     [Fact]
     public async Task Query_all_paths()
@@ -279,20 +279,20 @@ public class CallSiteBranchTests
         Assert.Equal(7, ((RResp)fast!).V);
     }
 
-    // ── : 0-behavior fast-path ────────────────────────────────────
+    // ── Композитор: 0-behavior fast-path ────────────────────────────────────
 
     [Fact]
     public async Task Compositor_zero_middlewares_returns_terminal()
     {
         var cfg = new MedianaConfiguration().UseSingletonHandlers()
-            .AddCommandHandler<VCmd, int, VCmdHandler>(); // behaviors
+            .AddCommandHandler<VCmd, int, VCmdHandler>(); // behaviors не зарегистрированы
         var services = new ServiceCollection().AddSingleton<VCmdHandler>();
         var mediator = BuildMediator(cfg, services);
 
         Assert.Equal(2, await mediator.Send((ICommand<int>)new VCmd(1)));
     }
 
-    // ── EventCallSite: behaviors ──────────────────────────────────
+    // ── EventCallSite: обе ветки behaviors ──────────────────────────────────
 
     private sealed record Evt : IEvent;
 

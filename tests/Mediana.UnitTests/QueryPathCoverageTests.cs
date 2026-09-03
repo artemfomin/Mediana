@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Mediana.UnitTests;
 
-/// <summary>: query-, parallel-async , async-cast, scoped query.</summary>
+/// <summary>Добор: query-пути всех режимов, parallel-async ошибки, async-cast, scoped query.</summary>
 public class QueryPathCoverageTests
 {
     internal sealed record Q1(int V) : IQuery<int>;
@@ -157,7 +157,7 @@ public class QueryPathCoverageTests
     [Fact]
     public async Task Command_singleton_first_call_composes_and_dispatches()
     {
-        // Slow: + (ref-)
+        // первый вызов через Slow: ленивая компоновка корня + моста (ref-ответ)
         var cfg = new MedianaConfiguration().UseSingletonHandlers()
             .AddCommandHandler<AllocCommand, int, AllocCommandHandler>();
         var sc = new ServiceCollection().AddSingleton<AllocCommandHandler>();
@@ -220,8 +220,8 @@ public class QueryPathCoverageTests
         var registry = Mediana.Dispatch.MessageRegistry.Empty;
         Assert.Null(registry.TryGet(typeof(object)));
 
-        // (ns2.1) / rebuild (net10)
-        // 40 (ns2.1) / rebuild (net10)
+        // множество добавлений — рост корзин (ns2.1) / rebuild (net10)
+        // 40 РАЗЛИЧНЫХ типов — рост корзин (ns2.1) / rebuild (net10)
         var types = typeof(string).Assembly.GetTypes().Where(t => t.IsVisible).Take(40).ToArray();
         var r = registry;
         foreach (var t in types)
@@ -230,7 +230,7 @@ public class QueryPathCoverageTests
         }
 
         Assert.NotNull(r.TryGet(types[0]));
-        // See English documentation.
+        // дубликат
         Assert.Throws<MediatorConfigurationException>(
             () => r.Add(types[0], new Mediana.Dispatch.MessageEntry(Mediana.Dispatch.HandlerKind.Event, types[0], null)));
     }

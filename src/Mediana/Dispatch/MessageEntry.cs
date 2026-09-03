@@ -1,6 +1,6 @@
 namespace Mediana.Dispatch;
 
-/// <summary>(Freeze).</summary>
+/// <summary>Запись реестра для одного типа сообщения (мутабельна только в период Freeze).</summary>
 public sealed class MessageEntry
 {
     public MessageEntry(HandlerKind kind, Type messageType, Type? responseType)
@@ -14,19 +14,19 @@ public sealed class MessageEntry
 
     public Type MessageType { get; }
 
-    /// <summary>command/query; stream; null .</summary>
+    /// <summary>Тип ответа для command/query; тип строки для stream; null для события.</summary>
     public Type? ResponseType { get; }
 
-    /// <summary>Call-site (Kind == Command).</summary>
+    /// <summary>Call-site команды (Kind == Command).</summary>
     public object? CommandCallSite { get; internal set; }
 
-    /// <summary>Call-site (Kind == Query).</summary>
+    /// <summary>Call-site запроса (Kind == Query).</summary>
     public object? QueryCallSite { get; internal set; }
 
-    /// <summary>Call-site (Kind == Stream).</summary>
+    /// <summary>Call-site стрим-запроса (Kind == Stream).</summary>
     public object? StreamCallSite { get; internal set; }
 
-    /// <summary>Call-site'(Kind == Event).</summary>
+    /// <summary>Call-site'ы хендлеров события (Kind == Event).</summary>
     public IReadOnlyList<IEventCallSite> EventCallSites { get; internal set; } = [];
 
     public EventDispatchPolicy Policy { get; internal set; } = EventDispatchPolicy.Sequential;

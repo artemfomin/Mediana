@@ -8,8 +8,8 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Mediana.Benchmarks;
 
 /// <summary>
-/// RAM-Mediana vs MediatR: GC-churn (N )
-/// retention (N async-), footprint ()
+/// RAM-сценарии Mediana vs MediatR: GC-churn (коллекции на N операций),
+/// retention (удержание N незавершённых async-операций), footprint (отдельные процессы).
 /// </summary>
 public static class RamCheck
 {
@@ -43,7 +43,7 @@ public static class RamCheck
         public ValueTask<int> Handle(RamCommand r, HandlerDelegate<RamCommand, int> next, CancellationToken ct) => next(r, ct);
     }
 
-    // ── MediatR-─────────────────────────────────────────────────────
+    // ── MediatR-зеркала ─────────────────────────────────────────────────────
 
     private sealed record MediatRRam(int Value) : global::MediatR.IRequest<int>;
 
@@ -127,7 +127,7 @@ public static class RamCheck
         GC.Collect(2, GCCollectionMode.Forced, blocking: true);
     }
 
-    // ═══ 1: churn — GC-ChurnOps ═══
+    // ═══ Сценарий 1: churn — GC-коллекции и аллокации на ChurnOps операций ═══
 
     public static void Churn()
     {
@@ -135,14 +135,14 @@ public static class RamCheck
         var cmd = (ICommand<int>)new RamCommand(1);
         var mcmd = new MediatRRam(1);
 
-        // See English documentation.
+        // прогрев
         for (var i = 0; i < 20_000; i++)
         {
             _ = mediana.Send(cmd);
             _ = mediatr.Send(mcmd);
         }
 
- Console.WriteLine($"== RAM churn: {ChurnOps:N0} sync- Send + 2 pass-through middlewares) ==\n");
+        Console.WriteLine($"== RAM churn: {ChurnOps:N0} sync-операций (Send + 2 pass-through middlewares) ==\n");
 
         FullCollect();
         var g0 = GC.CollectionCount(0); var g1 = GC.CollectionCount(1); var g2 = GC.CollectionCount(2);
@@ -156,7 +156,7 @@ public static class RamCheck
         sw.Stop();
         var mg0 = GC.CollectionCount(0) - g0; var mg1 = GC.CollectionCount(1) - g1;
         var mAlloc = GC.GetTotalAllocatedBytes(precise: true) - alloc;
- Console.WriteLine($"MediatR : {sw.ElapsedMilliseconds,5} ms | Gen0={mg0,4} Gen1={mg1,3} | {mAlloc / (double)ChurnOps,7:F0} B/ ");
+        Console.WriteLine($"MediatR : {sw.ElapsedMilliseconds,5} ms | Gen0={mg0,4} Gen1={mg1,3} | аллокировано {mAlloc / (double)ChurnOps,7:F0} B/оп");
 
         FullCollect();
         g0 = GC.CollectionCount(0); g1 = GC.CollectionCount(1); g2 = GC.CollectionCount(2);
@@ -170,14 +170,14 @@ public static class RamCheck
         sw.Stop();
         var dg0 = GC.CollectionCount(0) - g0; var dg1 = GC.CollectionCount(1) - g1;
         var dAlloc = GC.GetTotalAllocatedBytes(precise: true) - alloc;
- Console.WriteLine($"Mediana : {sw.ElapsedMilliseconds,5} ms | Gen0={dg0,4} Gen1={dg1,3} | {dAlloc / (double)ChurnOps,7:F0} B/ ");
+        Console.WriteLine($"Mediana : {sw.ElapsedMilliseconds,5} ms | Gen0={dg0,4} Gen1={dg1,3} | аллокировано {dAlloc / (double)ChurnOps,7:F0} B/оп");
     }
 
-    // ═══ 2: retention — RetentionOps async-═══
+    // ═══ Сценарий 2: retention — удержание RetentionOps незавершённых async-операций ═══
 
     public static void Retention()
     {
- Console.WriteLine($"\n== RAM retention: {RetentionOps:N0} async- GC) ==\n");
+        Console.WriteLine($"\n== RAM retention: {RetentionOps:N0} удерживаемых async-операций (после полной GC) ==\n");
 
         // MediatR
         {
@@ -200,7 +200,7 @@ public static class RamCheck
 
             FullCollect();
             var retained = GC.GetTotalMemory(true) - before;
- Console.WriteLine($"MediatR : {retained / 1024.0 / 1024,7:F2} MB ({retained / (double)RetentionOps,6:F0} B/ ");
+            Console.WriteLine($"MediatR : удержано {retained / 1024.0 / 1024,7:F2} MB ({retained / (double)RetentionOps,6:F0} B/оп)");
 
             gate.SetResult();
             Task.WaitAll(pending);
@@ -232,7 +232,7 @@ public static class RamCheck
 
             FullCollect();
             var retained = GC.GetTotalMemory(true) - before;
- Console.WriteLine($"Mediana : {retained / 1024.0 / 1024,7:F2} MB ({retained / (double)RetentionOps,6:F0} B/ ");
+            Console.WriteLine($"Mediana : удержано {retained / 1024.0 / 1024,7:F2} MB ({retained / (double)RetentionOps,6:F0} B/оп)");
 
             gate.SetResult();
             for (var i = 0; i < RetentionOps; i++)
@@ -245,12 +245,12 @@ public static class RamCheck
         }
     }
 
-    // ═══ 3: footprint (JIT + + churn) ═══
+    // ═══ Сценарий 3: footprint одного процесса (JIT + метаданные + куча после churn) ═══
 
     public static void Footprint(string lib)
     {
         var isMediatR = lib == "mediatr";
- Console.WriteLine($"== RAM footprint ({lib}): + {200_000:N0} GC ==\n");
+        Console.WriteLine($"== RAM footprint ({lib}): прогрев + {200_000:N0} операций, полная GC ==\n");
 
         if (isMediatR)
         {

@@ -8,10 +8,10 @@ using Xunit;
 
 namespace Mediana.UnitTests;
 
-/// <summary>: , scoped-, scan, , .</summary>
+/// <summary>Добор веточного покрытия: ошибки конфигурации, scoped-пути, scan, диагностика, исключения.</summary>
 public class BranchCoverageTests
 {
-    // ── ─────────────────────────────────────────────────────────────
+    // ── Исключения ─────────────────────────────────────────────────────────────
 
     [Fact]
     public void RemoteExecutionException_carries_details()
@@ -37,19 +37,19 @@ public class BranchCoverageTests
         Assert.Equal("t", timeout.Message);
     }
 
-    // ── : no-op ──────────────────────────────────────
+    // ── Диагностика: no-op без слушателей ──────────────────────────────────────
 
     [Fact]
     public void Diagnostics_noop_and_enrich_tolerances()
     {
-        // no-op :
-        // Enrich(null) — null-
+        // no-op проверка допустима при любом глобальном состоянии слушателей:
+        // Enrich(null) — null-толерантность контракта
         MedianaDiagnostics.Enrich(null, "k", "v");
         MedianaDiagnostics.Enrich(MedianaDiagnostics.StartDispatch("X"), "k", "v");
-        // Listener-MutationKillerTests ()
+        // Listener-сценарии — в MutationKillerTests (сериализация глобального состояния)
     }
 
-    // ── : scan ────────────────────────────────────────────
+    // ── Конфигурация: ошибки и scan ────────────────────────────────────────────
 
     [Fact]
     public void Duplicate_query_handler_rejected()
@@ -72,8 +72,8 @@ public class BranchCoverageTests
     [Fact]
     public void AddHandlersFromAssembly_rejects_duplicate_command_handlers()
     {
-        // CreateOrderHandler AsyncCreateOrderHandler CreateOrder —
-        // scan (MED001)
+        // тестовая сборка содержит CreateOrderHandler и AsyncCreateOrderHandler для CreateOrder —
+        // scan обязан поймать дубликат (в реальных проектах дубликат ловит генератор через MED001)
         var sc = new ServiceCollection();
         Assert.Throws<MediatorConfigurationException>(() =>
             sc.AddMediana(c => c.AddHandlersFromAssembly(typeof(CreateOrderHandler).Assembly)));
@@ -84,7 +84,7 @@ public class BranchCoverageTests
     {
         var sc = new ServiceCollection();
         sc.AddMediana(c => c.AddHandlersFromAssembly(typeof(List<>).Assembly));
-        // BCL freeze
+        // BCL не содержит хендлеров — freeze проходит без регистраций
         var sp = sc.BuildServiceProvider();
         Assert.Throws<MediatorConfigurationException>(
             () => sp.GetRequiredService<IMediator>().Send((IQuery<OrderDto>)new GetOrder(1)).AsTask().Result);
@@ -99,7 +99,7 @@ public class BranchCoverageTests
             .AddMediana(c => c
                 .AddStreamHandler<SearchOrders, OrderDto, SearchOrdersHandler>()
                 .AddStreamMiddleware<SearchOrders, OrderDto, StreamFilterBehavior>()
-                .AddMiddleware<CreateOrder, OrderCreated, OrderingBehavior>());
+                .AddMiddleware<CreateOrder, OrderCreated, OrderingBehavior>()); // не применим к стриму
         var sp = sc.BuildServiceProvider();
         var mediator = sp.GetRequiredService<IMediator>();
 
@@ -114,7 +114,7 @@ public class BranchCoverageTests
         Assert.Equal(2, rows.Count);
     }
 
-    // ── Mediator: ──────────────────────────
+    // ── Mediator: несоответствия и параллельный успех ──────────────────────────
 
     [Fact]
     public async Task Send_wrong_response_type_throws()
@@ -126,7 +126,7 @@ public class BranchCoverageTests
         var sp = sc.BuildServiceProvider();
         var mediator = sp.GetRequiredService<IMediator>();
 
-        // GetOrder IQuery<OrderDto>, IQuery<string> Unsafe.As
+        // GetOrder зарегистрирован как IQuery<OrderDto>, но шлём как IQuery<string> через Unsafe.As
         var query = System.Runtime.CompilerServices.Unsafe.As<IQuery<string>>(new GetOrder(1));
         await Assert.ThrowsAsync<MediatorConfigurationException>(
             () => mediator.Send<string>(query).AsTask());
@@ -196,7 +196,7 @@ public class BranchCoverageTests
         var sp = sc.BuildServiceProvider();
         var mediator = (Mediator)sp.GetRequiredService<IMediator>();
 
-        // row=int; Stream<OrderDto> Unsafe.As
+        // зарегистрирован row=int; запрашиваем как Stream<OrderDto> через Unsafe.As
         var query = System.Runtime.CompilerServices.Unsafe.As<IStreamQuery<OrderDto>>(new IntStreamQuery(3));
         await Assert.ThrowsAsync<MediatorConfigurationException>(async () =>
         {
@@ -224,7 +224,7 @@ public class BranchCoverageTests
         Assert.Equal(1, sp.GetRequiredService<CountingHandler2>().Count);
     }
 
-    // ── Scoped-ChainState ───────────────────────────────────────────────
+    // ── Scoped-пути и ChainState ───────────────────────────────────────────────
 
     private static IServiceProvider BuildScoped(
         Action<MedianaConfiguration> cfg, Action<ServiceCollection> services)
@@ -281,7 +281,7 @@ public class BranchCoverageTests
     [Fact]
     public async Task Missing_handler_registration_throws_at_invoke()
     {
-        // AddMediana
+        // AddMediana регистрирует хендлеры сам; для проверки пропуска строим медиатор вручную
         var cfg = new MedianaConfiguration().AddCommandHandler<AllocCommand, int, AllocCommandHandler>();
         var mediator = new Mediator(cfg.Freeze(), new ServiceCollection().BuildServiceProvider());
 
@@ -294,7 +294,7 @@ public class BranchCoverageTests
     {
         var cfg = new MedianaConfiguration()
             .AddCommandHandler<AllocCommand, int, AllocCommandHandler>()
-            .AddMiddleware<AllocCommand, int, AllocBehavior1>(); // behavior DI
+            .AddMiddleware<AllocCommand, int, AllocBehavior1>(); // behavior не в DI
         var mediator = new Mediator(cfg.Freeze(), new ServiceCollection().BuildServiceProvider());
 
         await Assert.ThrowsAsync<MediatorConfigurationException>(
@@ -325,7 +325,7 @@ public class BranchCoverageTests
         });
     }
 
-    // ── ChainState ──────────────────────────────────────────────────────
+    // ── ChainState защита ──────────────────────────────────────────────────────
 
     [Fact]
     public async Task ChainState_double_next_after_terminal_throws()
@@ -352,7 +352,7 @@ public class BranchCoverageTests
         public object? GetService(Type serviceType) => null;
     }
 
-    // ── behaviors ───────────────────────────────────────────────────
+    // ── Событийные behaviors ───────────────────────────────────────────────────
 
     [Fact]
     public async Task Event_middlewares_scoped_mode_applied_in_order()
@@ -378,7 +378,7 @@ public class BranchCoverageTests
             .AddScoped<OrderCreatedAuditHandler>()
             .AddMediana(c => c
                 .AddEventHandler<OrderCreated, OrderCreatedAuditHandler>()
-                .AddEventMiddleware<OrderCreated, EventOrderingBehavior>()); // DI
+                .AddEventMiddleware<OrderCreated, EventOrderingBehavior>()); // не в DI
         var sp = sc.BuildServiceProvider();
         var mediator = sp.GetRequiredService<IMediator>();
 
@@ -402,7 +402,7 @@ public class BranchCoverageTests
             () => mediator.Publish(new OrderCreated(1, "x")).AsTask());
     }
 
-    // ── Singleton event behaviors ────────────────────────────────────────────
+    // ── Singleton event с behaviors ────────────────────────────────────────────
 
     [Fact]
     public async Task Singleton_event_with_middlewares_zero_di()
@@ -423,7 +423,7 @@ public class BranchCoverageTests
         Assert.Equal(4, EventOrderingBehavior.Trace.Count);
     }
 
-    // ── WithRegistry (runtime-) ──────────────────────────────────────
+    // ── WithRegistry (runtime-расширение) ──────────────────────────────────────
 
     [Fact]
     public async Task WithRegistry_extends_dispatch()
@@ -438,7 +438,7 @@ public class BranchCoverageTests
         await Assert.ThrowsAsync<MediatorConfigurationException>(
             () => mediator.Send((ICommand<OrderCreated>)new CreateOrder(1)).AsTask());
 
-        // runtime-copy-on-write
+        // runtime-добавление команды в реестр через copy-on-write
         var extended = mediator.Registry.Add(
             typeof(CreateOrder),
             BuildCommandEntry(sp));
@@ -446,7 +446,7 @@ public class BranchCoverageTests
 
         var result = await extendedMediator.Send((ICommand<OrderCreated>)new CreateOrder(42));
         Assert.Equal(42, result.OrderId);
-        // See English documentation.
+        // исходный медиатор не изменился
         await Assert.ThrowsAsync<MediatorConfigurationException>(
             () => mediator.Send((ICommand<OrderCreated>)new CreateOrder(1)).AsTask());
     }

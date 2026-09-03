@@ -5,9 +5,9 @@ using Mediana.Pipeline;
 namespace Mediana.Dispatch;
 
 /// <summary>
-/// Call-site : event-behaviors
-/// Singleton-(DI-)
-/// scoped — behaviors +
+/// Call-site хендлера события: цепочка event-behaviors вокруг терминала.
+/// Singleton-режим — композированная один раз цепочка (ноль DI-обращений и аллокаций на вызов);
+/// scoped — резолв behaviors на вызов + статическая рекурсия цепочки.
 /// </summary>
 internal sealed class EventCallSite<TEvent, THandler>
     : IEventCallSite
@@ -17,7 +17,7 @@ internal sealed class EventCallSite<TEvent, THandler>
     private readonly Type[] _middlewareTypes;
     private readonly bool _singleton;
     private EventHandlerDelegate<TEvent>? _singletonRoot;
-    // Non-generic bridge: generic-canon-shared generic-; Func —
+    // Non-generic bridge: вызов generic-делегата из canon-shared generic-контекста аллоцирует; Func — нет.
     private Func<object, IServiceProvider, CancellationToken, ValueTask>? _bridge;
     private readonly object _singletonLock = new();
 
@@ -31,7 +31,7 @@ internal sealed class EventCallSite<TEvent, THandler>
     {
         var bridge = _bridge;
         if (bridge is not null)
-        // Stryker disable once block: fallback/perf-(. CallSiteBranchTests: fast/slow )
+        // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
         {
             return bridge(message, serviceProvider, cancellationToken);
         }
@@ -43,8 +43,8 @@ internal sealed class EventCallSite<TEvent, THandler>
     {
         var @event = (TEvent)message;
 
-        // Stryker disable once negate: fallback/perf-(. CallSiteBranchTests: fast/slow )
-        // Stryker disable once negate: fallback/perf-(. CallSiteBranchTests: fast/slow )
+        // Stryker disable once negate: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once negate: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
         if (_singleton)
         {
             lock (_singletonLock)
@@ -69,7 +69,7 @@ internal sealed class EventCallSite<TEvent, THandler>
     private IEventMiddleware<TEvent>[] ResolveBehaviors(IServiceProvider serviceProvider)
     {
         if (_middlewareTypes.Length == 0)
-        // Stryker disable once block: fallback/perf-(. CallSiteBranchTests: fast/slow )
+        // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
         {
             return [];
         }
@@ -102,9 +102,9 @@ internal sealed class EventCallSite<TEvent, THandler>
     }
 
     internal EventHandlerDelegate<TEvent> GetRoot(IServiceProvider serviceProvider)
-        // Stryker disable once Equality:
-        // Stryker disable once null-coalescing: fallback/perf-(. CallSiteBranchTests: fast/slow )
-        // Stryker disable once null-coalescing: fallback/perf-(. CallSiteBranchTests: fast/slow )
+        // Stryker disable once Equality: тест-хук, продакшн-путь не отличается
+        // Stryker disable once null-coalescing: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once null-coalescing: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
         => _singletonRoot ?? BuildSingletonRoot(serviceProvider);
 
     internal EventHandlerDelegate<TEvent> BuildSingletonRoot(IServiceProvider serviceProvider)
@@ -121,7 +121,7 @@ internal sealed class EventCallSite<TEvent, THandler>
                     $"Event handler {typeof(THandler)} is not registered in the service provider."));
             EventHandlerDelegate<TEvent> root = (e, ct) => handler.Handle(e, ct);
 
-            // Stryker disable once equality: fallback/perf-(. CallSiteBranchTests: fast/slow )
+            // Stryker disable once equality: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
             if (_middlewareTypes.Length > 0)
             {
                 var behaviors = new IEventMiddleware<TEvent>[_middlewareTypes.Length];

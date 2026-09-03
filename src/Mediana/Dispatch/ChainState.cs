@@ -5,11 +5,11 @@ using Mediana.Pipeline;
 namespace Mediana.Dispatch;
 
 /// <summary>
-/// behaviors (Treiber stack, lock-free)
-/// See English documentation.
-/// + async-box ()
-/// next (index-based)
-/// ()
+/// Пул состояний цепочки behaviors (Treiber stack, lock-free).
+/// Синхронное завершение цепочки — возврат в пул сразу, ноль аллокаций;
+/// истинная асинхронность — одно состояние на вызов из пула + один async-box (документированный бюджет).
+/// Состояние поддерживает последовательные вызовы next (index-based); повторный вызов за пределами
+/// терминала — исключение (защита от повреждения пула).
 /// </summary>
 internal sealed class ChainState<TRequest, TResponse> where TRequest : IRequest<TResponse>
 {
@@ -23,7 +23,7 @@ internal sealed class ChainState<TRequest, TResponse> where TRequest : IRequest<
 
     public ChainState()
     {
-        // next
+        // Делегат next создаётся один раз на состояние; пул амортизирует аллокацию.
         NextDelegate = Next;
     }
 
@@ -46,8 +46,8 @@ internal sealed class ChainState<TRequest, TResponse> where TRequest : IRequest<
 
         if (index == behaviors.Length)
         {
-            // (behaviors next )
-            // See English documentation.
+            // терминал может вызываться повторно (behaviors могут звать next несколько раз);
+            // фиксируем позицию, чтобы повторный проход не вышел за границы
             Index = index + 1;
             return Terminal(request, cancellationToken);
         }
@@ -58,14 +58,14 @@ internal sealed class ChainState<TRequest, TResponse> where TRequest : IRequest<
     }
 
     public void Return()
-    // Stryker disable once block: fallback/perf-(. CallSiteBranchTests: fast/slow )
+    // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
     {
         Behaviors = [];
         Terminal = null!;
         _pooled = this;
     }
 
-    /// <summary>thread-static ; behaviors .</summary>
+    /// <summary>Взять состояние из thread-static пула или создать; резолвит behaviors по типам.</summary>
     public static ChainState<TRequest, TResponse> Take(
         IServiceProvider serviceProvider,
         Type[] middlewareTypes,
@@ -73,7 +73,7 @@ internal sealed class ChainState<TRequest, TResponse> where TRequest : IRequest<
     {
         var state = _pooled;
         if (state is not null)
-        // Stryker disable once block: fallback/perf-(. CallSiteBranchTests: fast/slow )
+        // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
         {
             _pooled = null;
         }

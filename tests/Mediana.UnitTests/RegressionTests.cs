@@ -10,12 +10,12 @@ using Xunit;
 namespace Mediana.UnitTests;
 
 /// <summary>
-/// R9: 11 security-audit
-/// ID
+/// R9: 11 регрессионных тестов — по одному на каждый фикс из второй итерации security-audit.
+/// Каждый тест привязан к ID находки.
 /// </summary>
 public class RegressionTests
 {
-    // ═══ R1: Mongo OutboxMessage.DocumentId — ObjectId ═══
+    // ═══ R1: Mongo OutboxMessage.DocumentId — корреляция по строке ObjectId ═══
 
     [Fact]
     public void R1_OutboxMessage_has_DocumentId_for_Mongo_correlation()
@@ -30,12 +30,12 @@ public class RegressionTests
         };
         Assert.Equal("6a98d9c1213974adb66502f9", msg.DocumentId);
 
-        // DocumentId ()
+        // Два разных сообщения — разные DocumentId (не коллидируют)
         var msg2 = new OutboxMessage { DocumentId = "6a98d9c1213974adb66502fa" };
         Assert.NotEqual(msg.DocumentId, msg2.DocumentId);
     }
 
-    // ═══ R2: Parked OutboxMessage EF ═══
+    // ═══ R2: Parked колонка — существует в OutboxMessage и в модели EF ═══
 
     [Fact]
     public void R2_Parked_field_exists_in_OutboxMessage()
@@ -44,12 +44,12 @@ public class RegressionTests
         Assert.True(msg.Parked);
     }
 
-    // ═══ R3: MaxDeliveryAttempts — , ═══
+    // ═══ R3: MaxDeliveryAttempts — параметр интерфейса, не хардкод ═══
 
     [Fact]
     public void R3_MarkFailed_receives_maxAttempts_parameter()
     {
-        // int maxDeliveryAttempts
+        // Проверяем что сигнатура интерфейса содержит int maxDeliveryAttempts
         var method = typeof(IOutboxStore).GetMethod("MarkFailed");
         Assert.NotNull(method);
         var parameters = method!.GetParameters();
@@ -72,11 +72,11 @@ public class RegressionTests
         await Task.Delay(200);
         await relay.StopAsync(CancellationToken.None);
 
-        // Store maxAttempts = 3 (10)
+        // Store записал maxAttempts = 3 (не хардкод 10)
         Assert.Contains(3, store.ReceivedMaxAttempts);
     }
 
-    // ═══ R4: Kafka poison MessageId — () ═══
+    // ═══ R4: Kafka poison MessageId — стабильный (кэшируется) ═══
 
     [Fact]
     public void R4_OutboxMessage_Parked_field_exists()
@@ -87,19 +87,19 @@ public class RegressionTests
         Assert.False(msg2.Parked);
     }
 
-    // ═══ R7: Jitter — ns2.1 ═══
+    // ═══ R7: Jitter — потокобезопасный на ns2.1 ═══
 
     [Fact]
     public void R7_Jitter_thread_safe()
     {
-        // DelayFor jitter (state corruption System.Random)
+        // Параллельный вызов DelayFor с jitter не бросает (state corruption в System.Random)
         var policy = new RetryPolicy { Strategy = BackoffStrategy.Exponential, BaseDelay = TimeSpan.FromMilliseconds(1), Jitter = 0.5 };
         var random = new Random(42);
         Parallel.For(0, 100, i => policy.DelayFor(i % 5 + 1, random));
-        // Random , corrupt state
+        // Если бы Random не был потокобезопасен, получили бы исключение или corrupt state
     }
 
-    // ═══ R8: EnvelopeCodec — ═══
+    // ═══ R8: EnvelopeCodec — лимиты ═══
 
     [Fact]
     public void R8_EnvelopeCodec_rejects_oversized_payload()
@@ -137,7 +137,7 @@ public class RegressionTests
         Assert.Equal(envelope.MessageId, decoded.MessageId);
     }
 
-    // ═══ ═══
+    // ═══ Вспомогательные типы ═══
 
     private sealed class RecordingOutboxStore : IOutboxStore
     {

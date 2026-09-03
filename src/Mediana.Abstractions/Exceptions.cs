@@ -1,6 +1,6 @@
 namespace Mediana;
 
-/// <summary>(, , ).</summary>
+/// <summary>Message graph configuration error (no handler, duplicate, invalid policy).</summary>
 public class MediatorConfigurationException : Exception
 {
     public MediatorConfigurationException(string message)
@@ -15,8 +15,8 @@ public class MediatorConfigurationException : Exception
 }
 
 /// <summary>
-/// : , fault-
-/// Send remote-
+/// Remote execution error: the remote host's error type, serialized details, and fault envelope.
+/// Local Send propagates exceptions as-is — this type is for remote paths only.
 /// </summary>
 public class RemoteExecutionException : Exception
 {
@@ -35,7 +35,7 @@ public class RemoteExecutionException : Exception
         new Dictionary<string, string?>();
 }
 
-/// <summary>(request/reply ).</summary>
+/// <summary>Remote query timeout (request/reply over transport).</summary>
 public class RemoteTimeoutException : TimeoutException
 {
     public RemoteTimeoutException(string message)

@@ -1,27 +1,40 @@
 # Changelog
 
-Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), SemVer 2.0](https://semver.org/lang/ru/).
+Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: [SemVer 2.0](https://semver.org/)
 
 ## [Unreleased]
 
-## [1.0.0] — 2026-09-02
+## [1.0.0] — 2026-09-03
 
-first public release.
+Initial public release.
 
 ### Added
 
-- ****: `IRequest`/`ICommand<T>`/`IQuery<T>`/`IEvent`/`IStreamQuery<T>`; middlewares /events/`IHandlerMiddleware`, `IEventMiddleware`, `IStreamMiddleware`); `IMediator` on `ValueTask`; zero-alloc singleton-DI-on and scoped-`SendExact` for struct-messages without parallel/sequential events.
-- **Source generator** (`Mediana.Generators`): without NativeAOT/trimming), MED001 on command/query/stream-handlers.
-- **SPI** (`Mediana.Transport.Abstractions`): envelope (UUIDv7 MessageId, W3C traceparent, partition key), fluent + `Remote`), `IMessageSerializer` (STJ by inbox-deduplication (in-memory), retry-fixed/incremental/exponential + jitter, poison detection → DLQ, consumer-pipeline.
-- **transports**: `Mediana.RabbitMQ` (DLX-cycle retry, direct reply-to request/reply, publisher confirms, graceful drain), `Mediana.Kafka` (retry-partition ordering; RPC/not D11), `Mediana.MassTransit` (transport, in Fault-**Transactional outbox (opt-in)**: `Mediana.Outbox` (relay lease/backoff/cleanup) + `.EFCore` (net10.0-only), `.Dapper` (Postgres SKIP LOCKED / SQL Server READPAST), `.MongoDB` (lease-based).
-- **telemetry**: `Mediana.Telemetry.OpenTelemetry` — OTLP (traces+metrics+logs), bounded-drop-on-overflow shutdown-flush.
-- **MediatR**: `Mediana.MediatR` — MediatR-handlers without ****: 17 ADR (docs/superpowers/specs), CI-union branch coverage ≥95% (TFM-Stryker mutation score ≥90%, B/D14 (not-Microsoft AOT-build.
+- **Message hierarchy**: `IRequest` ← `ICommand<T>` / `IQuery<T>` / `IEvent` / `IStreamQuery<T>`; middlewares for commands (`IHandlerMiddleware`), events (`IEventMiddleware`), and streams (`IStreamMiddleware`); `IMediator` on `ValueTask`; zero-alloc singleton mode (zero DI lookups per dispatch) and scoped mode with state pooling; `SendExact` for struct messages without boxing; sequential/parallel event dispatch policies.
+- **Source generator** (`Mediana.Generators`): reflection-free registration (NativeAOT/trimming compatible), MED001 diagnostic on duplicate command/query/stream handlers.
+- **Transport SPI** (`Mediana.Transport.Abstractions`): envelope (UUIDv7 MessageId, W3C traceparent, partition key), routing policies (fluent + `Remote` attribute), `IMessageSerializer` (STJ default), in-memory inbox deduplication, retry engine (fixed/incremental/exponential + jitter, own implementation — not Polly), poison detection → DLQ, consumer pipeline.
+- **Transports**: `Mediana.RabbitMQ` (DLX-cycle retries, direct reply-to, publisher confirms, graceful drain), `Mediana.Kafka` (retry topics, partition ordering; no RPC/streaming by design — D11), `Mediana.MassTransit` (transport + bidirectional bridge + Fault format compatibility).
+- **Transactional outbox (opt-in)**: `Mediana.Outbox` (relay with lease/backoff/cleanup) + `.EFCore` (net10.0-only), `.Dapper` (Postgres SKIP LOCKED / SQL Server READPAST), `.MongoDB` (lease-based).
+- **Telemetry**: `Mediana.Telemetry.OpenTelemetry` — OTLP export (traces + metrics + logs), non-blocking log pipeline via OpenTelemetry SDK, shutdown flush.
+- **MediatR bridge**: `Mediana.MediatR` — runs existing MediatR handlers with zero code changes.
+- **Engineering**: 17 ADRs (docs/superpowers/specs), CI gates: union branch coverage ≥95% (both TFM assets), Stryker mutation score ≥90%, allocation gate (0 B/call), D14 dependency audit (zero non-Microsoft in core), AOT build.
 
-### Performance (measurements vs MediatR 14.2, in benchmarks/RESULTS.md)
+### Performance (measured vs MediatR 14.2, methodology in benchmarks/RESULTS.md)
 
-- Send: **13.6 ns vs 100.3 ns (7.4×)**, 0 B Query 10×; Publish 8×
-- throughput 64 **710M vs 24M ops/s (29×)**; scaling to MediatR p99.99 **500 ns vs 21–31 µs (42–61×)**; GC-vs 3.4–3.7%
-- RAM: retention async-×3.3 WorkingSet −62%, package KB vs 265 KB
+- Send: **13.6 ns vs 100.3 ns (7.4×)**, 0 B allocations; Query 10×; Publish 8×
+- Throughput at 64 threads: **710M vs 24M ops/s (29×)**; linear scaling to CPU cores (MediatR degrades above 16 threads)
+- p99.99 latency: **500 ns vs 21–31 µs (42–61×)**; GC pauses 0.00% vs 3.4–3.7%
+- RAM: async operation retention ×3.3 less, WorkingSet −62%, core package 68.5 KB vs 265 KB
+
+### Breaking changes (relative to pre-release iterations; 1.0.0 was never published)
+
+- `EnvelopeCodec` moved from `Mediana.Outbox` to `Mediana.Messaging` namespace
+- `IOutboxStore.MarkFailed` signature: added `int maxDeliveryAttempts` parameter
+- `KafkaDelivery` constructor: now takes `IProducer` for DLQ produce
+- `BridgeLoggerFactory` removed (replaced by standard MEL OpenTelemetry provider)
+- Middleware family renamed (D17): `IPipelineBehavior` → `IHandlerMiddleware`, `IEventPipelineBehavior` → `IEventMiddleware`, `IStreamPipelineBehavior` → `IStreamMiddleware`, `RequestHandlerDelegate` → `HandlerDelegate`
+- `OutboxMessage` gained `DocumentId` (string) and `Parked` (bool) fields
+- `MongoOutboxStore.MarkDelivered/MarkFailed` throw → idempotent no-op when `DocumentId` is null
 
 [Unreleased]: https://github.com/artemfomin/Mediana/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/artemfomin/Mediana/releases/tag/v1.0.0
