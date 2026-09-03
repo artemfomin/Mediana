@@ -158,21 +158,81 @@ public sealed class KafkaConsumerHost(
             }
             catch (Exception ex)
             {
-                // R4 fix: handler-→ commit + continue (re-read)
-                // T-01/T-06: poll loop
-                Console.Error.WriteLine($"Kafka poll cycle failed for {endpoint.Name}: {ex.Message}");
+                // NEW-R2-1 fix: best-effort DLQ produce, then commit.
+                // If DLQ produce fails — Seek back (do NOT commit, message is not lost).
                 if (result is not null)
                 {
-                    try
+                    var dlqOk = await TryProduceToDlq(result, "handler-exception", ex, cancellationToken).ConfigureAwait(false);
+                    if (dlqOk)
                     {
-                        _consumer!.Commit(result);
+                        try { _consumer!.Commit(result); }
+                        catch (Exception commitEx)
+                        {
+                            Console.Error.WriteLine($"Kafka commit-after-DLQ failed for {endpoint.Name}: {commitEx.Message}");
+                        }
                     }
-                    catch (Exception commitEx)
+                    else
                     {
-                        Console.Error.WriteLine($"Kafka commit-after-error failed: {commitEx.Message}");
+                        // DLQ unavailable — Seek back so message is retried on next cycle
+                        Console.Error.WriteLine($"Kafka DLQ unavailable for {endpoint.Name}, seeking back to offset {result.Offset}");
+                        try
+                        {
+                            _consumer!.Seek(new TopicPartitionOffset(result.TopicPartition, result.Offset));
+                            await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).ConfigureAwait(false);
+                        }
+                        catch (Exception seekEx)
+                        {
+                            Console.Error.WriteLine($"Kafka seek-back failed: {seekEx.Message}");
+                        }
                     }
                 }
             }
+        }
+    }
+
+    /// <summary>Best-effort poison-report produce to DLQ topic. Returns false if DLQ is unavailable.</summary>
+    private async Task<bool> TryProduceToDlq(
+        ConsumeResult<string, byte[]> result, string reason, Exception? originalException, CancellationToken ct)
+    {
+        try
+        {
+            var dlqTopic = result.Topic + ".dlq";
+            var headers = new Headers
+            {
+                { "mediana.dlx-reason", System.Text.Encoding.UTF8.GetBytes(reason) },
+                { "mediana.original-topic", System.Text.Encoding.UTF8.GetBytes(result.Topic) },
+                { "mediana.original-partition", System.Text.Encoding.UTF8.GetBytes(result.Partition.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)) },
+                { "mediana.original-offset", System.Text.Encoding.UTF8.GetBytes(result.Offset.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)) },
+            };
+            // T-05 fix: preserve original headers
+            if (result.Message.Headers is { } originalHeaders)
+            {
+                foreach (var h in originalHeaders)
+                {
+                    if (!h.Key.StartsWith("mediana.", StringComparison.Ordinal))
+                    {
+                        headers.Add(h.Key, h.GetValueBytes());
+                    }
+                }
+            }
+            if (originalException is not null)
+            {
+                headers.Add("mediana.error-type", System.Text.Encoding.UTF8.GetBytes(originalException.GetType().Name));
+            }
+
+            var message = new Message<string, byte[]>
+            {
+                Key = result.Message.Key,
+                Value = result.Message.Value,
+                Headers = headers,
+            };
+            await _dlqProducer!.ProduceAsync(dlqTopic, message, ct).ConfigureAwait(false);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Kafka DLQ produce failed for {endpoint.Name}: {ex.Message}");
+            return false;
         }
     }
 
@@ -225,10 +285,17 @@ public sealed class KafkaDelivery(
         }
         catch
         {
-            // R4 fix: stable MessageId Kafka offset — , inbox
+            // N-4/NEW-R2-2 fix: deterministic poison-id from (topic, partition, offset)
+            var seed = $"{result.Topic}:{result.Partition.Value}:{result.Offset.Value}";
+            using var sha = System.Security.Cryptography.SHA256.Create();
+            var hash = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(seed));
+            var guidBytes = new byte[16];
+            Array.Copy(hash, guidBytes, 16);
+            guidBytes[7] = (byte)((guidBytes[7] & 0x0F) | 0x70); // version 7
+            guidBytes[8] = (byte)((guidBytes[8] & 0x3F) | 0x80); // variant 10xx
             return new Envelope
             {
-                MessageId = GuidV7.NewGuid(), // _envelope
+                MessageId = new Guid(guidBytes),
                 MessageType = new MessageTypeDescriptor
                 {
                     FullName = "mediana.poison",
@@ -248,21 +315,37 @@ public sealed class KafkaDelivery(
 
     public async ValueTask Nack(bool requeue, TimeSpan? redeliveryDelay)
     {
-        // T-05 fix: commit — publish DLQ
-        var dlqTopic = result.Topic + ".dlq";
+        // T-05 fix: full DLQ produce with CT, original headers, retry-topic support
+        var targetTopic = redeliveryDelay is { } delay
+            ? Mediana.Kafka.KafkaTransport.RetryTopicName(result.Topic, delay)   // retry-topic for delayed redelivery
+            : result.Topic + ".dlq";               // DLQ for permanent failure
+
+        var headers = new Headers
+        {
+            { "mediana.dlx-reason", System.Text.Encoding.UTF8.GetBytes(requeue ? "nack-requeue" : "nack-no-requeue") },
+            { "mediana.original-topic", System.Text.Encoding.UTF8.GetBytes(result.Topic) },
+            { "mediana.original-partition", System.Text.Encoding.UTF8.GetBytes(result.Partition.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)) },
+            { "mediana.original-offset", System.Text.Encoding.UTF8.GetBytes(result.Offset.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)) },
+        };
+        // T-05 fix: preserve original headers
+        if (result.Message.Headers is { } originalHeaders)
+        {
+            foreach (var h in originalHeaders)
+            {
+                if (!h.Key.StartsWith("mediana.", StringComparison.Ordinal))
+                {
+                    headers.Add(h.Key, h.GetValueBytes());
+                }
+            }
+        }
+
         var message = new Message<string, byte[]>
         {
             Key = result.Message.Key,
             Value = result.Message.Value,
-            Headers = new Headers
-            {
-                { "mediana.dlx-reason", System.Text.Encoding.UTF8.GetBytes("nack-no-requeue") },
-                { "mediana.original-topic", System.Text.Encoding.UTF8.GetBytes(result.Topic) },
-                { "mediana.original-partition", System.Text.Encoding.UTF8.GetBytes(result.Partition.Value.ToString()) },
-                { "mediana.original-offset", System.Text.Encoding.UTF8.GetBytes(result.Offset.Value.ToString()) },
-            },
+            Headers = headers,
         };
-        await dlqProducer.ProduceAsync(dlqTopic, message).ConfigureAwait(false);
+        await dlqProducer.ProduceAsync(targetTopic, message).ConfigureAwait(false);
         consumer.Commit(result);
     }
 }

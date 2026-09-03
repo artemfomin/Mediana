@@ -26,10 +26,21 @@ public sealed class DapperOutboxStore : IOutboxStore
         _dialect = dialect;
     }
 
-    /// <summary>DDL outbox ().</summary>
+    /// <summary>OB-06/NEW-OB-17 fix: validates table identifier against allowlist regex.</summary>
+    private static string ValidateTableName(string table)
+    {
+        if (!System.Text.RegularExpressions.Regex.IsMatch(table, @"^[A-Za-z_][A-Za-z0-9_]{0,62}$"))
+        {
+            throw new ArgumentException(
+                $"Invalid table identifier '{table}'. Must match ^[A-Za-z_][A-Za-z0-9_]{{0,62}}$");
+        }
+        return table;
+    }
+
     /// <summary>R2 fix: DDL (parked column, index).</summary>
     public string GetMigrationSql(string table = "mediana_outbox")
     {
+        table = ValidateTableName(table);
         return _dialect == SqlDialect.Postgres
             ? $"""
                ALTER TABLE {table} ADD COLUMN IF NOT EXISTS parked BOOLEAN NOT NULL DEFAULT FALSE;
@@ -43,6 +54,7 @@ public sealed class DapperOutboxStore : IOutboxStore
 
     public string GetCreateTableSql(string table = "mediana_outbox")
     {
+        table = ValidateTableName(table);
         return _dialect == SqlDialect.Postgres
             ? $"""
                CREATE TABLE IF NOT EXISTS {table} (

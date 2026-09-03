@@ -119,13 +119,13 @@ public static class MassTransitEnvelopeMapper
             {
                 new Dictionary<string, object>
                 {
-                    ["exceptionType"] = exception.GetType().FullName ?? "unknown",
-                    ["message"] = exception.Message,
+                    ["exceptionType"] = exception.GetType().Name,
+                    ["errorCode"] = exception.HResult.ToString(),
                 },
             },
             ["host"] = new Dictionary<string, object>
             {
-                ["machineName"] = Environment.MachineName,
+                // T-14 fix: removed MachineName
             },
         };
     }

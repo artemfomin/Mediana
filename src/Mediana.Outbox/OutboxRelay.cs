@@ -115,6 +115,8 @@ public sealed class OutboxRelay(
     ILogger<OutboxRelay>? logger = null) : BackgroundService
 {
     private readonly OutboxRelayOptions _options = options ?? new OutboxRelayOptions();
+    private int _cycleCount;
+    private const int _cleanupEveryCycles = 10; // cleanup every 10 empty cycles
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -130,6 +132,28 @@ public sealed class OutboxRelay(
 
                 if (leased.Count == 0)
                 {
+                    // OB-05 fix: periodic cleanup of delivered messages
+                    if (_options.CleanupAge is { } cleanupAge)
+                    {
+                        _cycleCount++;
+                        if (_cycleCount >= _cleanupEveryCycles)
+                        {
+                            _cycleCount = 0;
+                            try
+                            {
+                                var removed = await store.CleanupOlderThan(cleanupAge, stoppingToken).ConfigureAwait(false);
+                                if (removed > 0)
+                                {
+                                    logger?.LogInformation("Outbox cleanup removed {Count} delivered messages older than {Age}", removed, cleanupAge);
+                                }
+                            }
+                            catch (Exception cleanupEx)
+                            {
+                                logger?.LogWarning(cleanupEx, "Outbox cleanup failed (non-fatal)");
+                            }
+                        }
+                    }
+
                     await Task.Delay(_options.PollInterval, stoppingToken).ConfigureAwait(false);
                     continue;
                 }
@@ -163,7 +187,7 @@ public sealed class OutboxRelay(
         }
     }
 
- [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec reflection-based JSON.")]
+    [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec reflection-based JSON.")]
     private async ValueTask Deliver(ITransportPublisher publisher, OutboxMessage message, CancellationToken cancellationToken)
     {
         try
@@ -175,9 +199,15 @@ public sealed class OutboxRelay(
                 cancellationToken).ConfigureAwait(false);
             await store.MarkDelivered(message, cancellationToken).ConfigureAwait(false);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // OB-04 fix: OCE during shutdown — rethrow, do not count as delivery failure
+            throw;
+        }
         catch (Exception ex)
         {
-            await store.MarkFailed(message, ex.Message, _options.MaxDeliveryAttempts, cancellationToken).ConfigureAwait(false);
+            // OB-04 fix: use CancellationToken.None for MarkFailed (token may be cancelled)
+            await store.MarkFailed(message, ex.Message, _options.MaxDeliveryAttempts, CancellationToken.None).ConfigureAwait(false);
         }
     }
 }

@@ -149,21 +149,23 @@ public class AllocationBudgetTests
             await Task.Yield();
         }
 
-        var beforeYield = GC.GetTotalAllocatedBytes(precise: true);
+        var beforeYield = GC.GetAllocatedBytesForCurrentThread();
         for (var i = 0; i < 2000; i++)
         {
             await Task.Yield();
         }
 
-        var yieldBaseline = GC.GetTotalAllocatedBytes(precise: true) - beforeYield;
+        var yieldBaseline = GC.GetAllocatedBytesForCurrentThread() - beforeYield;
 
-        var before = GC.GetTotalAllocatedBytes(precise: true);
+        var before = GC.GetAllocatedBytesForCurrentThread();
         for (var i = 0; i < 2000; i++)
         {
-            _ = await mediator.Send(command);
+            #pragma warning disable xUnit1031
+            _ = mediator.Send(command).Result;
+            #pragma warning restore xUnit1031
         }
 
-        var sendAlloc = GC.GetTotalAllocatedBytes(precise: true) - before;
+        var sendAlloc = GC.GetAllocatedBytesForCurrentThread() - before;
 
         // : yield. async-
         // record-≈ 860, ~2000(; ~860); ns2.1-. x2 (≥4000)

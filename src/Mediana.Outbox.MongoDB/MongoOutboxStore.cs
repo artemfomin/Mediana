@@ -93,7 +93,8 @@ public sealed class MongoOutboxStore(IMongoDatabase database, string collectionN
     {
         if (string.IsNullOrEmpty(message.DocumentId))
         {
-            throw new InvalidOperationException("OutboxMessage.DocumentId is required for Mongo correlation (use LeaseBatch results).");
+            // NEW-OB-15 fix: idempotent no-op
+            return;
         }
 
         var objectId = ObjectId.Parse(message.DocumentId);
@@ -107,7 +108,8 @@ public sealed class MongoOutboxStore(IMongoDatabase database, string collectionN
     {
         if (string.IsNullOrEmpty(message.DocumentId))
         {
-            throw new InvalidOperationException("OutboxMessage.DocumentId is required for Mongo correlation (use LeaseBatch results).");
+            // NEW-OB-15 fix: idempotent no-op
+            return;
         }
 
         var objectId = ObjectId.Parse(message.DocumentId);

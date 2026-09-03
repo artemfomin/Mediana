@@ -190,7 +190,7 @@ public sealed class RabbitMqDelivery(IChannel channel, BasicDeliverEventArgs arg
 /// <summary>request/reply direct reply-to (§8.1): .</summary>
 public sealed class RabbitMqRequestClient(IConnection connection)
 {
- [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec reflection-based JSON.")]
+    [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("EnvelopeCodec reflection-based JSON.")]
     public async ValueTask<Envelope> Request(
         Envelope request,
         string destination,
@@ -202,12 +202,26 @@ public sealed class RabbitMqRequestClient(IConnection connection)
 
         var completion = new TaskCompletionSource<Envelope>(TaskCreationOptions.RunContinuationsAsynchronously);
         var correlationId = request.MessageId.ToString();
+
+        // T-07 fix: linked CTS instead of Task.Delay race — clean cancellation
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(timeout);
+
         var consumer = new AsyncEventingBasicConsumer(channel);
         consumer.ReceivedAsync += (_, received) =>
         {
-            if (received.BasicProperties.CorrelationId == correlationId)
+            // T-07 fix: validate both CorrelationId AND MessageId to prevent reply-spoofing by co-consumer
+            if (received.BasicProperties.CorrelationId == correlationId
+                && (received.BasicProperties.MessageId is null || received.BasicProperties.MessageId == correlationId))
             {
-                completion.TrySetResult(EnvelopeCodec.Decode(received.Body.ToArray()));
+                try
+                {
+                    completion.TrySetResult(EnvelopeCodec.Decode(received.Body.ToArray()));
+                }
+                catch (Exception ex)
+                {
+                    completion.TrySetException(ex);
+                }
             }
 
             return Task.CompletedTask;
@@ -217,7 +231,7 @@ public sealed class RabbitMqRequestClient(IConnection connection)
             queue: "amq.rabbitmq.reply-to",
             autoAck: true,
             consumer,
-            cancellationToken).ConfigureAwait(false);
+            timeoutCts.Token).ConfigureAwait(false);
 
         var props = new BasicProperties
         {
@@ -233,15 +247,27 @@ public sealed class RabbitMqRequestClient(IConnection connection)
             mandatory: false,
             basicProperties: props,
             body: new ReadOnlyMemory<byte>(EnvelopeCodec.Encode(request)),
-            cancellationToken).ConfigureAwait(false);
+            timeoutCts.Token).ConfigureAwait(false);
 
-        var delayTask = Task.Delay(timeout, cancellationToken);
-        var done = await Task.WhenAny(completion.Task, delayTask).ConfigureAwait(false);
-        if (done == delayTask)
+        // T-07 fix: await completion with linked CT — no Task.Delay race, no leak
+        try
+        {
+#if NET10_0
+            return await completion.Task.WaitAsync(timeoutCts.Token).ConfigureAwait(false);
+#else
+            // netstandard2.1: WaitAsync not available — use WhenAny with CTS registration
+            var cancelTask = Task.Delay(Timeout.Infinite, timeoutCts.Token);
+            var done = await Task.WhenAny(completion.Task, cancelTask).ConfigureAwait(false);
+            if (done == cancelTask)
+            {
+                throw new RemoteTimeoutException("Request to " + destination + " timed out after " + timeout + ".");
+            }
+            return await completion.Task.ConfigureAwait(false);
+#endif
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             throw new RemoteTimeoutException("Request to " + destination + " timed out after " + timeout + ".");
         }
-
-        return await completion.Task.ConfigureAwait(false);
     }
 }

@@ -120,8 +120,7 @@ public static class PoisonDetector
     {
         return exception is Mediana.Messaging.SerializationException
             or FormatException
-            or InvalidOperationException
-            or ArgumentException
+            // T-11 fix: removed volatile classifications
             or MediatorConfigurationException;
     }
 }

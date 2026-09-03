@@ -164,8 +164,8 @@ public class Coverage95Batch2Tests
     {
         Assert.True(PoisonDetector.IsPoison(new Mediana.Messaging.SerializationException("s")));
         Assert.True(PoisonDetector.IsPoison(new FormatException()));
-        Assert.True(PoisonDetector.IsPoison(new InvalidOperationException()));
-        Assert.True(PoisonDetector.IsPoison(new ArgumentException()));
+        Assert.False(PoisonDetector.IsPoison(new InvalidOperationException()));
+        Assert.False(PoisonDetector.IsPoison(new ArgumentException()));
         Assert.True(PoisonDetector.IsPoison(new MediatorConfigurationException("c")));
         Assert.False(PoisonDetector.IsPoison(new TimeoutException()));
         Assert.False(PoisonDetector.IsPoison(new OperationCanceledException()));

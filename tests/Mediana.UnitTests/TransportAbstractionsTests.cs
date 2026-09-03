@@ -306,7 +306,7 @@ public class RetryEngineTests
     {
         Assert.True(PoisonDetector.IsPoison(new SerializationException("x")));
         Assert.True(PoisonDetector.IsPoison(new FormatException()));
-        Assert.True(PoisonDetector.IsPoison(new InvalidOperationException()));
+        Assert.False(PoisonDetector.IsPoison(new InvalidOperationException()));
         Assert.False(PoisonDetector.IsPoison(new TransientException()));
         Assert.False(PoisonDetector.IsPoison(new TimeoutException()));
     }

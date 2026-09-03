@@ -163,6 +163,22 @@ public sealed class BridgeLogger(string category, AsyncLogBridge bridge) : ILogg
     }
 }
 
+internal static class OtlpEndpointValidator
+{
+    public static Uri Validate(string? endpoint)
+    {
+        if (string.IsNullOrWhiteSpace(endpoint))
+            throw new InvalidOperationException("OTLP endpoint is required but not set.");
+        if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri))
+            throw new InvalidOperationException($"Invalid OTLP endpoint URI: '{endpoint}'");
+        if (uri.Scheme is not ("http" or "https" or "grpc"))
+            throw new InvalidOperationException($"OTLP endpoint scheme must be http/https/grpc, got '{uri.Scheme}'");
+        if (uri.Scheme == "http" && !uri.IsLoopback)
+            throw new InvalidOperationException($"OTLP endpoint uses insecure http on non-loopback '{uri}'. Set AllowInsecureOtlp = true to override.");
+        return uri;
+    }
+}
+
 public static class MedianaTelemetryExtensions
 {
     /// <summary>
@@ -204,7 +220,7 @@ public static class MedianaTelemetryExtensions
                     {
                         t.AddOtlpExporter(o =>
                         {
-                            o.Endpoint = new Uri(endpoint);
+                            o.Endpoint = OtlpEndpointValidator.Validate(endpoint);
                             o.Protocol = protocol;
                         });
                     }
@@ -226,7 +242,7 @@ public static class MedianaTelemetryExtensions
                     {
                         m.AddOtlpExporter(o =>
                         {
-                            o.Endpoint = new Uri(endpoint);
+                            o.Endpoint = OtlpEndpointValidator.Validate(endpoint);
                             o.Protocol = protocol;
                         });
                     }
@@ -242,7 +258,7 @@ public static class MedianaTelemetryExtensions
                     o.SetResourceBuilder(resourceBuilder);
                     o.AddOtlpExporter(e =>
                     {
-                        e.Endpoint = new Uri(endpoint);
+                        e.Endpoint = OtlpEndpointValidator.Validate(endpoint);
                         e.Protocol = protocol;
                     });
                 }));
@@ -260,7 +276,7 @@ public static class MedianaTelemetryExtensions
                     o.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName));
                     o.AddOtlpExporter(e =>
                     {
-                        e.Endpoint = new Uri(endpoint);
+                        e.Endpoint = OtlpEndpointValidator.Validate(endpoint);
                         e.Protocol = protocol;
                     });
                 }));
