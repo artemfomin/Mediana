@@ -11,6 +11,9 @@ public sealed record OutboxMessage
 {
     public long Sequence { get; init; }
 
+    /// <summary>Идентификатор записи в хранилище (ObjectId для MongoDB, sequence для SQL). R1 fix.</summary>
+    public string? DocumentId { get; init; }
+
     public Guid MessageId { get; init; }
 
     public string Destination { get; init; } = "";
@@ -27,6 +30,8 @@ public sealed record OutboxMessage
     public int DeliveryAttempts { get; init; }
 
     public string? LastError { get; init; }
+
+    public bool Parked { get; init; }
 }
 
 /// <summary>Хранилище outbox: реализуют спутниковые пакеты (EF Core/Dapper/Mongo).</summary>
@@ -41,8 +46,8 @@ public interface IOutboxStore
     /// <summary>Пометить доставленным.</summary>
     ValueTask MarkDelivered(OutboxMessage message, CancellationToken cancellationToken);
 
-    /// <summary>Вернуть lease (ошибка доставки): счётчик попыток + последняя ошибка.</summary>
-    ValueTask MarkFailed(OutboxMessage message, string error, CancellationToken cancellationToken);
+    /// <summary>Вернуть lease (ошибка доставки): backoff + парковка при исчерпании maxAttempts (R3).</summary>
+    ValueTask MarkFailed(OutboxMessage message, string error, int maxDeliveryAttempts, CancellationToken cancellationToken);
 
     /// <summary>Удалить доставленные старше возраста (cleanup-политика).</summary>
     ValueTask<int> CleanupOlderThan(TimeSpan age, CancellationToken cancellationToken);
@@ -76,18 +81,6 @@ public sealed class OutboxCollector
     public int Count => _pending.Count;
 }
 
-/// <summary>Кодирование конверта.</summary>
-public static class EnvelopeCodec
-{
-    [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("Reflection-based JSON; для AOT — source-gen.")]
-    public static byte[] Encode(Envelope envelope)
-        => System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(envelope);
-
-    [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("Reflection-based JSON; для AOT — source-gen.")]
-    public static Envelope Decode(byte[] body)
-        => System.Text.Json.JsonSerializer.Deserialize<Envelope>(body)
-           ?? throw new Mediana.Messaging.SerializationException("Empty envelope body.");
-}
 
 /// <summary>Опции relay.</summary>
 public sealed record OutboxRelayOptions
@@ -184,7 +177,7 @@ public sealed class OutboxRelay(
         }
         catch (Exception ex)
         {
-            await store.MarkFailed(message, ex.Message, cancellationToken).ConfigureAwait(false);
+            await store.MarkFailed(message, ex.Message, _options.MaxDeliveryAttempts, cancellationToken).ConfigureAwait(false);
         }
     }
 }

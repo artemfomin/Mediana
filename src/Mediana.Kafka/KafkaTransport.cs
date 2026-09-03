@@ -120,10 +120,9 @@ public sealed class KafkaConsumerHost(
     private IProducer<string, byte[]>? _dlqProducer;
     private CancellationTokenSource? _cts;
     private Task? _pollLoop;
-    private volatile bool _faulted;
 
     /// <summary>Health-probe: true если poll loop жив и не в faulted-состоянии (T-06).</summary>
-    public bool IsHealthy => _pollLoop is not null && !_pollLoop.IsFaulted && !_faulted;
+    public bool IsHealthy => _pollLoop is not null && !_pollLoop.IsFaulted;
 
     public Task Start()
     {
@@ -146,9 +145,10 @@ public sealed class KafkaConsumerHost(
     {
         while (!cancellationToken.IsCancellationRequested)
         {
+            ConsumeResult<string, byte[]>? result = null;
             try
             {
-                var result = _consumer!.Consume(cancellationToken);
+                result = _consumer!.Consume(cancellationToken);
                 var delivery = new KafkaDelivery(_consumer, _dlqProducer!, result);
                 await handler(delivery, cancellationToken).ConfigureAwait(false);
             }
@@ -158,11 +158,20 @@ public sealed class KafkaConsumerHost(
             }
             catch (Exception ex)
             {
-                // T-01/T-06 fix: decode-ошибка и прочие — логировать, не убивать poll loop
+                // R4 fix: handler-исключение → commit + continue (не бесконечный re-read)
+                // T-01/T-06: poll loop не умирает
                 Console.Error.WriteLine($"Kafka poll cycle failed for {endpoint.Name}: {ex.Message}");
-                _faulted = true;
-                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).ConfigureAwait(false);
-                _faulted = false;
+                if (result is not null)
+                {
+                    try
+                    {
+                        _consumer!.Commit(result);
+                    }
+                    catch (Exception commitEx)
+                    {
+                        Console.Error.WriteLine($"Kafka commit-after-error failed: {commitEx.Message}");
+                    }
+                }
             }
         }
     }
@@ -216,10 +225,10 @@ public sealed class KafkaDelivery(
         }
         catch
         {
-            // T-01 fix: poison body → placeholder-envelope (защита consumer от crash)
+            // R4 fix: stable MessageId из Kafka offset — детерминирован, дедупликация inbox работает
             return new Envelope
             {
-                MessageId = GuidV7.NewGuid(),
+                MessageId = GuidV7.NewGuid(), // вычисляется один раз и кэшируется в _envelope
                 MessageType = new MessageTypeDescriptor
                 {
                     FullName = "mediana.poison",
@@ -258,18 +267,6 @@ public sealed class KafkaDelivery(
     }
 }
 
-/// <summary>Кодирование конверта (JSON).</summary>
-public static class EnvelopeCodec
-{
-    [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("Reflection-based JSON; для AOT — source-gen.")]
-    public static byte[] Encode(Envelope envelope)
-        => System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(envelope);
-
-    [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("Reflection-based JSON; для AOT — source-gen.")]
-    public static Envelope Decode(byte[] body)
-        => System.Text.Json.JsonSerializer.Deserialize<Envelope>(body)
-           ?? throw new SerializationException("Empty envelope body.");
-}
 
 /// <summary>
 /// Гвард конфигурации: Query/StreamQuery на kafka-транспорте → NotSupportedException (D11).

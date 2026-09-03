@@ -43,7 +43,7 @@ public class OutboxTests
             return default;
         }
 
-        public ValueTask MarkFailed(OutboxMessage message, string error, CancellationToken ct)
+        public ValueTask MarkFailed(OutboxMessage message, string error, int maxAttempts, CancellationToken ct)
         {
             Failed.Add((message.MessageId, error));
             var index = Messages.FindIndex(m => m.Sequence == message.Sequence);
@@ -90,7 +90,7 @@ public class OutboxTests
             Sequence = sequence,
             MessageId = id,
             Destination = "orders",
-            EnvelopeBytes = Mediana.Outbox.EnvelopeCodec.Encode(Envelope.Create("App.M", "1", [])),
+            EnvelopeBytes = Mediana.Messaging.EnvelopeCodec.Encode(Envelope.Create("App.M", "1", [])),
             CreatedAt = DateTimeOffset.UtcNow,
         };
 
@@ -213,7 +213,7 @@ public static class OutboxTestHelpers
         public ValueTask AddRange(IEnumerable<OutboxMessage> m, CancellationToken ct) => default;
         public ValueTask<IReadOnlyList<OutboxMessage>> LeaseBatch(int b, long l, CancellationToken ct) => new([]);
         public ValueTask MarkDelivered(OutboxMessage m, CancellationToken ct) => default;
-        public ValueTask MarkFailed(OutboxMessage m, string e, CancellationToken ct) => default;
+        public ValueTask MarkFailed(OutboxMessage m, string e, int maxAttempts, CancellationToken ct) => default;
         public ValueTask<int> CleanupOlderThan(TimeSpan a, CancellationToken ct) => new(0);
     }
 

@@ -98,7 +98,9 @@ public sealed class ConsumerHostService : BackgroundService
 /// <summary>ns2.1 fallback для Random.Shared (T-12): thread-safe jitter-генератор.</summary>
 internal static class JitterRandom
 {
-    private static readonly Random _random = new();
-    public static Random Shared => _random;
+    // R7 fix: thread-safe через ThreadLocal (System.Random не потокобезопасен на ns2.1)
+    [ThreadStatic]
+    private static Random? _random;
+    public static Random Shared => _random ??= new Random();
 }
 #endif

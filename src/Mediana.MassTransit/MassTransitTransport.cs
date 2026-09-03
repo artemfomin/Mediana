@@ -136,18 +136,6 @@ public static class MassTransitEnvelopeMapper
         => EnvelopeCodec.Decode(message.Body);
 }
 
-/// <summary>Кодирование конверта.</summary>
-public static class EnvelopeCodec
-{
-    [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("Reflection-based JSON; для AOT — source-gen.")]
-    public static byte[] Encode(Envelope envelope)
-        => System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(envelope);
-
-    [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("Reflection-based JSON; для AOT — source-gen.")]
-    public static Envelope Decode(byte[] body)
-        => System.Text.Json.JsonSerializer.Deserialize<Envelope>(body)
-           ?? throw new SerializationException("Empty envelope body.");
-}
 
 /// <summary>
 /// Режим 2 — мост: MassTransit-консюмер Mediana-сообщений, диспатчит в локальный пайплайн Mediana.

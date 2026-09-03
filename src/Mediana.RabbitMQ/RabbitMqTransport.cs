@@ -245,15 +245,3 @@ public sealed class RabbitMqPublisher : ITransportPublisher
     }
 }
 
-/// <summary>Кодирование конверта в payload (JSON конверта + payload внутри).</summary>
-public static class EnvelopeCodec
-{
-    [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("Reflection-based JSON: для NativeAOT подключите source-gen контекст.")]
-    public static byte[] Encode(Envelope envelope)
-        => System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(envelope);
-
-    [System.Diagnostics.CodeAnalysis.RequiresDynamicCode("Reflection-based JSON: для NativeAOT подключите source-gen контекст.")]
-    public static Envelope Decode(ReadOnlySpan<byte> body)
-        => System.Text.Json.JsonSerializer.Deserialize<Envelope>(body.ToArray())
-           ?? throw new SerializationException("Empty envelope body.");
-}

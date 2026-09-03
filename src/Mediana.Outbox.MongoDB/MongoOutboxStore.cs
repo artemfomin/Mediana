@@ -6,7 +6,8 @@ namespace Mediana.Outbox.MongoDb;
 
 /// <summary>
 /// MongoDB-провайдер outbox: lease-based relay (§9.4), фоновые индексы.
-/// OB-01 fix: корреляция Mark* по ObjectId (_id), не по Sequence (Sequence может коллидировать).
+/// R1 fix: корреляция Mark* по ObjectId через DocumentId (строковое представление) —
+/// не восстанавливаем _id из Sequence (это не работает: ObjectId 12 байт ≠ long 8 байт).
 /// </summary>
 public sealed class MongoOutboxStore(IMongoDatabase database, string collectionName = "mediana_outbox") : IOutboxStore
 {
@@ -80,7 +81,6 @@ public sealed class MongoOutboxStore(IMongoDatabase database, string collectionN
             },
             cancellationToken).ConfigureAwait(false);
 
-        // FindOneAndUpdate атомарно берёт одну запись; батч собирается последовательными вызовами
         if (leased is null)
         {
             return [];
@@ -91,36 +91,37 @@ public sealed class MongoOutboxStore(IMongoDatabase database, string collectionN
 
     public async ValueTask MarkDelivered(OutboxMessage message, CancellationToken cancellationToken)
     {
-        // OB-01 fix: корреляция по _id — точечное обновление, не по Sequence
-        var objectId = ParseId(message);
-        await _collection.UpdateOneAsync(
+        if (string.IsNullOrEmpty(message.DocumentId))
+        {
+            throw new InvalidOperationException("OutboxMessage.DocumentId is required for Mongo correlation (use LeaseBatch results).");
+        }
+
+        var objectId = ObjectId.Parse(message.DocumentId);
+        var result = await _collection.UpdateOneAsync(
             d => d.Id == objectId,
             Builders<OutboxDocument>.Update.Set(d => d.DeliveredAt, DateTimeOffset.UtcNow),
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
-    public async ValueTask MarkFailed(OutboxMessage message, string error, CancellationToken cancellationToken)
+    public async ValueTask MarkFailed(OutboxMessage message, string error, int maxDeliveryAttempts, CancellationToken cancellationToken)
     {
-        // OB-01 fix: корреляция по _id; OB-08 fix: экспоненциальный backoff вместо LeaseUntil=0
-        var objectId = ParseId(message);
-        var backoffMs = Math.Min(
-            Math.Pow(2, message.DeliveryAttempts) * 1000,
-            300_000); // cap 5 минут
-        var leaseUntil = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + (long)backoffMs;
-
-        var update = Builders<OutboxDocument>.Update
-            .Set(d => d.LastError, error is { Length: > 4000 } ? error[..4000] : error)
-            .Set(d => d.LeaseUntil, leaseUntil);
-
-        // OB-02 fix: парковка при исчерпании MaxDeliveryAttempts (default 10 в relay)
-        if (message.DeliveryAttempts >= 10)
+        if (string.IsNullOrEmpty(message.DocumentId))
         {
-            update = update.Set(d => d.Parked, true);
+            throw new InvalidOperationException("OutboxMessage.DocumentId is required for Mongo correlation (use LeaseBatch results).");
         }
+
+        var objectId = ObjectId.Parse(message.DocumentId);
+        var truncatedError = error is { Length: > 4000 } ? error[..4000] : error;
+        var backoffMs = Math.Min(Math.Pow(2, message.DeliveryAttempts) * 1000, 300_000);
+        var leaseUntil = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + (long)backoffMs;
+        var parked = message.DeliveryAttempts >= maxDeliveryAttempts; // R3: опция, не хардкод
 
         await _collection.UpdateOneAsync(
             d => d.Id == objectId,
-            update,
+            Builders<OutboxDocument>.Update
+                .Set(d => d.LastError, truncatedError)
+                .Set(d => d.LeaseUntil, leaseUntil)
+                .Set(d => d.Parked, parked),
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -131,26 +132,6 @@ public sealed class MongoOutboxStore(IMongoDatabase database, string collectionN
             d => d.DeliveredAt != null && d.DeliveredAt < cutoff,
             cancellationToken).ConfigureAwait(false);
         return (int)result.DeletedCount;
-    }
-
-    private static ObjectId ParseId(OutboxMessage message)
-    {
-        // OutboxMessage.Sequence хранит ObjectId как long (низкие 8 байт достаточно для уникальности
-        // в пределах одной InsertMany — для полного решения расширить OutboxMessage.Id строкой)
-        if (message.Sequence > 0)
-        {
-            // Sequence используется как timestamp-часть ObjectId для корреляции
-            var timestamp = (int)(message.Sequence & 0xFFFFFFFF);
-            var counter = (int)((message.Sequence >> 32) & 0xFFFFFFFF);
-            var bytes = new byte[12];
-            BitConverter.TryWriteBytes(bytes.AsSpan(0, 4), timestamp);
-            BitConverter.TryWriteBytes(bytes.AsSpan(4, 4), counter);
-            return new ObjectId(bytes);
-        }
-
-        // fallback для legacy-записей без Sequence: ищем по MessageId
-        throw new OutboxCorrelationException(
-            "Cannot correlate outbox message: no ObjectId available. Use LeaseBatch results only.");
     }
 
     private static OutboxDocument ToDocument(OutboxMessage message)
@@ -168,7 +149,8 @@ public sealed class MongoOutboxStore(IMongoDatabase database, string collectionN
     private static OutboxMessage ToMessage(OutboxDocument document)
         => new()
         {
-            Sequence = document.Id.Timestamp, // корреляция через ObjectId timestamp
+            Sequence = 0, // Sequence не используется для Mongo
+            DocumentId = document.Id.ToString(), // R1 fix: точная корреляция по ObjectId
             MessageId = document.MessageId,
             Destination = document.Destination,
             Transport = document.Transport,
@@ -177,11 +159,6 @@ public sealed class MongoOutboxStore(IMongoDatabase database, string collectionN
             LeaseUntil = document.LeaseUntil,
             DeliveryAttempts = document.DeliveryAttempts,
             LastError = document.LastError,
+            Parked = document.Parked,
         };
-}
-
-/// <summary>Ошибка корреляции outbox-записи (OB-01 fix).</summary>
-public class OutboxCorrelationException : Exception
-{
-    public OutboxCorrelationException(string message) : base(message) { }
 }

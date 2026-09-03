@@ -152,13 +152,13 @@ public sealed class EfOutboxStore(Func<DbContext> contextFactory) : IOutboxStore
             .ConfigureAwait(false);
     }
 
-    public async ValueTask MarkFailed(OutboxMessage message, string error, CancellationToken cancellationToken)
+    public async ValueTask MarkFailed(OutboxMessage message, string error, int maxDeliveryAttempts, CancellationToken cancellationToken)
     {
         // OB-08 fix: экспоненциальный backoff; OB-02 fix: парковка при исчерпании попыток
         var truncatedError = error is { Length: > 4000 } ? error[..4000] : error;
         var backoffMs = Math.Min(Math.Pow(2, message.DeliveryAttempts) * 1000, 300_000);
         var leaseUntil = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + (long)backoffMs;
-        var parked = message.DeliveryAttempts >= 10;
+        var parked = message.DeliveryAttempts >= maxDeliveryAttempts; // R3: параметр
 
         await using var context = contextFactory();
         await context.Set<OutboxEntry>()

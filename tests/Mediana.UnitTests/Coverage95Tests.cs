@@ -349,7 +349,7 @@ public class Coverage95Tests
         public ValueTask AddRange(IEnumerable<OutboxMessage> m, CancellationToken ct) => default;
         public ValueTask<IReadOnlyList<OutboxMessage>> LeaseBatch(int b, long l, CancellationToken ct) => throw new InvalidOperationException("store down");
         public ValueTask MarkDelivered(OutboxMessage m, CancellationToken ct) => default;
-        public ValueTask MarkFailed(OutboxMessage m, string e, CancellationToken ct) => default;
+        public ValueTask MarkFailed(OutboxMessage m, string e, int maxAttempts, CancellationToken ct) => default;
         public ValueTask<int> CleanupOlderThan(TimeSpan a, CancellationToken ct) => new(0);
     }
 

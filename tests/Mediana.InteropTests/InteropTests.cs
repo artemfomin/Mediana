@@ -158,4 +158,42 @@ public class TelemetryBridgeTests
 
         Assert.Contains(sc, d => d.ServiceType == typeof(MedianaOpenTelemetryOptions));
     }
+
+    // ═══ R5: MediatR bridge — синхронные исключения не оборачиваются ═══
+
+    private sealed record R5Cmd(int V) : global::MediatR.IRequest<int>;
+
+    private sealed class R5ThrowingHandler : global::MediatR.IRequestHandler<R5Cmd, int>
+    {
+        public Task<int> Handle(R5Cmd r, CancellationToken ct) => throw new InvalidOperationException("sync-throw");
+    }
+
+    [Fact]
+    public async Task R5_MediatR_bridge_sync_exception_not_wrapped()
+    {
+        var sc = new ServiceCollection();
+        sc.AddSingleton<global::MediatR.IRequestHandler<R5Cmd, int>, R5ThrowingHandler>();
+        var sp = sc.BuildServiceProvider();
+        using var scope = sp.CreateScope();
+        var bridge = new Mediana.MediatR.MediatRBridge(scope.ServiceProvider, typeof(TelemetryBridgeTests).Assembly);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => bridge.Send(new R5Cmd(1)).AsTask());
+        Assert.IsNotType<System.Reflection.TargetInvocationException>(ex);
+    }
+
+    [Fact]
+    public void R6_Telemetry_does_not_register_AsyncLogBridge_or_ILoggerFactory()
+    {
+        var sc = new ServiceCollection();
+        sc.AddMedianaOpenTelemetry(o =>
+        {
+            o.Endpoint = "http://localhost:4317";
+            o.EnableLogs = true;
+        });
+
+        Assert.DoesNotContain(sc, d => d.ServiceType == typeof(Mediana.Telemetry.AsyncLogBridge));
+        // Стандартный ILoggerFactory регистрируется AddLogging — это правильно (не подменяется).
+        // BridgeLoggerFactory удалён из кодовой базы (R6 fix) — нечего проверять на подмену.
+    }
 }

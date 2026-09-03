@@ -27,6 +27,20 @@ public sealed class DapperOutboxStore : IOutboxStore
     }
 
     /// <summary>DDL создания таблицы outbox (миграции запускает приложение).</summary>
+    /// <summary>R2 fix: DDL миграции для существующих таблиц (parked column, index).</summary>
+    public string GetMigrationSql(string table = "mediana_outbox")
+    {
+        return _dialect == SqlDialect.Postgres
+            ? $"""
+               ALTER TABLE {table} ADD COLUMN IF NOT EXISTS parked BOOLEAN NOT NULL DEFAULT FALSE;
+               CREATE INDEX IF NOT EXISTS idx_{table}_lease_parked ON {table} (lease_until) WHERE delivered_at IS NULL AND parked = FALSE;
+               """
+            : $"""
+               IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'{table}') AND name = 'parked')
+                   ALTER TABLE {table} ADD parked BIT NOT NULL DEFAULT 0;
+               """;
+    }
+
     public string GetCreateTableSql(string table = "mediana_outbox")
     {
         return _dialect == SqlDialect.Postgres
@@ -127,14 +141,13 @@ public sealed class DapperOutboxStore : IOutboxStore
                 cancellationToken: cancellationToken)).ConfigureAwait(false);
     }
 
-    public async ValueTask MarkFailed(OutboxMessage message, string error, CancellationToken cancellationToken)
+    public async ValueTask MarkFailed(OutboxMessage message, string error, int maxDeliveryAttempts, CancellationToken cancellationToken)
     {
-        // OB-08 fix: экспоненциальный backoff вместо lease_until=0 (tight loop fix)
-        // OB-02 fix: парковка при исчерпании MaxDeliveryAttempts (default 10)
+        // R3: maxDeliveryAttempts — параметр, не хардкод; OB-08: backoff; OB-02: парковка
         var truncatedError = error is { Length: > 4000 } ? error[..4000] : error;
         var backoffMs = Math.Min(Math.Pow(2, message.DeliveryAttempts) * 1000, 300_000);
         var leaseUntil = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + (long)backoffMs;
-        var parked = message.DeliveryAttempts >= 10;
+        var parked = message.DeliveryAttempts >= maxDeliveryAttempts;
 
         await using var connection = _connectionFactory();
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);

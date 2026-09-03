@@ -104,24 +104,23 @@ public sealed class MediatRBridge
 
         var invoke = HandleCache.GetOrAdd((requestType, typeof(TResponse)), static key =>
         {
-            // M-15 fix: точный overload через параметр-типы
             var closedInterface = typeof(global::MediatR.IRequestHandler<,>).MakeGenericType(key.RequestType, key.ResponseType);
-            var method = closedInterface.GetMethod("Handle", new[] { key.RequestType, typeof(CancellationToken) });
-            if (method is null)
-            {
-                throw new MediatorConfigurationException("Handle method not found for " + key.RequestType + ".");
-            }
+            var method = closedInterface.GetMethod("Handle", new[] { key.RequestType, typeof(CancellationToken) })
+                ?? throw new MediatorConfigurationException("Handle method not found for " + key.RequestType + ".");
 
-            // H-8 fix: делегат (request, ct) => Task<TResponse> — bound to handler instance
-            var delegateType = typeof(Func<,,>).MakeGenericType(
-                key.RequestType,
-                typeof(CancellationToken),
-                typeof(Task<>).MakeGenericType(key.ResponseType));
-            return (h, r, ct) =>
-            {
-                var d = method.CreateDelegate(delegateType, h);
-                return (Task)d.DynamicInvoke(r, ct)!;
-            };
+            // R5/H-8 fix: Expression.Lambda → compiled delegate, без Invoke/DynamicInvoke — исключения as-is
+            var handlerParam = System.Linq.Expressions.Expression.Parameter(typeof(object), "handler");
+            var requestParam = System.Linq.Expressions.Expression.Parameter(typeof(object), "request");
+            var ctParam = System.Linq.Expressions.Expression.Parameter(typeof(CancellationToken), "ct");
+
+            var castHandler = System.Linq.Expressions.Expression.Convert(handlerParam, closedInterface);
+            var castRequest = System.Linq.Expressions.Expression.Convert(requestParam, key.RequestType);
+            var call = System.Linq.Expressions.Expression.Call(castHandler, method, castRequest, ctParam);
+            var castResult = System.Linq.Expressions.Expression.Convert(call, typeof(Task));
+
+            var lambda = System.Linq.Expressions.Expression.Lambda<Func<object, object, CancellationToken, Task>>(
+                castResult, handlerParam, requestParam, ctParam);
+            return lambda.Compile();
         });
 
         var result = invoke(handler, request, cancellationToken);

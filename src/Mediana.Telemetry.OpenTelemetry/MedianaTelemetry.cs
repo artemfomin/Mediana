@@ -237,8 +237,6 @@ public static class MedianaTelemetryExtensions
             {
                 // C-1/C-2 fix: реальные OTLP logs через MEL (Microsoft.Extensions.Logging OpenTelemetry)
                 // НЕ подменяем ILoggerFactory — добавляем провайдер как дополнительный sink
-                var bridge = new AsyncLogBridge(options, entry => { }); // счётчики drop работают
-                services.AddSingleton(bridge);
                 services.AddLogging(b => b.AddOpenTelemetry(o =>
                 {
                     o.SetResourceBuilder(resourceBuilder);

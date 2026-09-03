@@ -69,7 +69,7 @@ public class Coverage95Batch2Tests
     public void Outbox_envelope_codec_decode_null_throws()
     {
         Assert.Throws<Mediana.Messaging.SerializationException>(
-            () => Mediana.Outbox.EnvelopeCodec.Decode("null"u8.ToArray()));
+            () => Mediana.Messaging.EnvelopeCodec.Decode("null"u8.ToArray()));
     }
 
     // ── Outbox: relay С логгером (true-ветка LogError) ──
@@ -79,7 +79,7 @@ public class Coverage95Batch2Tests
         public ValueTask AddRange(IEnumerable<OutboxMessage> m, CancellationToken ct) => default;
         public ValueTask<IReadOnlyList<OutboxMessage>> LeaseBatch(int b, long l, CancellationToken ct) => throw new InvalidOperationException("down");
         public ValueTask MarkDelivered(OutboxMessage m, CancellationToken ct) => default;
-        public ValueTask MarkFailed(OutboxMessage m, string e, CancellationToken ct) => default;
+        public ValueTask MarkFailed(OutboxMessage m, string e, int maxAttempts, CancellationToken ct) => default;
         public ValueTask<int> CleanupOlderThan(TimeSpan a, CancellationToken ct) => new(0);
     }
 
