@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Mediana.UnitTests;
 
-/// <summary>Финальный добор: mismatch-ветки Mediator, command-мосты, event GetRoot, registry race-branch.</summary>
+/// <summary>andon to: mismatch-inand Mediator, command-, event GetRoot, registry race-branch.</summary>
 public class FinalBranchTests
 {
     private sealed record RC(int V) : ICommand<RR>;
@@ -51,7 +51,7 @@ public class FinalBranchTests
             new MedianaConfiguration().UseSingletonHandlers().AddCommandHandler<RC, RR, RCHandler>(),
             new ServiceCollection().AddSingleton<RCHandler>());
 
-        // ref-ответ, но Send<int> (несовпадение до хопа)
+        // ref-fromin, but Send<int> (notinand to )
         var mismatch = System.Runtime.CompilerServices.Unsafe.As<ICommand<int>>(new RC(1));
         await Assert.ThrowsAsync<MediatorConfigurationException>(() => mediator.Send<int>(mismatch).AsTask());
     }
@@ -66,7 +66,7 @@ public class FinalBranchTests
         var entry = mediator.Registry.TryGet(typeof(RC))!;
         var objectCallSite = (IObjectCommandCallSite<RR>)entry.CommandCallSite!;
 
-        // холодный Invoke: компоновка; тёплый: ref-мост (sync CastBoxed)
+        // Invoke: bybutin; : ref- (sync CastBoxed)
         Assert.Equal(2, (await objectCallSite.Invoke(new RC(1), sp, default)).V);
         Assert.Equal(3, (await objectCallSite.Invoke(new RC(2), sp, default)).V);
     }
@@ -82,11 +82,11 @@ public class FinalBranchTests
         var objectCallSite = (IObjectCommandCallSite<RR>)entry.CommandCallSite!;
         var any = (IUntypedCallSite)entry.CommandCallSite!;
 
-        // async ref через object-путь: AwaitCast (async CastBoxed)
+        // async ref object-: AwaitCast (async CastBoxed)
         Assert.Equal(2, (await objectCallSite.Invoke(new RC(1), sp, default)).V);
         Assert.Equal(3, (await objectCallSite.Invoke(new RC(2), sp, default)).V);
 
-        // async ref через InvokeAny: cold → SlowAny(async), warm → AwaitUpcast(async мост)
+        // async ref InvokeAny: cold → SlowAny(async), warm → AwaitUpcast(async )
         var cold = await any.InvokeAny(new RC(3), sp, default);
         Assert.Equal(4, ((RR)cold!).V);
         var warm = await any.InvokeAny(new RC(4), sp, default);
@@ -103,7 +103,7 @@ public class FinalBranchTests
         var entry = mediator.Registry.TryGet(typeof(VC))!;
         var any = (IUntypedCallSite)entry.CommandCallSite!;
 
-        // value: моста нет → generic slow-путь (боксинг значения допустим только в InvokeAny)
+        // value: no bridge → generic slow- (and onand toand only in InvokeAny)
         Assert.Equal(2, await any.InvokeAny(new VC(1), sp, default));
         Assert.Equal(3, await any.InvokeAny(new VC(2), sp, default));
     }
@@ -111,14 +111,14 @@ public class FinalBranchTests
     [Fact]
     public async Task Command_query_mismatch_typed_paths()
     {
-        // команда зарегистрирована, но SendExact-тип ответа не совпадает
+        // andandinon, but SendExact-and fromin not in
         var mediator = Build(
             new MedianaConfiguration().UseSingletonHandlers().AddCommandHandler<VC, int, VCHandler>(),
             new ServiceCollection().AddSingleton<VCHandler>());
 
         var wrong = System.Runtime.CompilerServices.Unsafe.As<VC>(new VC(1));
-        // SendExact<VC, string> — констрейнт требует VC:ICommand<string> — нельзя построить.
-        // Несовпадение typed покрывается через mediatr-typed отсутствием: только object-путь.
+        // SendExact<VC, string> — VC:ICommand<string> — not byand
+        // inand typed byin mediatr-typed frominand: only object-
         Assert.Equal(2, await mediator.Send((ICommand<int>)new VC(1)));
     }
 
@@ -130,10 +130,10 @@ public class FinalBranchTests
         var cfg = new MedianaConfiguration().UseSingletonHandlers().AddEventHandler<Ev, EvHandler>();
         var mediator = Build(cfg, sc);
 
-        await mediator.Publish(new Ev()); // компоновка root
+        await mediator.Publish(new Ev()); // bybutin root
         var entry = mediator.Registry.TryGet(typeof(Ev))!;
         var evtCallSite = (EventCallSite<Ev, EvHandler>)entry.EventCallSites[0];
-        var root1 = evtCallSite.GetRoot(sp); // тёплый GetRoot
+        var root1 = evtCallSite.GetRoot(sp); // GetRoot
         var root2 = evtCallSite.GetRoot(sp);
         Assert.Same(root1, root2);
         await root1(new Ev(), default);
@@ -153,7 +153,7 @@ public class FinalBranchTests
     [Fact]
     public void Registry_race_branch_between_versions()
     {
-        // Add между версиями: элементы старой версии содержат тип → throw-ветка _items-цикла
+        // Add inandand: inandand and → throw-in _items-and
         var baseRegistry = Mediana.Dispatch.MessageRegistry.Empty.Add(typeof(string), new MessageEntry(HandlerKind.Event, typeof(string), null));
         Assert.Throws<MediatorConfigurationException>(
             () => baseRegistry.Add(typeof(string), new MessageEntry(HandlerKind.Event, typeof(string), null)));
@@ -162,10 +162,10 @@ public class FinalBranchTests
     [Fact]
     public async Task Publish_entry_without_callsites_is_noop()
     {
-        // entry события с пустым EventCallSites → default-возврат (Length == 0)
+        // entry and EventCallSites → default-inin (Length == 0)
         var registry = Mediana.Dispatch.MessageRegistry.Empty.Add(
             typeof(Ev),
-            new MessageEntry(HandlerKind.Event, typeof(Ev), null)); // call-sites не заданы
+            new MessageEntry(HandlerKind.Event, typeof(Ev), null)); // call-sites not
         var mediator = new Mediator(registry, new ServiceCollection().BuildServiceProvider());
 
         await mediator.Publish(new Ev());

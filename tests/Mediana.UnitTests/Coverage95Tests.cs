@@ -9,10 +9,10 @@ using Xunit;
 
 namespace Mediana.UnitTests;
 
-/// <summary>Добор до 95%+ branch: точечное закрытие непокрытых веток всех пакетов ядра.</summary>
+/// <summary>Push to 95%+ branch: thenbut and notby inthen all thenin .</summary>
 public class Coverage95Tests
 {
-    // ═══ Mediana: Serialization — нетипизированная перегрузка ═══
+    // ═══ Mediana: Serialization — noandfromandinon ═══
 
     [Fact]
     public void Serializer_deserialize_by_type_roundtrip_and_null()
@@ -36,7 +36,7 @@ public class Coverage95Tests
 
     private sealed record SerPayload(int A, string B);
 
-    // ═══ Mediana: StreamCallSite — middleware не в DI ═══
+    // ═══ Mediana: StreamCallSite — middleware not in DI ═══
 
     private sealed record CS(int V) : IStreamQuery<int>;
 
@@ -63,7 +63,7 @@ public class Coverage95Tests
         var cfg = new MedianaConfiguration()
             .AddStreamHandler<CS, int, CSH>()
             .AddStreamMiddleware<CS, int, CSMw>();
-        var sc = new ServiceCollection().AddSingleton<CSH>(); // middleware намеренно не в DI
+        var sc = new ServiceCollection().AddSingleton<CSH>(); // middleware onbut not in DI
         var mediator = new Mediator(cfg.Freeze(), sc.BuildServiceProvider());
 
         await Assert.ThrowsAsync<MediatorConfigurationException>(async () =>
@@ -74,7 +74,7 @@ public class Coverage95Tests
         });
     }
 
-    // ═══ Mediana: Compositor — middleware отсутствует в singleton-режиме ═══
+    // ═══ Mediana: Compositor — middleware fromin in singleton-and ═══
 
     private sealed record CC(int V) : ICommand<int>;
 
@@ -102,7 +102,7 @@ public class Coverage95Tests
         Assert.Contains(typeof(CCMw).ToString(), ex.Message);
     }
 
-    // ═══ Mediana: EventCallSite — singleton-режим, отсутствующий хендлер/middleware, холодный GetRoot, double-check ═══
+    // ═══ Mediana: EventCallSite — singleton-and, frominand /middleware, GetRoot, double-check ═══
 
     private sealed record CE : IEvent;
 
@@ -133,7 +133,7 @@ public class Coverage95Tests
         var cfg = new MedianaConfiguration().UseSingletonHandlers()
             .AddEventHandler<CE, CEH>()
             .AddEventMiddleware<CE, CEMw>();
-        var sc = new ServiceCollection().AddSingleton<CEH>(); // middleware не в DI
+        var sc = new ServiceCollection().AddSingleton<CEH>(); // middleware not in DI
         var mediator = new Mediator(cfg.Freeze(), sc.BuildServiceProvider());
 
         var ex = await Assert.ThrowsAsync<MediatorConfigurationException>(
@@ -152,26 +152,26 @@ public class Coverage95Tests
         var registry = cfg.Freeze();
         var site = (EventCallSite<CE, CEH>)registry.TryGet(typeof(CE))!.EventCallSites[0];
 
-        // холодный GetRoot: BuildSingletonRoot строит цепочку
+        // GetRoot: BuildSingletonRoot and by
         var cold = site.GetRoot(sp);
-        // повторный BuildSingletonRoot: double-check внутри lock возвращает готовый корень
+        // byinthen BuildSingletonRoot: double-check inand lock inin fromin
         var again = site.BuildSingletonRoot(sp);
         Assert.Same(cold, again);
         await cold(new CE(), default);
-        // повторный вызов по построенному корню
+        // byinthen inin by bybut
         await site.GetRoot(sp)(new CE(), default);
     }
 
-    // ═══ Mediana: Diagnostics — детерминированный обход всех веток в одном тесте ═══
+    // ═══ Mediana: Diagnostics — andandin all inthen in but ═══
 
     [Fact]
     public void Diagnostics_all_branches_deterministic()
     {
-        // без слушателей: все Start* → null (false-ветки)
+        // without : all Start* → null (false-inand)
         Assert.Null(MedianaDiagnostics.StartDispatch("d1"));
         Assert.Null(MedianaDiagnostics.StartPublish("p1"));
         Assert.Null(MedianaDiagnostics.StartConsume("c1"));
-        MedianaDiagnostics.Enrich(null, "k", "v"); // null-толерантность
+        MedianaDiagnostics.Enrich(null, "k", "v"); // null-thenbut
 
         using var listener = new System.Diagnostics.ActivityListener
         {
@@ -181,7 +181,7 @@ public class Coverage95Tests
         };
         System.Diagnostics.ActivitySource.AddActivityListener(listener);
 
-        // со слушателем: все Start* → activity (true-ветки)
+        // : all Start* → activity (true-inand)
         using var d = MedianaDiagnostics.StartDispatch("d2");
         using var p = MedianaDiagnostics.StartPublish("p2");
         using var c = MedianaDiagnostics.StartConsume("c2");
@@ -189,12 +189,12 @@ public class Coverage95Tests
         Assert.NotNull(p);
         Assert.NotNull(c);
 
-        // Enrich с реальной активностью (true-ветка SetTag)
+        // Enrich but andinbut (true-in SetTag)
         MedianaDiagnostics.Enrich(d, "messaging.message.id", "42");
         Assert.Equal("42", d!.GetTagItem("messaging.message.id"));
     }
 
-    // ═══ Mediana: Mediator — command value-mismatch (false-ветка typed-каста) ═══
+    // ═══ Mediana: Mediator — command value-mismatch (false-in typed-) ═══
 
     [Fact]
     public async Task Send_command_value_response_mismatch_throws()
@@ -208,20 +208,20 @@ public class Coverage95Tests
             () => mediator.Send<string>(mismatch).AsTask());
     }
 
-    // ═══ Mediana: MedianaConfiguration — default-arm через internal AddHandler(Event) ═══
+    // ═══ Mediana: MedianaConfiguration — default-arm internal AddHandler(Event) ═══
 
     [Fact]
     public void Freeze_unknown_request_kind_throws_via_internal_add()
     {
         var cfg = new MedianaConfiguration();
-        cfg.AddHandler(HandlerKind.Event, typeof(CE), typeof(CEH)); // Event на request-пути — недопустимо
+        cfg.AddHandler(HandlerKind.Event, typeof(CE), typeof(CEH)); // Event on request-and — nottoand
         Assert.Throws<InvalidOperationException>(() => cfg.Freeze());
     }
 
     [Fact]
     public void Event_collect_filters_out_request_middlewares()
     {
-        // command-middleware не должен попасть в event-цепочку (false-ветка фильтра)
+        // command-middleware not to by in event-by (false-in and)
         var cfg = new MedianaConfiguration()
             .AddEventHandler<CE, CEH>()
             .AddMiddleware<CC, int, CCMw>();
@@ -231,13 +231,13 @@ public class Coverage95Tests
         Assert.Equal(EventDispatchPolicy.Sequential, entry.Policy);
     }
 
-    // ═══ Transport.Abstractions: RetryEngine — смешанные jitter-комбинации, invalid strategy, poison MediatR-cfg ═══
+    // ═══ Transport.Abstractions: RetryEngine — jitter-andonandand, invalid strategy, poison MediatR-cfg ═══
 
     [Fact]
     public void DelayFor_mixed_jitter_random_combinations()
     {
         var jitterNoRandom = new RetryPolicy { Strategy = BackoffStrategy.Fixed, BaseDelay = TimeSpan.FromSeconds(10), MaxDelay = TimeSpan.FromMinutes(1), Jitter = 1.0 };
-        Assert.Equal(TimeSpan.FromSeconds(10), jitterNoRandom.DelayFor(1)); // random==null → без jitter
+        Assert.Equal(TimeSpan.FromSeconds(10), jitterNoRandom.DelayFor(1)); // random==null → without jitter
 
         var noJitterWithRandom = new RetryPolicy { Strategy = BackoffStrategy.Fixed, BaseDelay = TimeSpan.FromSeconds(10), MaxDelay = TimeSpan.FromMinutes(1), Jitter = 0 };
         Assert.Equal(TimeSpan.FromSeconds(10), noJitterWithRandom.DelayFor(1, new Random(1)));
@@ -255,7 +255,7 @@ public class Coverage95Tests
     {
         using var cts = new CancellationTokenSource();
         cts.Cancel();
-        // filter-false: ct запрошен → исключение покидает движок как есть
+        // filter-false: ct → andand byand inand
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             RetryEngine.Execute(
                 (_, _) => throw new InvalidOperationException("boom"),
@@ -342,7 +342,7 @@ public class Coverage95Tests
         Assert.Empty(e.Headers);
     }
 
-    // ═══ Outbox: relay без опций (default-ветка ctor) + внешний catch LeaseBatch-сбой ═══
+    // ═══ Outbox: relay without and (default-in ctor) + innotand catch LeaseBatch- ═══
 
     private sealed class ThrowingOutboxStore : IOutboxStore
     {
@@ -357,11 +357,11 @@ public class Coverage95Tests
     public async Task Relay_without_options_and_store_failure_backs_off()
     {
         var relay = new OutboxRelay(new ThrowingOutboxStore(), _ => new ValueTask<ITransportPublisher>(new OutboxTestHelpers.NullPublisher()));
-        // ctor без options: default-ветка; хранилище падает в LeaseBatch → внешний catch + backoff
+        // ctor without options: default-in; or in LeaseBatch → innotand catch + backoff
 
         using var cts = new CancellationTokenSource(300);
         await relay.StartAsync(cts.Token);
-        await Task.Delay(150); // несколько циклов с ошибками и backoff
+        await Task.Delay(150); // not andin andand and backoff
         await relay.StopAsync(CancellationToken.None);
         relay.Dispose();
     }

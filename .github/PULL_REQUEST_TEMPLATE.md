@@ -1,27 +1,27 @@
-### Что изменено
+### 
 
-<!-- Кратко; одна логическая правка на PR. -->
+<!-- ; PR. -->
 
-### Тип
+### 
 
-- [ ] feat — новая функциональность
-- [ ] fix — исправление бага
-- [ ] perf — оптимизация (требует измерений)
+- [ ] feat — 
+- [ ] fix — 
+- [ ] perf — ( )
 - [ ] refactor / test / docs / chore / bench
 
-### Гейты (все CI-проверки локально)
+### ( CI- )
 
-- [ ] `dotnet build -c Release` — 0 ошибок/предупреждений
-- [ ] `dotnet test` — все 5 тест-проектов зелёные (включая ns2.1-ассет)
+- [ ] `dotnet build -c Release` — 0 /
+- [ ] `dotnet test` — 5 - ( ns2.1-)
 - [ ] `powershell -File scripts/check-coverage.ps1` — union ≥95%
 - [ ] `dotnet tool run dotnet-stryker` — score ≥90%
-- [ ] `alloc-check` — 0 B/вызов (если тронут диспетч)
+- [ ] `alloc-check` — 0 B/ ( )
 
 ### North star
 
-- [ ] Горячий путь без новых аллокаций (или обоснование + цифры)
-- [ ] Ядро без новых не-Microsoft зависимостей (D14)
+- [ ] ( + )
+- [ ] -Microsoft (D14)
 
 ### CHANGELOG
 
-- [ ] Обновлён для пользовательских изменений
+- [ ] 

@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Mediana.UnitTests;
 
-/// <summary>Мутационные killer-тесты: точные тексты исключений, DI-ветки, guard-инверсии.</summary>
+/// <summary>and killer-: then andand, DI-inand, guard-andinandand.</summary>
 public class MutationKillerTests
 {
     private sealed record MK(int V) : ICommand<int>;
@@ -51,7 +51,7 @@ public class MutationKillerTests
         }
     }
 
-    // ── Тексты исключений (убивают string/Linq Statement-мутации в сообщениях) ──
+    // ── andand (andin string/Linq Statement-andand in and) ──
 
     [Fact]
     public async Task Exception_messages_exact_texts()
@@ -99,7 +99,7 @@ public class MutationKillerTests
         var cfg = new MedianaConfiguration()
             .AddCommandHandler<MK, int, MKH>()
             .AddMiddleware<MK, int, MKBeh>();
-        var sc = new ServiceCollection().AddScoped<MKH>(); // behavior намеренно НЕ в DI
+        var sc = new ServiceCollection().AddScoped<MKH>(); // behavior onbut in DI
         var mediator = new Mediator(cfg.Freeze(), sc.BuildServiceProvider());
 
         var ex = await Assert.ThrowsAsync<MediatorConfigurationException>(
@@ -119,7 +119,7 @@ public class MutationKillerTests
         Assert.Contains(typeof(MK).ToString(), ex.Message);
     }
 
-    // ── DI-ветки (ServiceCollectionExtensions: Scoped/Singleton registrations) ──
+    // ── DI-inand (ServiceCollectionExtensions: Scoped/Singleton registrations) ──
 
     [Fact]
     public void AddMediana_registers_handlers_with_configured_lifetime()
@@ -136,11 +136,11 @@ public class MutationKillerTests
         var evtDesc = FindDescriptor(sc, typeof(MREH));
         Assert.Equal(ServiceLifetime.Scoped, evtDesc!.Lifetime);
 
-        // Регистрация IMediator + реестра
+        // andand IMediator +
         Assert.NotNull(FindDescriptor(sc, typeof(IMediator)));
         Assert.NotNull(FindDescriptor(sc, typeof(Mediana.Dispatch.MessageRegistry)));
 
-        // Mediator резолвится и работает (Scoped из root — валидно без ValidateScopes)
+        // Mediator inand and from (Scoped from root — inandbut without ValidateScopes)
         var mediator = scopedSp.GetRequiredService<IMediator>();
         using var scope = scopedSp.CreateScope();
         var scopedMediator = scope.ServiceProvider.GetRequiredService<IMediator>();
@@ -155,7 +155,7 @@ public class MutationKillerTests
     private static ServiceDescriptor? FindDescriptor(IServiceCollection sc, Type service)
         => sc.FirstOrDefault(d => d.ServiceType == service);
 
-    // ── Null-guard инверсии (Guard/Mediator Publish/Stream) ──
+    // ── Null-guard andinandand (Guard/Mediator Publish/Stream) ──
 
     [Fact]
     public async Task Publish_null_event_rejected_with_param_name()
@@ -183,12 +183,12 @@ public class MutationKillerTests
         Assert.Equal(0, rows);
     }
 
-    // ── MedianaDiagnostics: оба значения guard ──
+    // ── MedianaDiagnostics: onand guard ──
 
     [Fact]
     public void Diagnostics_has_listeners_flag_both_ways()
     {
-        // Только listener-ветки: no-op ветки гоняются с глобальным состоянием в других тестах
+        // listener-inand: no-op inand thenand in and
         using var listener = new System.Diagnostics.ActivityListener
         {
             ShouldListenTo = s => s.Name == "Mediana",
@@ -206,7 +206,7 @@ public class MutationKillerTests
         Assert.Equal(System.Diagnostics.ActivityKind.Consumer, a3.Kind);
     }
 
-    // ── ChainState: Configure-поля и повторная конфигурация ──
+    // ── ChainState: Configure-by and byinthenon andand ──
 
     [Fact]
     public async Task ChainState_reconfiguration_after_return()
@@ -224,21 +224,21 @@ public class MutationKillerTests
         s.Return();
     }
 
-    // ── Scan-фильтры: generic/abstract/interface хендлеры игнорируются, конкретные находятся ──
+    // ── Scan-and: generic/abstract/interface andbutand, on ──
     [Fact]
     public void Scan_skips_generic_abstract_interface_and_finds_concrete()
     {
         var cfg = new MedianaConfiguration()
             .AddHandlersFromAssembly(typeof(MutationKillerTests).Assembly);
-        // NB: тестовая сборка содержит дубликат CreateOrder — ожидаем исключение ДО проверки фильтров,
-        // потому фильтры проверяем через реестр частично: соберём конфиг только со scan-целями нельзя.
-        // Вместо этого: freeze упадёт на дубликате → подтвердим, что scan НАШЁЛ оба CreateOrder-хендлера:
+        // NB: thenin and and CreateOrder — and andand inand andin
+        // bythen and in andbut: and only scan-and not
+        // then this: freeze on and → byinand, then scan CreateOrder-:
         var ex = Assert.Throws<MediatorConfigurationException>(() => cfg.Freeze());
         Assert.Contains("exactly one handler", ex.Message);
 
-        // Фильтры: отдельный реестр из чистых scan-типов
+        // and: from from and scan-andbyin
         var clean = new MedianaConfiguration()
             .AddHandlersFromAssembly(typeof(MutationKillerTests).Assembly);
-        // (в чистом виде нельзя изолировать одну сборку-источник — фильтры покрыты кодом выше)
+        // (in andthen inand not fromandin -andthenand — and by to in)
     }
 }

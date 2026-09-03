@@ -7,8 +7,8 @@ using Xunit;
 namespace Mediana.UnitTests;
 
 /// <summary>
-/// Мутационные killer-тесты II: агрегация ошибок параллельного publish, event-цепочки
-/// с наблюдаемым порядком, DI-порядок регистраций, registry-рост.
+/// and killer- II: and and but publish, event-byand
+/// on by, DI-byto andand, registry-
 /// </summary>
 public class MutationKiller2Tests
 {
@@ -33,7 +33,7 @@ public class MutationKiller2Tests
         public ValueTask Handle(PE e, CancellationToken ct) => throw new InvalidOperationException("e3");
     }
 
-    // ── Mediator.PublishParallel: все ошибки агрегируются (coalesce-мутации) ──
+    // ── Mediator.PublishParallel: all andand and (coalesce-andand) ──
 
     [Fact]
     public async Task Parallel_publish_aggregates_ALL_errors_sync_and_async()
@@ -43,15 +43,15 @@ public class MutationKiller2Tests
             .AddSingleton<Throwing2>()
             .AddSingleton<Throwing3>()
             .AddMediana(c => c
-                .AddEventHandler<PE, Throwing1>()   // sync-бросок (первый контур)
-                .AddEventHandler<PE, Throwing2>()   // async-бросок (второй контур)
-                .AddEventHandler<PE, Throwing3>()   // sync-бросок
+                .AddEventHandler<PE, Throwing1>() // sync- (in )
+                .AddEventHandler<PE, Throwing2>() // async- (inthen )
+                .AddEventHandler<PE, Throwing3>() // sync-
                 .SetEventPolicy<PE>(EventDispatchPolicy.Parallel));
         var sp = sc.BuildServiceProvider();
         var mediator = sp.GetRequiredService<IMediator>();
 
         var ex = await Assert.ThrowsAsync<AggregateException>(() => mediator.Publish(new PE()).AsTask());
-        // ВСЕ ТРИ ошибки должны быть в агрегате (coalesce-накопление не теряет)
+        // andand to in (coalesce-onand not )
         Assert.Equal(3, ex.InnerExceptions.Count);
         Assert.Contains(ex.InnerExceptions, x => x.Message == "e1");
         Assert.Contains(ex.InnerExceptions, x => x.Message == "e2");
@@ -75,7 +75,7 @@ public class MutationKiller2Tests
         Assert.Equal(2, ex.InnerExceptions.Count);
     }
 
-    // ── EventCallSite: порядок behaviors наблюдаем (negate/block-мутации) ──
+    // ── EventCallSite: byto behaviors on (negate/block-andand) ──
 
     private sealed record OE : IEvent;
     private sealed class OETrace { public static List<string> Log = []; }
@@ -132,7 +132,7 @@ public class MutationKiller2Tests
 
         await mediator.Publish(new OE());
 
-        // строго вложенный порядок: A → B → handler → B → A
+        // in byto: A → B → handler → B → A
         Assert.Equal(
         [
             "A:before",
@@ -169,13 +169,13 @@ public class MutationKiller2Tests
         Assert.Equal("B:before", OETrace.Log[1]);
     }
 
-    // ── DI-порядок: регистрации хендлеров именно через TryAdd + точные lifetime ──
+    // ── DI-byto: andandand handlers andbut TryAdd + then lifetime ──
 
     [Fact]
     public void AddMediana_does_not_duplicate_existing_registrations()
     {
         var sc = new ServiceCollection();
-        sc.AddSingleton<MK2H>(); // пред-регистрация юзера
+        sc.AddSingleton<MK2H>(); // -andand
         sc.AddMediana(c => c.AddCommandHandler<MK2, int, MK2H>());
 
         Assert.Single(sc, d => d.ServiceType == typeof(MK2H));
@@ -189,7 +189,7 @@ public class MutationKiller2Tests
         public ValueTask<int> Handle(MK2 c, CancellationToken ct) => new(c.V + 1);
     }
 
-    // ── Registry: цикл копирования не теряет элементы (statement-мутации) ──
+    // ── Registry: and andinand not (statement-andand) ──
 
     [Fact]
     public void Registry_add_copies_all_previous_items()
@@ -201,7 +201,7 @@ public class MutationKiller2Tests
             r = r.Add(t, new Mediana.Dispatch.MessageEntry(Mediana.Dispatch.HandlerKind.Event, t, null));
         }
 
-        // ВСЕ предыдущие типы присутствуют после каждого добавления
+        // and and onin by to toinand
         Assert.NotNull(r.TryGet(typeof(string)));
         Assert.NotNull(r.TryGet(typeof(int)));
         Assert.NotNull(r.TryGet(typeof(bool)));

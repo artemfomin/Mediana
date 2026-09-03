@@ -8,10 +8,10 @@ using Microsoft.CodeAnalysis.Text;
 namespace Mediana.Generators;
 
 /// <summary>
-/// Incremental source generator: находит закрытые реализации ICommandHandler/IQueryHandler/
-/// IEventHandler/IStreamHandler и генерирует MedianaRegistrar.AddGeneratedHandlers() —
-/// регистрацию без рефлексии (AOT-совместимо, D6). Дубликаты command/query/stream хендлеров —
-/// диагностика MED001 на компиляции.
+/// Incremental source generator: onand fromandand ICommandHandler/IQueryHandler/
+/// IEventHandler/IStreamHandler and generates MedianaRegistrar.AddGeneratedHandlers() —
+/// reflection-free registration (AOT-compatible, D6). Duplicate command/query/stream handlers produce
+/// andbutand MED001 on andandand
 /// </summary>
 [Generator(LanguageNames.CSharp)]
 public sealed class MedianaGenerator : IIncrementalGenerator
@@ -100,11 +100,11 @@ public sealed class MedianaGenerator : IIncrementalGenerator
 
             if (fqn == "Mediana.Handlers.IEventHandler<TEvent>")
             {
-                continue; // arity 2 check выше пропускает события; отдельная ветка ниже
+                continue; // arity 2 check in and; fromon in and
             }
         }
 
-        // события: arity 1
+        // and: arity 1
         foreach (var iface in symbol.AllInterfaces)
         {
             if (!iface.IsGenericType || iface.TypeArguments.Length != 1)
@@ -137,7 +137,7 @@ public sealed class MedianaGenerator : IIncrementalGenerator
 
     private static void Emit(SourceProductionContext context, ImmutableArray<HandlerEntry> handlers)
     {
-        // MED001: дубликаты command/query/stream
+        // MED001: and command/query/stream
         var reported = new HashSet<(HandlerKind, string)>();
         foreach (var handler in handlers)
         {

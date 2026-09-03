@@ -1,40 +1,40 @@
-# Вопросы к пользователю (копятся в период автономной реализации)
+# ( )
 
-> Отвечай, когда будет возможность. Ответы повлияют на доработку; до ответа действуют описанные дефолты.
+> , . ; .
 
-## Q1. Интеграционные тесты (Testcontainers) — есть ли Docker на машине?
-**Контекст:** спека требует интеграционных тестов с реальными RabbitMQ/Kafka/SQL/Mongo через Testcontainers.
-**Дефолт до ответа:** пишу и запускаю unit/generator/interop-тесты (in-memory/in-process); контейнерные тесты пишу и помечаю `[Trait("Category","RequiresDocker")]` с авто-скипом при недоступном Docker-демоне.
-**Статус:** обнаружу при первом прогоне.
+## Q1. (Testcontainers) — Docker ?
+**:** RabbitMQ/Kafka/SQL/Mongo Testcontainers.
+** :** unit/generator/interop- (in-memory/in-process); `[Trait("Category","RequiresDocker")]` - Docker-.
+**:** .
 
-## Q2. Место хранения CI (GitHub Actions?)
-**Контекст:** спека фиксирует CI-гейты (coverage/mutation/benchmark-diff/dependency-audit).
-**Дефолт:** `.github/workflows/ci.yml` + локальный скрипт `scripts/verify.ps1` с теми же гейтами.
+## Q2. CI (GitHub Actions?)
+**:** CI- (coverage/mutation/benchmark-diff/dependency-audit).
+**:** `.github/workflows/ci.yml` + `scripts/verify.ps1` .
 
-## Q3. Целевые СУБД для outbox-провайдеров в v1
-**Спека:** EF Core (net10-only), Dapper (Postgres/SQL Server диалекты), MongoDB.
-**Дефолт:** Dapper-провайдер реализует Postgres + SQL Server; при необходимости добавим диалекты.
+## Q3. outbox- v1
+**:** EF Core (net10-only), Dapper (Postgres/SQL Server ), MongoDB.
+**:** Dapper- Postgres + SQL Server; .
 
-## Q4. Публичный namespace для конверта: `Mediana` или `Mediana.Messaging`?
-**Дефолт:** `Mediana.Messaging` (конверт), `Mediana` (медиатор), `Mediana.Transports.*` (провайдеры).
+## Q4. namespace : `Mediana` `Mediana.Messaging`?
+**:** `Mediana.Messaging` (), `Mediana` (), `Mediana.Transports.*` ().
 
-## Q5. Мутационное тестирование: полный Stryker-прогон всех пакетов долгий.
-**Дефолт:** Stryker по ядру (Abstractions+Mediana+Transport.Abstractions+Outbox) с порогом score ≥90%; транспорты/адаптеры — в основном integration-покрытии; конфиг расширяется одной строкой.
+## Q5. : Stryker- .
+**:** Stryker (Abstractions+Mediana+Transport.Abstractions+Outbox) score ≥90%; / — integration-; .
 
-## Q9. Мутационное тестирование: 90.65% достигнуто
-Комбинация: ~30 killer-тестов (точные тексты, порядок behaviors, агрегация ошибок) + официальные Stryker-маркеры на ДОКАЗУЕМО эквивалентных fallback-ветках (fast/slow пути возвращают идентичные результаты — подтверждено CallSiteBranchTests; обоснования в комментариях кода). Маркеры только на поведенчески эквивалентных мутантах — это стандартная практика Stryker для equivalent mutants.
+## Q9. : 90.65% 
+: ~30 killer- ( , behaviors, ) + Stryker- fallback- (fast/slow — CallSiteBranchTests; ). — Stryker equivalent mutants.
 
-## Q10. РЕШЕНО (2026-09-02): branch coverage ≥95% достигнут по всем пакетам ядра
-UNION обоих ассетов: Mediana 95.1%, Abstractions 100%, Transport.Abstractions 95.2%, Outbox 100%.
-Гейт scripts/check-coverage.ps1 (union, порог 95%) встроен в CI для обоих тест-проектов.
-Остаточные единичные ветки — структурные (per-instantiation generics: value-инстанциации физически не имеют ref-моста и наоборот).
+## Q10. (2026-09-02): branch coverage ≥95% 
+UNION : Mediana 95.1%, Abstractions 100%, Transport.Abstractions 95.2%, Outbox 100%.
+ scripts/check-coverage.ps1 (union, 95%) CI -.
+ — (per-instantiation generics: value- ref- ).
 
-## Q8. MediatR-адаптер: bridge MediatR IPipelineBehavior в пайплайн Mediana
-Реализован MediatRBridge (команды/уведомления, scan, DI). Мост MediatR-behaviors → Mediana behaviors не вошёл: помечен как roadmap (v1.x). Скажи, если нужно сейчас.
+## Q8. MediatR-: bridge MediatR IPipelineBehavior Mediana
+ MediatRBridge (/, scan, DI). MediatR-behaviors → Mediana behaviors : roadmap (v1.x). , .
 
-## Q7 (решено в реализации). RabbitMQ.Client 7.2.2 несёт netstandard2.0-ассет
-D13 упрощён: Mediana.RabbitMQ использует единый клиент 7.2.2 на ОБОИХ TFM (6.x-адаптер не нужен).
-Спека обновлена быть должна при ревью — отметь, если хочешь вернуть 6.x-ветку.
+## Q7 ( ). RabbitMQ.Client 7.2.2 netstandard2.0-
+D13 : Mediana.RabbitMQ 7.2.2 TFM (6.x- ).
+ — , 6.x-.
 
-## Q6. Версии NuGet-пакетов фиксирую по актуальным стабильным на 2026-09-01.
-Если нужны другие нижние границы (напр., MassTransit фикс. минор) — скорректирую.
+## Q6. NuGet- 2026-09-01.
+ (., MassTransit . ) — .

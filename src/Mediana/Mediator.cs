@@ -8,9 +8,9 @@ using Mediana.Messaging;
 namespace Mediana;
 
 /// <summary>
-/// Диспетчер in-process сообщений (§5 спеки).
-/// Lookup по точному типу в иммутабельном реестре → типизированный call-site без боксинга ответа.
-/// Локальный Send исключение хендлера прокидывает как есть.
+/// In-process message dispatcher (spec 5).
+/// Lookup by exact type in the immutable registry, then a typed call-site without response boxing.
+/// Local Send propagates handler exceptions as-is.
 /// </summary>
 public sealed class Mediator : IMediator
 {
@@ -23,12 +23,12 @@ public sealed class Mediator : IMediator
         _serviceProvider = serviceProvider;
     }
 
-    /// <summary>Иммутабельная версия реестра этого медиатора.</summary>
+    /// <summary>Immutable registry version of this mediator.</summary>
     public MessageRegistry Registry => _registry;
 
     /// <summary>
-    /// Возвращает новый медиатор с расширенным реестром (copy-on-write runtime-регистрация, §5.2);
-    /// этот экземпляр остаётся на прежней версии.
+    /// Returns a new mediator with an extended registry (copy-on-write runtime registration, spec 5.2);
+    /// this instance remains on the previous version.
     /// </summary>
     public Mediator WithRegistry(MessageRegistry updated)
         => new(updated, _serviceProvider);
@@ -40,7 +40,7 @@ public sealed class Mediator : IMediator
 
         if (ValueTypeResponse<TResponse>.Value)
         {
-            // value-ответ: специализированная инстанциация — прямой typed-путь без аллокаций
+            // value response: specialized instantiation — direct typed path without allocations
             if (entry.CommandCallSite is IObjectCommandCallSite<TResponse> typed)
             {
                 return typed.Invoke(command, _serviceProvider, cancellationToken);
@@ -49,8 +49,8 @@ public sealed class Mediator : IMediator
             return ThrowResponseTypeMismatch<TResponse>(entry, typeof(TResponse));
         }
 
-        // ref-ответ: non-generic static хоп (canon-generic контекст аллоцирует на любом invoke — измерено;
-        // цепочка canon → non-generic static → interface = ноль, см. PublishSequential)
+        // ref response: non-generic static hop (canon-generic context allocates on any invoke — measured;
+        // by canon → non-generic static → interface = but, . PublishSequential)
         if (entry.ResponseType != typeof(TResponse))
         {
             return ThrowResponseTypeMismatch<TResponse>(entry, typeof(TResponse));
@@ -73,8 +73,8 @@ public sealed class Mediator : IMediator
         Guard.NotNull(query, nameof(query));
         var entry = _registry.TryGet(query.GetType()) ?? ThrowNoHandler(query.GetType());
 
-        // Stryker disable once negate: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
-        // Stryker disable once negate: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once negate: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
+        // Stryker disable once negate: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
         if (ValueTypeResponse<TResponse>.Value)
         {
             if (entry.QueryCallSite is IObjectQueryCallSite<TResponse> typed)
@@ -109,13 +109,13 @@ public sealed class Mediator : IMediator
         var entry = _registry.TryGet(@event.GetType());
         if (entry is null)
         {
-            // Событие без подписчиков — no-op (семантика MediatR).
+            // Event without subscribers is a no-op (MediatR semantics).
             return default;
         }
 
         var callSites = System.Runtime.CompilerServices.Unsafe.As<IEventCallSite[]>(entry.EventCallSites);
         if (callSites.Length == 0)
-        // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once block: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
         {
             return default;
         }
@@ -140,7 +140,7 @@ public sealed class Mediator : IMediator
     public ValueTask<TResponse> SendExact<TRequest, TResponse>(TRequest request, CancellationToken cancellationToken = default)
         where TRequest : IRequest<TResponse>
     {
-        // Guard без боксинга struct-сообщений: кэшированный признак ссылочности типа.
+        // Guard without boxing struct messages: cached reference-type flag.
         if (ReferenceTypeFlag<TRequest>.Value && request is null)
         {
             Guard.ThrowNull(nameof(request));
@@ -189,13 +189,13 @@ public sealed class Mediator : IMediator
             }
             catch (Exception ex)
             {
-                // Синхронный бросок хендлера/behavior — тоже агрегируется (§4.3).
+                // Synchronous handler throw/behavior — is also aggregated (spec 4.3).
                 (errors ??= []).Add(ex);
             }
         }
 
-        // Хендлеры уже запущены (Invoke выполняется синхронно до первой реальной паузы);
-        // ожидаем все, ошибки агрегируем.
+        // Handlers are already started (Invoke runs synchronously until the first actual suspension);
+        // we await all and aggregate errors.
         for (var i = 0; i < pending.Length; i++)
         {
             try
@@ -245,13 +245,13 @@ public sealed class Mediator : IMediator
     private static async ValueTask<TResult> AwaitCastBack<TResult>(ValueTask<object?> pending)
         => (TResult)(await pending.ConfigureAwait(false))!;
 
-    /// <summary>Кэшированный признак ссылочного типа (guard-проверки без боксинга).</summary>
+    /// <summary>Cached reference-type flag (guard checks without boxing).</summary>
     private static class ReferenceTypeFlag<T>
     {
         public static readonly bool Value = !typeof(T).IsValueType;
     }
 
-    /// <summary>Кэшированный признак value-type ответа (выбор пути: typed vs untyped hop).</summary>
+    /// <summary>Cached value-type response flag (path selection: typed vs untyped hop).</summary>
     private static class ValueTypeResponse<T>
     {
         public static readonly bool Value = typeof(T).IsValueType;

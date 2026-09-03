@@ -3,9 +3,9 @@ using System.Security.Cryptography;
 namespace Mediana.Messaging;
 
 /// <summary>
-/// UUIDv7 (RFC 9562): time-ordered, index-friendly идентификатор сообщения (D10).
-/// net10.0 — Guid.CreateVersion7(); netstandard2.1 — собственная реализация с
-/// криптографической случайностью (T-08 fix: RandomNumberGenerator вместо System.Random).
+/// UUIDv7 (RFC 9562): time-ordered, index-friendly message identifier (D10).
+/// net10.0 — Guid.CreateVersion7(); netstandard2.1 — inon fromand
+/// andthenand but (T-08 fix: RandomNumberGenerator inthen System.Random)
 /// </summary>
 public static class GuidV7
 {
@@ -32,7 +32,7 @@ public static class GuidV7
             var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             if (timestamp <= _lastTimestamp)
             {
-                // монотонность внутри миллисекунды — счётчик в младших битах randB
+                // monotonicity within the same millisecond — counter in the low bits of randB
                 _sequence++;
             }
             else
@@ -41,13 +41,13 @@ public static class GuidV7
                 _sequence = 0;
             }
 
-            // T-08: криптографическая случайность — 74 бита через RandomNumberGenerator
+            // T-08: andthenand but — 74 and RandomNumberGenerator
             Span<byte> random = stackalloc byte[10];
             RandomNumberGenerator.Fill(random);
 
             Span<byte> bytes = stackalloc byte[16];
-            // Guid хранит data1/data2 little-endian: пишем timestamp в mixed-endian раскладку,
-            // чтобы строковая форма UUIDv7 была корректной (RFC big-endian в выводе)
+            // Guid and data1/data2 little-endian: and timestamp in mixed-endian
+            // then in UUIDv7 but (RFC big-endian in inin)
             bytes[3] = (byte)(timestamp >> 40);
             bytes[2] = (byte)(timestamp >> 32);
             bytes[1] = (byte)(timestamp >> 24);
@@ -55,11 +55,11 @@ public static class GuidV7
             bytes[5] = (byte)(timestamp >> 8);
             bytes[4] = (byte)timestamp;
 
-            // версия 7 + 12 бит randA из крипто-энтропии (random[0..1])
+            // inand 7 + 12 and randA from andthen-andand (random[0..1])
             bytes[7] = (byte)(0x70 | (random[0] & 0x0F));
             bytes[6] = random[1];
 
-            // вариант 10xx + 62 бита: крипто-энтропия (random[2..9]) + счётчик в младших 16
+            // inand 10xx + 62 and: andthen-and (random[2..9]) + and in and 16
             bytes[8] = (byte)(0x80 | (random[2] & 0x3F));
             bytes[9] = random[3];
             bytes[10] = random[4];

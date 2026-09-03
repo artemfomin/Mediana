@@ -3,24 +3,24 @@ using System.Text.Json;
 
 namespace Mediana.Messaging;
 
-/// <summary>Провайдер сериализации сообщений: выбор per message type (D9). Реестр — через DI.</summary>
+/// <summary>Message serialization provider: selection per message type (D9). Registry via DI.</summary>
 public interface IMessageSerializer
 {
     string ContentType { get; }
 
-    [RequiresDynamicCode("Реализация может использовать рефлексию: для NativeAOT подключайте source-gen сериализатор.")]
+    [RequiresDynamicCode("The implementation may use reflection: for NativeAOT register a source-gen serializer.")]
     byte[] Serialize<T>(T message);
 
-    [RequiresDynamicCode("Реализация может использовать рефлексию: для NativeAOT подключайте source-gen сериализатор.")]
+    [RequiresDynamicCode("The implementation may use reflection: for NativeAOT register a source-gen serializer.")]
     T Deserialize<T>(ReadOnlySpan<byte> payload);
 
-    [RequiresDynamicCode("Реализация может использовать рефлексию: для NativeAOT подключайте source-gen сериализатор.")]
+    [RequiresDynamicCode("The implementation may use reflection: for NativeAOT register a source-gen serializer.")]
     object Deserialize(ReadOnlySpan<byte> payload, Type messageType);
 }
 
 /// <summary>
-/// System.Text.Json сериализатор (default, D9): reflection-free через JsonSerializable
-/// у потребителя; для AOT подключайте source-gen контекст в настройках.
+/// System.Text.Json andfromthen (default, D9): reflection-free via JsonSerializable
+/// byand; for AOT register a source-gen context in settings
 /// </summary>
 public sealed class SystemTextJsonMessageSerializer : IMessageSerializer
 {
@@ -35,19 +35,19 @@ public sealed class SystemTextJsonMessageSerializer : IMessageSerializer
 
     public string ContentType => "application/json";
 
-    [RequiresDynamicCode("Reflection-based JSON: для NativeAOT используйте source-gen сериализатор (JsonSerializerContext).")]
-    [RequiresUnreferencedCode("Reflection-based JSON: для trimming используйте source-gen сериализатор.")]
+    [RequiresDynamicCode("Reflection-based JSON: for NativeAOT use a source-gen serializer (JsonSerializerContext).")]
+    [RequiresUnreferencedCode("Reflection-based JSON: for trimming use a source-gen serializer.")]
     public byte[] Serialize<T>(T message)
         => JsonSerializer.SerializeToUtf8Bytes(message, _options);
 
-    [RequiresDynamicCode("Reflection-based JSON: для NativeAOT используйте source-gen сериализатор (JsonSerializerContext).")]
-    [RequiresUnreferencedCode("Reflection-based JSON: для trimming используйте source-gen сериализатор.")]
+    [RequiresDynamicCode("Reflection-based JSON: for NativeAOT use a source-gen serializer (JsonSerializerContext).")]
+    [RequiresUnreferencedCode("Reflection-based JSON: for trimming use a source-gen serializer.")]
     public T Deserialize<T>(ReadOnlySpan<byte> payload)
         => JsonSerializer.Deserialize<T>(payload, _options)
            ?? throw new SerializationException("Deserialized null for " + typeof(T) + ".");
 
-    [RequiresDynamicCode("Reflection-based JSON: для NativeAOT используйте source-gen сериализатор (JsonSerializerContext).")]
-    [RequiresUnreferencedCode("Reflection-based JSON: для trimming используйте source-gen сериализатор.")]
+    [RequiresDynamicCode("Reflection-based JSON: for NativeAOT use a source-gen serializer (JsonSerializerContext).")]
+    [RequiresUnreferencedCode("Reflection-based JSON: for trimming use a source-gen serializer.")]
     public object Deserialize(ReadOnlySpan<byte> payload, Type messageType)
         => JsonSerializer.Deserialize(payload.ToArray(), messageType, _options)
            ?? throw new SerializationException("Deserialized null for " + messageType + ".");
@@ -58,7 +58,7 @@ public sealed class SystemTextJsonMessageSerializer : IMessageSerializer
     }
 }
 
-/// <summary>Ошибка сериализации/десериализации — poison-категория (§9.3).</summary>
+/// <summary>and andfromandand/andfromandand — poison-and (§9.3).</summary>
 public class SerializationException : Exception
 {
     public SerializationException(string message)

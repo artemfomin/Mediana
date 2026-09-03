@@ -1,17 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
-    <IsPackable>false</IsPackable>
-    <PublishAot>true</PublishAot>
-    <InvariantGlobalization>true</InvariantGlobalization>
-    <!-- AOT-анализатор выдаёт предупреждения по зависимостям (MEDI и пр.) — smoke-проект
-         проверяет компиляцию/запуск, а не чистоту анализа продукта -->
-    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
-  </PropertyGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\Mediana\Mediana.csproj" />
-    <ProjectReference Include="..\..\src\Mediana.Transport.Abstractions\Mediana.Transport.Abstractions.csproj" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
-  </ItemGroup>
+ <PropertyGroup>
+ <OutputType>Exe</OutputType>
+ <TargetFramework>net10.0</TargetFramework>
+ <IsPackable>false</IsPackable>
+ <PublishAot>true</PublishAot>
+ <InvariantGlobalization>true</InvariantGlobalization>
+ <!-- AOT- (MEDI .) — smoke-
+ /, -->
+ <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+ </PropertyGroup>
+ <ItemGroup>
+ <ProjectReference Include="..\..\src\Mediana\Mediana.csproj" />
+ <ProjectReference Include="..\..\src\Mediana.Transport.Abstractions\Mediana.Transport.Abstractions.csproj" />
+ <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+ </ItemGroup>
 </Project>

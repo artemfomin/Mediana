@@ -1,26 +1,26 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <LangVersion>latest</LangVersion>
-    <Nullable>enable</Nullable>
-    <IsPackable>true</IsPackable>
-    <PackageId>Mediana.Generators</PackageId>
-    <Description>Mediana source generator: reflection-free handler registration, MED001 diagnostics. NativeAOT/trimming friendly.</Description>
-    <DevelopmentDependency>true</DevelopmentDependency>
-    <!-- DevelopmentDependency: у потребителей не течёт; lib/ присутствует (валидация NuGet),
-         Roslyn грузит генератор из analyzers/dotnet/cs -->
-    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
-    <NoWarn>$(NoWarn);RS1041</NoWarn>
-    <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
-  </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
-  </ItemGroup>
-  <!-- Roslyn грузит генератор из analyzers/dotnet/cs; lib/netstandard2.0 остаётся для
-       валидации NuGet. Копия выполняется после Build, до Pack -->
-  <Target Name="CopyAnalyzerToPackage" AfterTargets="Build">
-    <ItemGroup>
-      <None Include="$(OutputPath)$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
-    </ItemGroup>
-  </Target>
+ <PropertyGroup>
+ <TargetFramework>netstandard2.0</TargetFramework>
+ <LangVersion>latest</LangVersion>
+ <Nullable>enable</Nullable>
+ <IsPackable>true</IsPackable>
+ <PackageId>Mediana.Generators</PackageId>
+ <Description>Mediana source generator: reflection-free handler registration, MED001 diagnostics. NativeAOT/trimming friendly.</Description>
+ <DevelopmentDependency>true</DevelopmentDependency>
+ <!-- DevelopmentDependency: ; lib/ ( NuGet),
+ Roslyn analyzers/dotnet/cs -->
+ <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+ <NoWarn>$(NoWarn);RS1041</NoWarn>
+ <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
+ </PropertyGroup>
+ <ItemGroup>
+ <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
+ </ItemGroup>
+ <!-- Roslyn analyzers/dotnet/cs; lib/netstandard2.0 
+ NuGet. Build, Pack -->
+ <Target Name="CopyAnalyzerToPackage" AfterTargets="Build">
+ <ItemGroup>
+ <None Include="$(OutputPath)$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+ </ItemGroup>
+ </Target>
 </Project>

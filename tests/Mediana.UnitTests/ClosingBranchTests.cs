@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Mediana.UnitTests;
 
-/// <summary>Замыкающий срез: последние частичные ветки (null-мосты, Diagnostics listener, конфиг-scan, DI outbox).</summary>
+/// <summary>Closing slice: byand and inand (null-, Diagnostics listener, and-scan, DI outbox).</summary>
 public class ClosingBranchTests
 {
     private sealed record C2(int V) : ICommand<int>;
@@ -29,7 +29,7 @@ public class ClosingBranchTests
         public ValueTask Handle(E2 e, CancellationToken ct) => default;
     }
 
-    // 1) Scoped-режим: мост = null (RefResponse && !singleton) → InvokeAny уходит в SlowAny generic
+    // 1) Scoped-and: = null (RefResponse && !singleton) → InvokeAny and in SlowAny generic
     [Fact]
     public async Task Scoped_ref_command_invoke_any_null_bridge()
     {
@@ -46,7 +46,7 @@ public class ClosingBranchTests
         Assert.Equal(2, await any.InvokeAny(new C2(1), sp, default));
     }
 
-    // 2) Query scoped InvokeAny с null-мостом
+    // 2) Query scoped InvokeAny null-then
     [Fact]
     public async Task Scoped_query_invoke_any_null_bridge()
     {
@@ -62,7 +62,7 @@ public class ClosingBranchTests
         Assert.Equal(2, await any.InvokeAny(new Q2(1), sp, default));
     }
 
-    // 3) Diagnostics: listener-ветки всех Start*
+    // 3) Diagnostics: listener-inand all Start*
     [Fact]
     public void Diagnostics_all_spans_with_listener()
     {
@@ -82,12 +82,12 @@ public class ClosingBranchTests
         Assert.NotNull(consume);
     }
 
-    // 4) Configuration: scan сборки без Mediana-хендлеров + политика без хендлеров + VoidResponse-маркер
+    // 4) Configuration: scan and without Mediana-handlers + byandand without handlers + VoidResponse-
     [Fact]
     public void Configuration_scan_clean_assembly_and_policy_guard()
     {
         var cfg = new MedianaConfiguration()
-            .AddHandlersFromAssembly(typeof(object).Assembly); // BCL: хендлеров нет
+            .AddHandlersFromAssembly(typeof(object).Assembly); // BCL: handlers no
         var registry = cfg.Freeze();
         Assert.Null(registry.TryGet(typeof(C2)));
 
@@ -96,7 +96,7 @@ public class ClosingBranchTests
             sc.AddMediana(c => c.AddHandlersFromAssembly(typeof(object).Assembly).SetEventPolicy<E2>(EventDispatchPolicy.Parallel)));
     }
 
-    // 5) DI-расширение outbox
+    // 5) DI-andand outbox
     [Fact]
     public void AddMedianaOutbox_registers_collector_and_options()
     {
@@ -111,11 +111,11 @@ public class ClosingBranchTests
         Assert.Equal(1, collector.Count);
     }
 
-    // 6) Mediator: несоответствие на command-хвосте и untyped-null fallback
+    // 6) Mediator: notfromininand on command-in and untyped-null fallback
     [Fact]
     public async Task Mediator_untyped_fallback_null_callsite_throws()
     {
-        // entry без CommandCallSite → mismatch-исключение
+        // entry without CommandCallSite → mismatch-andand
         var registry = Mediana.Dispatch.MessageRegistry.Empty.Add(
             typeof(C2), new MessageEntry(HandlerKind.Command, typeof(C2), typeof(int)));
         var mediator = new Mediator(registry, new ServiceCollection().BuildServiceProvider());
@@ -126,7 +126,7 @@ public class ClosingBranchTests
             () => mediator.Send((IQuery<int>)System.Runtime.CompilerServices.Unsafe.As<IQuery<int>>(new Q2(1))).AsTask());
     }
 
-    // 7) ChainState: повторный Take после Return (пул)
+    // 7) ChainState: byinthen Take by Return ()
     [Fact]
     public async Task ChainState_pool_reuse()
     {
@@ -144,7 +144,7 @@ public class ClosingBranchTests
         await Task.CompletedTask;
     }
 
-    // 8) DI outbox без configure (null-ветка)
+    // 8) DI outbox without configure (null-in)
     [Fact]
     public void AddMedianaOutbox_without_configure()
     {
@@ -154,7 +154,7 @@ public class ClosingBranchTests
         Assert.Equal(100, sp.GetRequiredService<OutboxRelayOptions>().BatchSize);
     }
 
-    // 9) Relay StopAsync до Start (graceful no-op ветки)
+    // 9) Relay StopAsync to Start (graceful no-op inand)
     [Fact]
     public async Task Relay_stop_before_start()
     {
@@ -164,7 +164,7 @@ public class ClosingBranchTests
         relay.Dispose();
     }
 
-    // 10) Mediator.Stream незарегистрированного
+    // 10) Mediator.Stream notandandinbut
     [Fact]
     public async Task Stream_unregistered_throws()
     {

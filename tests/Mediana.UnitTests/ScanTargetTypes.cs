@@ -5,7 +5,7 @@ namespace Mediana.UnitTests.ScanTargets;
 
 public sealed record ScanMsg(int V) : ICommand<int>;
 
-/// <summary>Scan должен ИГНОРИРОВАТЬ: generic-определение, abstract, interface.</summary>
+/// <summary>Scan to : generic-and, abstract, interface.</summary>
 public sealed record ScanEvent : IEvent;
 
 public class GenericHandler<T> : ICommandHandler<ScanMsg, int>
@@ -30,10 +30,10 @@ public sealed class ScanEventHandler : IEventHandler<ScanEvent>
     public ValueTask Handle(ScanEvent e, CancellationToken ct) => default;
 }
 
-/// <summary>Generic-interface комбинация фильтра скана (IsInterface + IsGenericTypeDefinition).</summary>
+/// <summary>Generic-interface andonand and on (IsInterface + IsGenericTypeDefinition).</summary>
 public interface IGenScanHandler<T> : ICommandHandler<ScanMsg, int>;
 
-/// <summary>Abstract-generic комбинация (IsAbstract + IsGenericTypeDefinition).</summary>
+/// <summary>Abstract-generic andonand (IsAbstract + IsGenericTypeDefinition).</summary>
 public abstract class AbstractGenericScanHandler<T> : ICommandHandler<ScanMsg, int>
 {
     public abstract ValueTask<int> Handle(ScanMsg c, CancellationToken ct);

@@ -1,4 +1,4 @@
-// Полифилл для netstandard2.0-ассета генератора.
+// andand for netstandard2.0- notthen
 namespace System.Runtime.CompilerServices
 {
     internal static class IsExternalInit

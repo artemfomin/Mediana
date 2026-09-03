@@ -2,37 +2,37 @@ using Mediana.Messaging;
 
 namespace Mediana.Routing;
 
-/// <summary>Куда направляется сообщение (§6 спеки).</summary>
+/// <summary>Where the message is routed (spec §6).</summary>
 public enum RouteTarget
 {
-    /// <summary>Только локальная диспетчеризация (default, без политики).</summary>
+    /// <summary>Local dispatch only (default, no policy).</summary>
     Local,
 
-    /// <summary>Только удалённо через транспорт.</summary>
+    /// <summary>Remote only via transport.</summary>
     Remote,
 
-    /// <summary>Локально И в очередь (для событий — natural fan-out; для команд — warning генератора).</summary>
+    /// <summary>but in (for and — natural fan-out; for — warning notthen).</summary>
     LocalAndRemote,
 }
 
-/// <summary>Политика маршрутизации сообщения.</summary>
+/// <summary>Message routing policy.</summary>
 public sealed record RoutePolicy
 {
     public required RouteTarget Target { get; init; }
 
-    /// <summary>Имя транспорта ("rabbit", "kafka", "masstransit"...).</summary>
+    /// <summary>Transport name ("rabbit", "kafka", "masstransit"...).</summary>
     public string? Transport { get; init; }
 
-    /// <summary>Цель: имя очереди/топика/exchange.</summary>
+    /// <summary>Destination: queue/topic/exchange name.</summary>
     public string? Destination { get; init; }
 
-    /// <summary>Паттерн topic для событий ("order.{type}").</summary>
+    /// <summary>Topic pattern for events ("order.{type}").</summary>
     public string? TopicPattern { get; init; }
 
-    /// <summary>Таймаут request/reply для запросов (default 30s).</summary>
+    /// <summary>Request/reply timeout for queries (default 30s).</summary>
     public TimeSpan RequestTimeout { get; init; } = TimeSpan.FromSeconds(30);
 
-    /// <summary>Политика доставки: Direct (без outbox-пакета) или Outbox (требует Mediana.Outbox).</summary>
+    /// <summary>Delivery policy: Direct (without the outbox package) or Outbox (requires Mediana.Outbox).</summary>
     public DeliveryMode Delivery { get; init; } = DeliveryMode.Direct;
 
     public static RoutePolicy LocalOnly() => new() { Target = RouteTarget.Local };
@@ -52,17 +52,17 @@ public sealed record RoutePolicy
     };
 }
 
-/// <summary>Режим доставки (D4: outbox — opt-in).</summary>
+/// <summary>and toinand (D4: outbox — opt-in).</summary>
 public enum DeliveryMode
 {
-    /// <summary>Прямая публикация в транспорт; retry/DLQ работают, атомарности с БД нет.</summary>
+    /// <summary>Direct publish to transport; retry/DLQ work, no atomicity with the database.</summary>
     Direct,
 
-    /// <summary>Через transactional outbox (требует установленный пакет Mediana.Outbox).</summary>
+    /// <summary>Through transactional outbox (requires the Mediana.Outbox package).</summary>
     Outbox,
 }
 
-/// <summary>Атрибут remote-маршрутизации сообщения (сахар; источник истины — fluent-конфигурация).</summary>
+/// <summary>and remote-fromandand and (; andthenand andand — fluent-andand).</summary>
 [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
 public sealed class RemoteAttribute : Attribute
 {
@@ -79,7 +79,7 @@ public sealed class RemoteAttribute : Attribute
 }
 
 /// <summary>
-/// Реестр политик маршрутизации: тип сообщения → политика. Приоритет: fluent > атрибут > Local.
+/// byandand fromandand: and and → byandand. andand: fluent > and > Local
 /// </summary>
 public sealed class RouteRegistry
 {
@@ -91,7 +91,7 @@ public sealed class RouteRegistry
         return this;
     }
 
-    /// <summary>Резолв политики: fluent-регистрация → атрибут Remote → LocalOnly.</summary>
+    /// <summary>in byandandand: fluent-andand → and Remote → LocalOnly.</summary>
     public RoutePolicy Resolve(Type messageType)
     {
         if (_policies.TryGetValue(messageType, out var policy))

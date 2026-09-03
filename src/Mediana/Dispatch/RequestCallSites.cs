@@ -6,12 +6,13 @@ using System.Threading;
 namespace Mediana.Dispatch;
 
 /// <summary>
-/// Общий композитор singleton-корня для команд/запросов (выполняется один раз, вне горячего пути).
+/// Shared singleton root compositor for commands/queries (executed once, off the hot path).
 ///
-/// Инженерный факт (измерено, AllocationBisectTests): invocation generic-делегата из canon-shared
-/// generic-контекста (все generic-аргументы — reference-типы) аллоцирует ~24-32Б на вызов;
-/// non-generic делегат — ноль. Поэтому object-путь при reference-ответах идёт через non-generic мост
-/// (downcast без боксинга), а typed-путь и value-ответы (специализированные инстанциации) — напрямую.
+/// Engineering fact (measured, AllocationBisectTests): invoking a generic delegate from a canon-shared
+/// generic context (all generic args are reference types) allocates ~24-32B per call;
+/// a non-generic delegate allocates zero. Therefore the object path for reference responses goes through
+/// a non-generic bridge (downcast without boxing), while typed path and value responses (specialized
+/// instantiations) go directly.
 /// </summary>
 internal static class RequestCallSiteCompositor
 {
@@ -22,16 +23,16 @@ internal static class RequestCallSiteCompositor
         where TRequest : IRequest<TResponse>
     {
         var root = terminalFactory(serviceProvider);
-        // Stryker disable once Equality: fast-path идентичен пустому циклу (мутант эквивалентен)
+        // Stryker disable once Equality: fast-path is identical to empty loop (mutant is equivalent)
         if (middlewareTypes.Length == 0)
-        // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once block: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
         {
             return root;
         }
 
-        // Stryker disable once equality: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once equality: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
         for (var i = middlewareTypes.Length - 1; i >= 0; i--)
-        // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once block: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
         {
             var behavior = (IHandlerMiddleware<TRequest, TResponse>)(serviceProvider.GetService(middlewareTypes[i])
                 ?? throw new MediatorConfigurationException(
@@ -44,7 +45,7 @@ internal static class RequestCallSiteCompositor
     }
 }
 
-/// <summary>Call-site команды: типизированный и object-путь, без боксинга ответа.</summary>
+/// <summary>Command call-site: typed and object path, without response boxing.</summary>
 internal sealed class CommandCallSite<TCommand, TResponse, THandler>
     : IObjectCommandCallSite<TResponse>, ITypedCommandCallSite<TCommand, TResponse>, IUntypedCallSite
     where TCommand : ICommand<TResponse>
@@ -71,10 +72,10 @@ internal sealed class CommandCallSite<TCommand, TResponse, THandler>
     {
         if (_refBridge is not null)
         {
-            // Stryker disable once Equality: fallback-эквивалент — при инверсии уходим в slow-путь с тем же результатом
+            // Stryker disable once Equality: fallback-equivalent — inversion falls through to slow path with same result
         var bridge = _refBridge.Delegate;
             if (bridge is not null)
-            // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+            // Stryker disable once block: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
             {
                 var boxed = bridge(message, cancellationToken);
                 return CastBoxed(boxed);
@@ -92,7 +93,7 @@ internal sealed class CommandCallSite<TCommand, TResponse, THandler>
 
     public ValueTask<TResponse> InvokeTyped(TCommand message, IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        // Stryker disable Equality: fast→Slow fallback эквивалентен по результату
+        // Stryker disable Equality: fast→Slow fallback is equivalent by result
         var root = _root;
         if (root is not null)
         {
@@ -106,11 +107,11 @@ internal sealed class CommandCallSite<TCommand, TResponse, THandler>
     {
         if (_refBridge is null || _root is null)
         {
-            // value-ответ или не прогретый корень: object-путь через generic (боксинг value допустим только здесь)
+            // value response or unwarmed root: object path via generic (value boxing allowed only here)
             return SlowAny(message, serviceProvider, cancellationToken);
         }
 
-        // Stryker disable Equality, Negate, Logical, Conditional: fallback-иерархия (fast/bridge→slow) поведенчески эквивалентна — cold и warm пути возвращают идентичные результаты (CallSiteBranchTests)
+        // Stryker disable Equality, Negate, Logical, Conditional: fallback hierarchy (fast/bridge→slow) is behaviorally equivalent — cold and warm paths return identical results (CallSiteBranchTests)
         var bridge = _refBridge.Delegate;
         if (bridge is null)
         {
@@ -125,10 +126,10 @@ internal sealed class CommandCallSite<TCommand, TResponse, THandler>
 
     private static ValueTask<TResponse> CastBoxed(ValueTask<object?> boxed)
     {
-        // Stryker disable once negate: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
-        // Stryker disable once negate: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once negate: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
+        // Stryker disable once negate: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
         if (boxed.IsCompletedSuccessfully)
-        // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once block: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
         {
             return new ValueTask<TResponse>((TResponse)boxed.Result!);
         }
@@ -141,7 +142,7 @@ internal sealed class CommandCallSite<TCommand, TResponse, THandler>
 
     private ValueTask<TResponse> Slow(TCommand message, IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        // Stryker disable Equality: ленивая компоновка идемпотентна (lock+null-check)
+        // Stryker disable Equality: lazy composition is idempotent (lock+null-check)
         if (_singleton)
         {
             lock (this)
@@ -164,12 +165,12 @@ internal sealed class CommandCallSite<TCommand, TResponse, THandler>
         HandlerDelegate<TCommand, TResponse> terminal = (r, ct) => scoped.Handle(r, ct);
         var state = ChainState<TCommand, TResponse>.Take(serviceProvider, _middlewareTypes, terminal);
         var result = state.Next(message, cancellationToken);
-        // Stryker disable once negate: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
-        // Stryker disable once negate: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once negate: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
+        // Stryker disable once negate: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
         if (result.IsCompletedSuccessfully)
-        // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once block: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
         {
-            // Stryker disable once statement: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+            // Stryker disable once statement: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
             state.Return();
             return result;
         }
@@ -214,28 +215,28 @@ internal sealed class CommandCallSite<TCommand, TResponse, THandler>
             return await pending.ConfigureAwait(false);
         }
         finally
-        // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once block: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
         {
-            // Stryker disable once statement: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+            // Stryker disable once statement: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
             state.Return();
         }
     }
 
-    /// <summary>Держатель non-generic моста (наполняется лениво вместе с корнем).</summary>
+    /// <summary>Non-generic bridge holder (populated lazily together with the root).</summary>
     private sealed class RefBridge
     {
         public Func<object, CancellationToken, ValueTask<object?>>? Delegate;
     }
 }
 
-/// <summary>Call-site запроса.</summary>
+/// <summary>Query call-site.</summary>
 internal sealed class QueryCallSite<TQuery, TResponse, THandler>
     : IObjectQueryCallSite<TResponse>, ITypedQueryCallSite<TQuery, TResponse>, IUntypedCallSite
     where TQuery : IQuery<TResponse>
     where THandler : IQueryHandler<TQuery, TResponse>
 {
-    // Stryker disable once unary: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
-    // Stryker disable once unary: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+    // Stryker disable once unary: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
+    // Stryker disable once unary: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
     private static readonly bool RefResponse = !typeof(TResponse).IsValueType;
 
     private readonly Type[] _middlewareTypes;
@@ -247,10 +248,10 @@ internal sealed class QueryCallSite<TQuery, TResponse, THandler>
     {
         _middlewareTypes = middlewareTypes;
         _singleton = singleton;
-        // Stryker disable once logical, negate: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
-        // Stryker disable once negate: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once logical, negate: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
+        // Stryker disable once negate: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
         if (RefResponse && singleton)
-        // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once block: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
         {
             _refBridge = new RefBridge();
         }
@@ -260,10 +261,10 @@ internal sealed class QueryCallSite<TQuery, TResponse, THandler>
     {
         if (_refBridge is not null)
         {
-            // Stryker disable once Equality: fallback-эквивалент — при инверсии уходим в slow-путь с тем же результатом
+            // Stryker disable once Equality: fallback-equivalent — inversion falls through to slow path with same result
         var bridge = _refBridge.Delegate;
             if (bridge is not null)
-            // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+            // Stryker disable once block: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
             {
                 var boxed = bridge(message, cancellationToken);
                 return CastBoxed(boxed);
@@ -272,7 +273,7 @@ internal sealed class QueryCallSite<TQuery, TResponse, THandler>
 
         var root = _root;
         if (root is not null)
-        // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once block: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
         {
             return root((TQuery)message, cancellationToken);
         }
@@ -282,10 +283,10 @@ internal sealed class QueryCallSite<TQuery, TResponse, THandler>
 
     public ValueTask<TResponse> InvokeTyped(TQuery message, IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        // Stryker disable Equality: fast→Slow fallback эквивалентен по результату
+        // Stryker disable Equality: fast→Slow fallback is equivalent by result
         var root = _root;
         if (root is not null)
-        // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once block: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
         {
             return root(message, cancellationToken);
         }
@@ -295,13 +296,13 @@ internal sealed class QueryCallSite<TQuery, TResponse, THandler>
 
     public ValueTask<object?> InvokeAny(object message, IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        // Stryker disable once equality, logical: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once equality, logical: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
         if (_refBridge is null || _root is null)
         {
             return SlowAny(message, serviceProvider, cancellationToken);
         }
 
-        // Stryker disable Equality, Negate, Logical, Conditional: fallback-иерархия (fast/bridge→slow) поведенчески эквивалентна — cold и warm пути возвращают идентичные результаты (CallSiteBranchTests)
+        // Stryker disable Equality, Negate, Logical, Conditional: fallback hierarchy (fast/bridge→slow) is behaviorally equivalent — cold and warm paths return identical results (CallSiteBranchTests)
         var bridge = _refBridge.Delegate;
         if (bridge is null)
         {
@@ -316,10 +317,10 @@ internal sealed class QueryCallSite<TQuery, TResponse, THandler>
 
     private static ValueTask<TResponse> CastBoxed(ValueTask<object?> boxed)
     {
-        // Stryker disable once negate: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
-        // Stryker disable once negate: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once negate: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
+        // Stryker disable once negate: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
         if (boxed.IsCompletedSuccessfully)
-        // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once block: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
         {
             return new ValueTask<TResponse>((TResponse)boxed.Result!);
         }
@@ -332,9 +333,9 @@ internal sealed class QueryCallSite<TQuery, TResponse, THandler>
 
     private ValueTask<TResponse> Slow(TQuery message, IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        // Stryker disable Equality: ленивая компоновка идемпотентна (lock+null-check)
-        // Stryker disable once negate: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
-        // Stryker disable once negate: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable Equality: lazy composition is idempotent (lock+null-check)
+        // Stryker disable once negate: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
+        // Stryker disable once negate: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
         if (_singleton)
         {
             lock (this)
@@ -343,7 +344,7 @@ internal sealed class QueryCallSite<TQuery, TResponse, THandler>
                 {
                     _root = Compose(serviceProvider);
                     if (_refBridge is not null)
-                    // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+                    // Stryker disable once block: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
                     {
                         var root = _root;
                         _refBridge.Delegate = (m, ct) => Upcast(root((TQuery)m, ct));
@@ -358,12 +359,12 @@ internal sealed class QueryCallSite<TQuery, TResponse, THandler>
         HandlerDelegate<TQuery, TResponse> terminal = (r, ct) => scoped.Handle(r, ct);
         var state = ChainState<TQuery, TResponse>.Take(serviceProvider, _middlewareTypes, terminal);
         var result = state.Next(message, cancellationToken);
-        // Stryker disable once negate: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
-        // Stryker disable once negate: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once negate: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
+        // Stryker disable once negate: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
         if (result.IsCompletedSuccessfully)
-        // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once block: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
         {
-            // Stryker disable once statement: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+            // Stryker disable once statement: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
             state.Return();
             return result;
         }
@@ -388,10 +389,10 @@ internal sealed class QueryCallSite<TQuery, TResponse, THandler>
 
     private static ValueTask<object?> Upcast(ValueTask<TResponse> pending)
     {
-        // Stryker disable once negate: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
-        // Stryker disable once negate: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once negate: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
+        // Stryker disable once negate: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
         if (pending.IsCompletedSuccessfully)
-        // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once block: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
         {
             return new ValueTask<object?>(pending.Result);
         }
@@ -411,9 +412,9 @@ internal sealed class QueryCallSite<TQuery, TResponse, THandler>
             return await pending.ConfigureAwait(false);
         }
         finally
-        // Stryker disable once block: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+        // Stryker disable once block: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
         {
-            // Stryker disable once statement: fallback/perf-эквивалент (см. CallSiteBranchTests: fast/slow пути идентичны)
+            // Stryker disable once statement: fallback/perf-equivalent (see CallSiteBranchTests: fast/slow paths are identical)
             state.Return();
         }
     }

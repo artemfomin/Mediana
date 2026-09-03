@@ -8,9 +8,9 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Mediana.Benchmarks;
 
 /// <summary>
-/// Нагрузочные сценарии in-process: #1 масштабирование throughput по потокам,
-/// #2 хвостовые латентности (p50..p99.99) + GC-паузы. Workstation GC зафиксирован
-/// в csproj; стороны гоняются последовательно с полной GC между фазами.
+/// In-process load scenarios: #1 andinand throughput by bythen
+/// #2 tail latencies (p50..p99.99) + GC-. Workstation GC andandin
+/// in csproj; then bytoinbut bybut GC and
 /// </summary>
 public static class LoadCheck
 {
@@ -18,7 +18,7 @@ public static class LoadCheck
     private static readonly TimeSpan ScalingDuration = TimeSpan.FromSeconds(3);
     private const int TailTotalOps = 5_000_000;
 
-    // ── Сообщения/хендлеры (симметричные для обеих сторон) ──────────────────
+    // ── and/ (symmetric for both sides) ──────────────────
 
     private sealed record LoadCmd(int Value) : ICommand<int>;
 
@@ -86,12 +86,14 @@ public static class LoadCheck
         GC.Collect(2, GCCollectionMode.Forced, blocking: true);
     }
 
-    // ═══ Сценарий 1: масштабирование throughput по потокам ═══
+    // ═══ onand 1: andinand throughput by bythen ═══
 
     public static void Scaling()
     {
-        Console.WriteLine($"== LOAD scaling: Send+2 middlewares, {ScalingDuration.TotalSeconds:F0}s на конфиг, Workstation GC ==\n");
-        Console.WriteLine("Потоки |      MediatR ops/s |      Mediana ops/s |  Mediana×");
+ Console.WriteLine($"== LOAD scaling: Send+2 middlewares, {ScalingDuration.TotalSeconds:F0}s on and , Workstation GC ==\n");
+
+ Console.WriteLine(" from and | MediatR ops/s | Mediana ops/s | Mediana×");
+
         Console.WriteLine("-------|--------------------|--------------------|--------");
 
         var mediatr = BuildMediatR();
@@ -102,7 +104,7 @@ public static class LoadCheck
 
         foreach (var threads in ThreadCounts)
         {
-            // прогрев каждой стороны на этом числе потоков
+            // warmup to then on this and bythenin
             RunScalingPhase(mediana, dCmd, threads, TimeSpan.FromMilliseconds(300), static (m, c) => m.Send(c).Result);
             RunScalingPhase(mediatr, mCmd, threads, TimeSpan.FromMilliseconds(300), static (m, c) => m.Send(c).Result);
             FullCollect();
@@ -150,7 +152,7 @@ public static class LoadCheck
             workers[t].Start();
         }
 
-        barrier.SignalAndWait(); // одновременный старт
+        barrier.SignalAndWait(); // butin
         foreach (var w in workers)
         {
             w.Join();
@@ -159,12 +161,14 @@ public static class LoadCheck
         return counts.Sum();
     }
 
-    // ═══ Сценарий 2: хвостовые латентности + GC-паузы ═══
+    // ═══ onand 2: tail latencies + GC- ═══
 
     public static void Tails()
     {
-        Console.WriteLine($"\n== LOAD tails: {TailTotalOps:N0} операций, пер-оп Stopwatch, Workstation GC ==\n");
-        Console.WriteLine("Метрика        |      MediatR |      Mediana");
+ Console.WriteLine($"\n== LOAD tails: {TailTotalOps:N0} and , - Stopwatch, Workstation GC ==\n");
+
+ Console.WriteLine(" and | MediatR | Mediana");
+
         Console.WriteLine("---------------|--------------|-------------");
 
         TailPhase("MediatR", BuildMediatR(), new MediatRLoad(1),
@@ -198,7 +202,7 @@ public static class LoadCheck
         var samples = new long[TailTotalOps];
         var freq = Stopwatch.Frequency;
 
-        // прогрев (JIT + tiering)
+        // warmup (JIT + tiering)
         for (var i = 0; i < 200_000; i++)
         {
             warmOp(mediator, cmd);
@@ -239,7 +243,8 @@ public static class LoadCheck
         var alloc = GC.GetTotalAllocatedBytes(precise: true) - allocBefore;
 
         Array.Sort(samples);
-        Console.WriteLine($"--- {label} ({threads} потоков, {sw.Elapsed.TotalSeconds:F1}s) ---");
+ Console.WriteLine($"--- {label} ({threads} bythen in, {sw.Elapsed.TotalSeconds:F1}s) ---");
+
         Console.WriteLine($"  ops/s         | {samples.Length / sw.Elapsed.TotalSeconds,12:N0}");
         Console.WriteLine($"  p50           | {Percentile(samples, 0.50),9:N0} ns");
         Console.WriteLine($"  p95           | {Percentile(samples, 0.95),9:N0} ns");
@@ -248,8 +253,10 @@ public static class LoadCheck
         Console.WriteLine($"  p99.99        | {Percentile(samples, 0.9999),9:N0} ns");
         Console.WriteLine($"  max           | {samples[^1],9:N0} ns");
         Console.WriteLine($"  Gen0/1/2      | {GC.CollectionCount(0) - g0}/{GC.CollectionCount(1) - g1}/{GC.CollectionCount(2) - g2}");
-        Console.WriteLine($"  GC pause      | {pauseMs,9:F1} ms ({pauseMs / sw.Elapsed.TotalMilliseconds * 100,5:F2}% времени)");
-        Console.WriteLine($"  Аллокировано  | {alloc / (double)samples.Length,9:F0} B/оп");
+ Console.WriteLine($" GC pause | {pauseMs,9:F1} ms ({pauseMs / sw.Elapsed.TotalMilliseconds * 100,5:F2}% in and)");
+
+ Console.WriteLine($" Allocated | {alloc / (double)samples.Length,9:F0} B/ ");
+
 
         FullCollect();
     }

@@ -17,7 +17,7 @@ public class MediatorTests
         return sc.BuildServiceProvider();
     }
 
-    // ── Send: команды и запросы ───────────────────────────────────────────────
+    // ── Send: and ───────────────────────────────────────────────
 
     [Fact]
     public async Task Send_command_dispatches_to_handler()
@@ -102,7 +102,7 @@ public class MediatorTests
             () => mediator.Send<OrderCreated>((ICommand<OrderCreated>)null!).AsTask());
     }
 
-    // ── SendExact: zero-boxing путь для struct-сообщений ─────────────────────
+    // ── SendExact: zero-boxing for struct-and ─────────────────────
 
     [Fact]
     public async Task SendExact_struct_command_without_boxing()
@@ -116,7 +116,7 @@ public class MediatorTests
         Assert.Equal(42, result);
     }
 
-    // ── Publish: события ─────────────────────────────────────────────────────
+    // ── Publish: and ─────────────────────────────────────────────────────
 
     [Fact]
     public async Task Publish_dispatches_to_all_handlers_sequentially()
@@ -185,7 +185,7 @@ public class MediatorTests
 
         Assert.Single(ex.InnerExceptions);
         Assert.Equal("event-handler-failure", ex.InnerExceptions[0].Message);
-        // параллельный хендлер продолжил выполнение несмотря на ошибку другого
+        // toand inbynotand notfrom on and
         await Task.Delay(80);
         Assert.Single(slow.CompletionOrder);
     }
@@ -303,7 +303,7 @@ public class MediatorTests
         Assert.Equal(["event-behavior:before", "event-behavior:after"], EventOrderingBehavior.Trace);
     }
 
-    // ── Singleton vs Scoped режимы ───────────────────────────────────────────
+    // ── Singleton vs Scoped and ───────────────────────────────────────────
 
     [Fact]
     public async Task Singleton_mode_resolves_handler_once_and_reuses()

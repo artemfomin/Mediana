@@ -1,25 +1,25 @@
 version: 2
 updates:
-  - package-ecosystem: "nuget"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-    groups:
-      microsoft:
-        patterns: ["Microsoft.*", "System.*"]
-      transports:
-        patterns: ["RabbitMQ.Client", "Confluent.Kafka", "MassTransit*"]
-      storage:
-        patterns: ["MongoDB.*", "Dapper", "Npgsql"]
-      testing:
-        patterns: ["xunit*", "coverlet*", "BenchmarkDotNet", "Testcontainers*", "Microsoft.NET.Test.Sdk", "Stryker.*"]
-    labels: ["dependencies", "triage"]
-    # Перф-чувствительные обновления (BCL, RabbitMQ.Client и т.п.) проходят ручной
-    # прогон бенчмарков перед мерджем: alloc-check + load-check (CONTRIBUTING.md)
+ - package-ecosystem: "nuget"
+ directory: "/"
+ schedule:
+ interval: "weekly"
+ day: "monday"
+ groups:
+ microsoft:
+ patterns: ["Microsoft.*", "System.*"]
+ transports:
+ patterns: ["RabbitMQ.Client", "Confluent.Kafka", "MassTransit*"]
+ storage:
+ patterns: ["MongoDB.*", "Dapper", "Npgsql"]
+ testing:
+ patterns: ["xunit*", "coverlet*", "BenchmarkDotNet", "Testcontainers*", "Microsoft.NET.Test.Sdk", "Stryker.*"]
+ labels: ["dependencies", "triage"]
+ # - (BCL, RabbitMQ.Client ..) 
+ # : alloc-check + load-check (CONTRIBUTING.md)
 
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    labels: ["dependencies", "ci"]
+ - package-ecosystem: "github-actions"
+ directory: "/"
+ schedule:
+ interval: "weekly"
+ labels: ["dependencies", "ci"]

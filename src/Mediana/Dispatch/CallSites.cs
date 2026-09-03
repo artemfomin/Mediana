@@ -1,7 +1,7 @@
 using Mediana.Messaging;
 namespace Mediana.Dispatch;
 
-/// <summary>Вид сообщения.</summary>
+/// <summary>Message kind.</summary>
 public enum HandlerKind
 {
     Command,
@@ -10,60 +10,60 @@ public enum HandlerKind
     Stream,
 }
 
-/// <summary>Политика диспетчеризации события (§4.3 спеки).</summary>
+/// <summary>Event dispatch policy (spec 4.3).</summary>
 public enum EventDispatchPolicy
 {
-    /// <summary>Последовательно; первый бросок прерывает цепочку. По умолчанию.</summary>
+    /// <summary>Sequential; the first throw interrupts the chain. Default.</summary>
     Sequential,
 
-    /// <summary>Все хендлеры стартуют одновременно; ошибки агрегируются в AggregateException.</summary>
+    /// <summary>All handlers start simultaneously; errors are aggregated into AggregateException.</summary>
     Parallel,
 }
 
 /// <summary>
-/// Call-site команды для object-вызова (<see cref="IMediator.Send{TResponse}(Mediana.Messaging.ICommand{TResponse}, CancellationToken)"/>).
-/// Advanced API: используется генератором и движком; в прикладном коде не нужна.
+/// Call-site for object-dispatch (<see cref="IMediator.Send{TResponse}(Mediana.Messaging.ICommand{TResponse}, CancellationToken)"/>).
+/// Advanced API: used by the generator and engine; not needed in application code.
 /// </summary>
 public interface IObjectCommandCallSite<TResponse>
 {
     ValueTask<TResponse> Invoke(object message, IServiceProvider serviceProvider, CancellationToken cancellationToken);
 }
 
-/// <summary>Call-site команды с типизированным сообщением (zero-boxing путь, SendExact).</summary>
+/// <summary>Call-site with typed message (zero-boxing path, SendExact).</summary>
 public interface ITypedCommandCallSite<TRequest, TResponse> where TRequest : IRequest<TResponse>
 {
     ValueTask<TResponse> InvokeTyped(TRequest message, IServiceProvider serviceProvider, CancellationToken cancellationToken);
 }
 
-/// <summary>Call-site запроса для object-вызова.</summary>
+/// <summary>Call-site for object-dispatch.</summary>
 public interface IObjectQueryCallSite<TResponse>
 {
     ValueTask<TResponse> Invoke(object message, IServiceProvider serviceProvider, CancellationToken cancellationToken);
 }
 
-/// <summary>Call-site запроса с типизированным сообщением (SendExact).</summary>
+/// <summary>Call-site with typed message (SendExact).</summary>
 public interface ITypedQueryCallSite<TRequest, TResponse> where TRequest : IRequest<TResponse>
 {
     ValueTask<TResponse> InvokeTyped(TRequest message, IServiceProvider serviceProvider, CancellationToken cancellationToken);
 }
 
-/// <summary>Call-site события.</summary>
+/// <summary>Event call-site.</summary>
 public interface IEventCallSite
 {
     ValueTask Invoke(object message, IServiceProvider serviceProvider, CancellationToken cancellationToken);
 }
 
 /// <summary>
-/// Non-generic хоп: вызов из canon-generic контекста аллоцирует (~24-32Б/вызов, измерено);
-/// не-generic InvokeAny из не-generic метода Mediator — ноль. Value-ответы боксируются —
-/// потому object-путь с value-ответами не использует этот хоп (см. Mediator).
+/// Non-generic hop: invoking from canon-generic context allocates (~24-32B/inin, frombut)
+/// non-generic InvokeAny from a non-generic Mediator method is zero. Value responses are boxed —
+/// so the object path with value responses does not use this hop (see Mediator).
 /// </summary>
 public interface IUntypedCallSite
 {
     ValueTask<object?> InvokeAny(object message, IServiceProvider serviceProvider, CancellationToken cancellationToken);
 }
 
-/// <summary>Call-site стрим-запроса.</summary>
+/// <summary>Call-site stream query.</summary>
 public interface IStreamCallSite<TRow>
 {
     IAsyncEnumerable<TRow> Invoke(object message, IServiceProvider serviceProvider, CancellationToken cancellationToken);

@@ -85,7 +85,7 @@ public class MessageRegistryTests
         Interlocked.Exchange(ref stop, 1);
         await reader;
 
-        // финальная версия видит все добавления
+        // andonon inand inandand all toinand
         foreach (var type in extraTypes)
         {
             Assert.NotNull(registry.TryGet(type));
@@ -107,7 +107,7 @@ public class MessageRegistryTests
             });
         });
 
-        // каждая версия консистентна: содержит свой тип
+        // inand andon: and own and
         for (var i = 0; i < types.Length; i++)
         {
             Assert.NotNull(versions[i].TryGet(types[i]));

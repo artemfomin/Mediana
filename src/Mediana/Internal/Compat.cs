@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Mediana.Internal;
 
-/// <summary>Guard-проверки без зависимости от ThrowIfNull (net6+).</summary>
+/// <summary>Guard checks without ThrowIfNull dependency (net6+).</summary>
 internal static class Guard
 {
     [DoesNotReturn]

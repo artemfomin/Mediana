@@ -1,104 +1,104 @@
-# Mediana — дизайн-спецификация v1
+# Mediana — - v1
 
-Дата: 2026-09-01
-Статус: утверждён в брейнсторминге (батчи 1–3 подтверждены пользователем)
-North star: **высочайший уровень алгоритмической оптимизации** — производительность приоритетнее удобства там, где есть конфликт.
+: 2026-09-01
+: ( 1–3 )
+North star: ** ** — , .
 
 ---
 
-## 1. Обзор
+## 1. 
 
-Mediana — библиотека паттерна медиатор для .NET 10 с собственной семантикой API (не клон MediatR), подключаемыми транспортами сообщений (RabbitMQ, Kafka, MassTransit и др.) и полным стеком надёжности доставки, где transactional outbox — строго opt-in опция через отдельный NuGet-пакет.
+Mediana — .NET 10 API ( MediatR), (RabbitMQ, Kafka, MassTransit .) , transactional outbox — opt-in NuGet-.
 
 ### Non-goals (v1)
 
-- Саги / процесс-менеджеры — не делаем; потребность закрывает мост MassTransit (саги в MassTransit, диспетч в Mediana).
-- Поддержка .NET Framework 4.x (netstandard2.0) — вне охвата: тяжёлые полифиллы противоречат north star.
-- Прозрачный автоматический ремоутинг «нет локального хендлера → уходим в очередь» — сознательно: скрытые сетевые вызовы ломают семантику исключений и латентность. Только явная политика роутинга.
-- Собственный RPC-протокол поверх TCP — только очереди.
+- / - — ; MassTransit ( MassTransit, Mediana).
+- .NET Framework 4.x (netstandard2.0) — : north star.
+- « → » — : . .
+- RPC- TCP — .
 
 ---
 
-## 2. Журнал решений (decision log)
+## 2. (decision log)
 
-| # | Решение | Обоснование |
+| # | | |
 |---|---------|-------------|
-| D1 | Собственный API + отдельный пакет `Mediana.MediatR` (адаптер MediatR-хендлеров) | Свобода оптимизаций без наследования компромиссов MediatR; миграция существующего кода без изменений |
-| D2 | **Обе версии — полные**: net10.0 и netstandard2.1 реализуются параллельно для всех пакетов (где позволяет клиентская библиотека, см. D13), с идентичной API-поверхностью, одинаковыми namespace и именами типов; распространяются как мульти-таргет ассеты внутри **одних и тех же NuGet-пакетов** (единые ID) | Разные проекты команды используют разные рантаймы; net10.0-ассет задействует все доступные оптимизации (FrozenDictionary — ~47% быстрее lookup чем Dictionary, System.Threading.Lock, GetAlternateLookup, R2R), ns2.1-ассет — рукописные эквиваленты там, где API нет. Одинаковые имена пакетов и типов = максимальная совместимость: отдельные ID на TFM создавали бы конфликт типов при сборке двух веток в один граф зависимостей. Замечание о «40+%»: это микро-бенчмарк lookup'а; на end-to-end Send выигрыш скромнее, т.к. source-gen диспетч убирает lookup с горячего пути; net10-ассет дополнительно выигрывает на fallback-путях, async-инфраструктуре и startup (R2R) |
-| D13 | Транспортные/хранящие пакеты мульти-таргетятся с закреплением мажоров клиентских библиотек per TFM: RabbitMQ — net10.0: RabbitMQ.Client 7.x, ns2.1: 6.x (различие API — тонкий слой адаптации внутри пакета); Kafka — Confluent.Kafka единый API (мажор проверить в плане); MassTransit 8.x — поддерживает ns2.1-хосты; Dapper/Mongo — ns2.1 ок; **EF Core-провайдер — net10.0-only** (EF Core 6+ не таргетирует ns2.1; ns2.1-потребители outbox используют Dapper/Mongo-провайдеры) | Полный охват «обеих версий» без жертвы совместимости API; единственное исключение (EF) задокументировано явно |
-| D14 | **Минимум сторонних библиотек — вторая метрика после north star.** Ядро (Abstractions, Mediana, Transport.Abstractions, Generators, релей-логика Outbox) — только собственный код; внешние зависимости ядра ограничены пакетами Microsoft и только там, где это структурно неизбежно (MEDI-абстракции для DI, Roslyn для генератора, STJ как сериализатор по умолчанию). Всё стороннее допускается только в спутниковых пакетах, где SDK и есть суть пакета (клиенты очередей, DB-провайдеры, сериализатор-провайдеры MessagePack/protobuf) | Контролируемая поверхность риска и перф: ноль транзитивных сюрпризов в ядре. Собственные реализации: retry-политики и backoff (не Polly), пулы объектов/IVTS (не ObjectPooling), UUIDv7 на ns2.1 (на net10.0 — `Guid.CreateVersion7`), планировщик relay. Метрика автоматизирована CI-гейтом (§12.6) |
-| D15 | **Полная OTLP-телеметрия.** Инструментация — в ядре, через BCL (`ActivitySource("Mediana")`, `Meter("Mediana")`, `ILogger`), ноль зависимостей и ноль затрат при выключенном сборщике (no-op Activity/Meter API). Готовый OTLP-экспорт — спутниковый пакет `Mediana.Telemetry.OpenTelemetry` (net10.0 + ns2.1): один вызов включает OTel SDK для всех трёх сигналов (traces + metrics + logs) с OTLP-экспортёром; атрибуты соответствуют OTel messaging semantic conventions; настройка — `OTEL_EXPORTER_OTLP_*` env + fluent-опции. Конвейер **полностью асинхронный**: inline — только запись в память, весь I/O фоновый, логи и экспорт не блокируют путь диспетчеризации (bounded-очереди, drop-on-overflow со счётчиками, flush при shutdown — §11.4) | Готовая полная телеметрия из коробки без нарушения D14 и D16; стандартная совместимость с коллекторами (Tempo/Jaeger/OTel Collector) |
-| D16 | **Идеальный перформанс во всех режимах диспетчеризации, не только Send.** Известные in-process слабости MediatR закрыты архитектурно (таблица контр-мер §5.4); бюджеты аллокаций §12 расширены на Publish (sequential/parallel), Stream и конкурентные режимы; бенчмарк-матрица гоняет все режимы против MediatR 12.x в CI | MediatR исторически терял in-process именно на per-call резолве behaviors из DI, пересборке пайплайна на каждый вызов и Task-аллокациях; у Mediana эти пути отсутствуют по построению, что фиксируется абсолютными бюджетами |
-| D3 | Интеграция с очередями: явная политика роутинга (локально / очередь / оба) + подключаемые транспорт-провайдеры; MassTransit — и как транспорт, и как мост | Предсказуемость + расширяемость |
-| D4 | Полный стек надёжности в v1: retry, DLQ, poison detection, inbox — в транспортном уровне ядра; **outbox — opt-in через отдельные NuGet-пакеты** | Ядро без зависимостей на БД; transactional-гарантии — осознанный выбор потребителя (по требованию пользователя) |
-| D5 | Функциональный объём ядра: parity MediatR + стриминг (`IAsyncEnumerable`), без саг | Стриминг дёшев на ns2.1+, саги — дублирование компетенции MassTransit |
-| D6 | Ядро диспетчеризации: гибрид — source-gen статический fast-path + опциональная runtime-регистрация (copy-on-write) | Максимальная скорость стандартного пути + escape hatch для плагинов |
-| D7 | Иерархия сообщений: общий корень `IRequest`; `ICommand`/`IQuery`/`IEvent`/`IStreamQuery` — наследники | Гибкость для generic-ограничений инфраструктуры (по требованию пользователя) при сохранении семантики роутинга |
+| D1 | API + `Mediana.MediatR` ( MediatR-) | MediatR; |
+| D2 | ** — **: net10.0 netstandard2.1 ( , . D13), API-, namespace ; - ** NuGet-** ( ID) | ; net10.0- (FrozenDictionary — ~47% lookup Dictionary, System.Threading.Lock, GetAlternateLookup, R2R), ns2.1- — , API . = : ID TFM . «40+%»: - lookup'; end-to-end Send , .. source-gen lookup ; net10- fallback-, async- startup (R2R) |
+| D13 | / - per TFM: RabbitMQ — net10.0: RabbitMQ.Client 7.x, ns2.1: 6.x ( API — ); Kafka — Confluent.Kafka API ( ); MassTransit 8.x — ns2.1-; Dapper/Mongo — ns2.1 ; **EF Core- — net10.0-only** (EF Core 6+ ns2.1; ns2.1- outbox Dapper/Mongo-) | « » API; (EF) |
+| D14 | ** — north star.** (Abstractions, Mediana, Transport.Abstractions, Generators, - Outbox) — ; Microsoft , (MEDI- DI, Roslyn , STJ ). , SDK ( , DB-, - MessagePack/protobuf) | : . : retry- backoff ( Polly), /IVTS ( ObjectPooling), UUIDv7 ns2.1 ( net10.0 — `Guid.CreateVersion7`), relay. CI- (§12.6) |
+| D15 | ** OTLP-.** — , BCL (`ActivitySource("Mediana")`, `Meter("Mediana")`, `ILogger`), (no-op Activity/Meter API). OTLP- — `Mediana.Telemetry.OpenTelemetry` (net10.0 + ns2.1): OTel SDK (traces + metrics + logs) OTLP-; OTel messaging semantic conventions; — `OTEL_EXPORTER_OTLP_*` env + fluent-. ** **: inline — , I/O , (bounded-, drop-on-overflow , flush shutdown — §11.4) | D14 D16; (Tempo/Jaeger/OTel Collector) |
+| D16 | ** , Send.** in-process MediatR ( - §5.4); §12 Publish (sequential/parallel), Stream ; - MediatR 12.x CI | MediatR in-process per-call behaviors DI, Task-; Mediana , |
+| D3 | : ( / / ) + -; MassTransit — , | + |
+| D4 | v1: retry, DLQ, poison detection, inbox — ; **outbox — opt-in NuGet-** | ; transactional- — ( ) |
+| D5 | : parity MediatR + (`IAsyncEnumerable`), | ns2.1+, — MassTransit |
+| D6 | : — source-gen fast-path + runtime- (copy-on-write) | + escape hatch |
+| D7 | : `IRequest`; `ICommand`/`IQuery`/`IEvent`/`IStreamQuery` — | generic- ( ) |
 
-Решения, принятые без отдельного голосования (можно оспорить на ревью спеки):
+, ( ):
 
-| # | Решение | Обоснование |
+| # | | |
 |---|---------|-------------|
-| D8 | DI — только `Microsoft.Extensions.DependencyInjection` | Стандарт экосистемы; keyed services доступны пакетом и на ns2.1 |
-| D9 | Сериализация по умолчанию — System.Text.Json source-gen; провайдеры MessagePack и protobuf подключаемые, выбор per message type | Zero-reflection + выбор по перф-бюджету |
-| D10 | `MessageId` — UUIDv7 (net10.0: `Guid.CreateVersion7()`; ns2.1: собственная реализация, D14) | Sortable → индекс-friendly для outbox/inbox |
-| D11 | Удалённый стриминг в v1 — только RabbitMQ (chunked reply frames) и MassTransit; Kafka — нет (documented limitation) | Kafka не предназначен для streaming reply; fetch-loop анти-паттерн |
-| D12 | OpenTelemetry-first наблюдаемость; ошибки удалённого Send — `RemoteExecutionException` | Стандарт отрасли; MassTransit-совместимые Fault-события |
+| D8 | DI — `Microsoft.Extensions.DependencyInjection` | ; keyed services ns2.1 |
+| D9 | — System.Text.Json source-gen; MessagePack protobuf , per message type | Zero-reflection + - |
+| D10 | `MessageId` — UUIDv7 (net10.0: `Guid.CreateVersion7()`; ns2.1: , D14) | Sortable → -friendly outbox/inbox |
+| D11 | v1 — RabbitMQ (chunked reply frames) MassTransit; Kafka — (documented limitation) | Kafka streaming reply; fetch-loop - |
+| D12 | OpenTelemetry-first ; Send — `RemoteExecutionException` | ; MassTransit- Fault- |
 
 ---
 
-## 2.1. Дополнение к журналу решений (пост-ревью реализации)
+## 2.1. (- )
 
-| # | Решение | Обоснование |
+| # | | |
 |---|---------|-------------|
-| D17 | Семейство behaviors переименовано в **Middleware** (выбор пользователя): IPipelineBehavior → IHandlerMiddleware, IEventPipelineBehavior → IEventMiddleware, IStreamPipelineBehavior → IStreamMiddleware, делегат RequestHandlerDelegate<,> → HandlerDelegate<,>, конфиг-методы Add*Behavior → Add*Middleware | Полное совпадение имён с MediatR вызывало CS0104-неоднозначность при совместных ссылках; Middleware — универсальная ментальная модель (ASP.NET Core/MassTransit), ноль коллизий. Namespace Mediana.Pipeline сохранён |
+| D17 | behaviors **Middleware** ( ): IPipelineBehavior → IHandlerMiddleware, IEventPipelineBehavior → IEventMiddleware, IStreamPipelineBehavior → IStreamMiddleware, RequestHandlerDelegate<,> → HandlerDelegate<,>, - Add*Behavior → Add*Middleware | MediatR CS0104- ; Middleware — (ASP.NET Core/MassTransit), . Namespace Mediana.Pipeline |
 
-## 3. Структура решения и пакеты
+## 3. 
 
 ```
 Mediana.sln
 ├── src/
-│   ├── Mediana.Abstractions/            # net10.0 + ns2.1. Контракты сообщений/хендлеров,
-│   │                                    #   envelope, метаданные. Ноль внешних зависимостей.
-│   ├── Mediana/                         # net10.0 + ns2.1. In-process диспетчер, пайплайны,
-│   │                                    #   runtime-регистрация, DI-интеграция, роутинг-ядро.
-│   ├── Mediana.Generators/              # netstandard2.0 (генераторы так таргетятся).
-│   │                                    #   Incremental source generator + анализаторы.
-│   ├── Mediana.Transport.Abstractions/  # net10.0 + ns2.1. SPI транспортов: ITransport,
-│   │                                    #   publisher/consumer, топология, capabilities,
-│   │                                    #   IInboxStore + in-memory реализация.
-│   ├── Mediana.RabbitMQ/                # net10.0 (клиент 7.x) + ns2.1 (клиент 6.x, слой адаптации).
-│   ├── Mediana.Kafka/                   # net10.0 + ns2.1 (Confluent.Kafka, мажор — в плане).
-│   ├── Mediana.MassTransit/             # net10.0 + ns2.1 (MassTransit 8.x).
-│   ├── Mediana.Outbox/                  # net10.0 + ns2.1. Ядро transactional outbox + relay
-│   │                                    #   (opt-in); DB-реализации inbox/outbox — в пакетах ниже.
-│   ├── Mediana.Outbox.EFCore/           # net10.0-only (EF Core 6+ не таргетирует ns2.1; D13).
-│   ├── Mediana.Outbox.Dapper/           # net10.0 + ns2.1. Dapper/SQL провайдер (opt-in).
-│   ├── Mediana.Outbox.MongoDB/          # net10.0 + ns2.1. MongoDB провайдер (opt-in).
-│   ├── Mediana.Telemetry.OpenTelemetry/ # net10.0 + ns2.1. Готовый OTLP-экспорт: OTel SDK для
-│   │                                    #   traces/metrics/logs Mediana, семантические конвенции.
-│   └── Mediana.MediatR/                 # net10.0 + ns2.1. Адаптер MediatR 12.x контрактов.
+│ ├── Mediana.Abstractions/ # net10.0 + ns2.1. /,
+│ │ # envelope, . .
+│ ├── Mediana/ # net10.0 + ns2.1. In-process , ,
+│ │ # runtime-, DI-, -.
+│ ├── Mediana.Generators/ # netstandard2.0 ( ).
+│ │ # Incremental source generator + .
+│ ├── Mediana.Transport.Abstractions/ # net10.0 + ns2.1. SPI : ITransport,
+│ │ # publisher/consumer, , capabilities,
+│ │ # IInboxStore + in-memory .
+│ ├── Mediana.RabbitMQ/ # net10.0 ( 7.x) + ns2.1 ( 6.x, ).
+│ ├── Mediana.Kafka/ # net10.0 + ns2.1 (Confluent.Kafka, — ).
+│ ├── Mediana.MassTransit/ # net10.0 + ns2.1 (MassTransit 8.x).
+│ ├── Mediana.Outbox/ # net10.0 + ns2.1. transactional outbox + relay
+│ │ # (opt-in); DB- inbox/outbox — .
+│ ├── Mediana.Outbox.EFCore/ # net10.0-only (EF Core 6+ ns2.1; D13).
+│ ├── Mediana.Outbox.Dapper/ # net10.0 + ns2.1. Dapper/SQL (opt-in).
+│ ├── Mediana.Outbox.MongoDB/ # net10.0 + ns2.1. MongoDB (opt-in).
+│ ├── Mediana.Telemetry.OpenTelemetry/ # net10.0 + ns2.1. OTLP-: OTel SDK 
+│ │ # traces/metrics/logs Mediana, .
+│ └── Mediana.MediatR/ # net10.0 + ns2.1. MediatR 12.x .
 ├── tests/
-│   ├── Mediana.UnitTests/               # ядро, реестр, пайплайны, конверт, retry-политики
-│   ├── Mediana.IntegrationTests/        # Testcontainers: RabbitMQ, Kafka, SQL, Mongo
-│   ├── Mediana.InteropTests/            # Mediana ⇄ MassTransit, MassTransit-envelope
-│   ├── Mediana.AotTests/                # NativeAOT publish + trimming smoke
-│   └── Mediana.ContractTests.Ns21/      # контрактные тесты идентичности API-поверхности
-│                                        #   обоих ассетов + тесты ядра против ns2.1-ассета
+│ ├── Mediana.UnitTests/ # , , , , retry-
+│ ├── Mediana.IntegrationTests/ # Testcontainers: RabbitMQ, Kafka, SQL, Mongo
+│ ├── Mediana.InteropTests/ # Mediana ⇄ MassTransit, MassTransit-envelope
+│ ├── Mediana.AotTests/ # NativeAOT publish + trimming smoke
+│ └── Mediana.ContractTests.Ns21/ # API-
+│ # + ns2.1-
 ├── benchmarks/
-│   └── Mediana.Benchmarks/              # BenchmarkDotNet: dispatch, serialization, e2e
+│ └── Mediana.Benchmarks/ # BenchmarkDotNet: dispatch, serialization, e2e
 └── docs/
 ```
 
-Правила multi-target (D2/D13): каждый пакет собирается одним csproj'ом в два ассета; публичная API-поверхность ассетов идентична (проверяется контрактным тестом на публичные типы/члены); выбор оптимизаций — через `#if NET10_0` внутри реализации, не через раздельные типы. Хост-приложение всегда получает один ассет — конфликтов типов в графе зависимостей нет.
+ multi-target (D2/D13): csproj' ; API- ( /); — `#if NET10_0` , . - — .
 
-Правила зависимостей (D14 — минимальный сторонний след): `Abstractions` не ссылается ни на что; `Mediana` — только `Abstractions` + MEDI-абстракции; `Transport.Abstractions` — без внешних зависимостей (in-memory inbox, контракты SPI); `Generators` — только Roslyn; outbox-relay — только собственный код; транспортные пакеты ссылаются на `Mediana.Transport.Abstractions` и свой клиентский SDK; outbox-провайдеры — на `Transport.Abstractions` и свой DB SDK. Сторонние SDK допускаются исключительно в спутниковых пакетах, где SDK и есть суть пакета. Пакет `Mediana.Outbox` (и его DB-провайдеры) **не требуется** для работы без transactional-гарантий: без него удалённая публикация идёт напрямую в транспорт с retry/DLQ, но без атомарности с бизнес-транзакцией.
+ (D14 — ): `Abstractions` ; `Mediana` — `Abstractions` + MEDI-; `Transport.Abstractions` — (in-memory inbox, SPI); `Generators` — Roslyn; outbox-relay — ; `Mediana.Transport.Abstractions` SDK; outbox- — `Transport.Abstractions` DB SDK. SDK , SDK . `Mediana.Outbox` ( DB-) ** ** transactional-: retry/DLQ, -.
 
 ---
 
-## 4. Ядро API
+## 4. API
 
-### 4.1 Иерархия сообщений
+### 4.1 
 
 ```csharp
 public interface IRequest { }
@@ -111,142 +111,142 @@ public interface IEvent : IRequest { }
 public interface IStreamQuery<TRow> : IRequest { }
 ```
 
-Маркеры — compile-time only: не влияют на диспетч и производительность. Роутинг различает подтипы (§6).
+ — compile-time only: . (§6).
 
-### 4.2 Хендлеры
+### 4.2 
 
 ```csharp
 public interface ICommandHandler<in TCommand, TResponse> where TCommand : ICommand<TResponse>
 {
-    ValueTask<TResponse> Handle(TCommand command, CancellationToken ct);
+ ValueTask<TResponse> Handle(TCommand command, CancellationToken ct);
 }
 
 public interface IQueryHandler<in TQuery, TResponse> where TQuery : IQuery<TResponse>
 {
-    ValueTask<TResponse> Handle(TQuery query, CancellationToken ct);
+ ValueTask<TResponse> Handle(TQuery query, CancellationToken ct);
 }
 
 public interface IEventHandler<in TEvent> where TEvent : IEvent
 {
-    ValueTask Handle(TEvent @event, CancellationToken ct);
+ ValueTask Handle(TEvent @event, CancellationToken ct);
 }
 
 public interface IStreamHandler<in TQuery, TRow> where TQuery : IStreamQuery<TRow>
 {
-    IAsyncEnumerable<TRow> Handle(TQuery query, CancellationToken ct);
+ IAsyncEnumerable<TRow> Handle(TQuery query, CancellationToken ct);
 }
 ```
 
-Ограничения (валидируются генератором): у `ICommand`/`IQuery` — ровно один хендлер на тип сообщения в графе; у `IEvent` — сколько угодно; сообщение с remote-политикой должно иметь stable-контракт (serializable).
+ ( ): `ICommand`/`IQuery` — ; `IEvent` — ; remote- stable- (serializable).
 
-### 4.3 Точка входа
+### 4.3 
 
 ```csharp
 public interface IMediator
 {
-    ValueTask<TResponse> Send<TResponse>(ICommand<TResponse> command, CancellationToken ct = default);
-    ValueTask<TResponse> Send<TResponse>(IQuery<TResponse> query, CancellationToken ct = default);
-    ValueTask Publish<TEvent>(TEvent @event, CancellationToken ct = default) where TEvent : IEvent;
-    IAsyncEnumerable<TRow> Stream<TRow>(IStreamQuery<TRow> query, CancellationToken ct = default);
+ ValueTask<TResponse> Send<TResponse>(ICommand<TResponse> command, CancellationToken ct = default);
+ ValueTask<TResponse> Send<TResponse>(IQuery<TResponse> query, CancellationToken ct = default);
+ ValueTask Publish<TEvent>(TEvent @event, CancellationToken ct = default) where TEvent : IEvent;
+ IAsyncEnumerable<TRow> Stream<TRow>(IStreamQuery<TRow> query, CancellationToken ct = default);
 
-    // Zero-boxing escape hatch для struct-сообщений на горячих путях
-    // (симметричная перегрузка есть и для IQuery<TResponse>)
-    ValueTask<TResponse> SendExact<TCommand, TResponse>(TCommand command, CancellationToken ct = default)
-        where TCommand : ICommand<TResponse>;
+ // Zero-boxing escape hatch struct- 
+ // ( IQuery<TResponse>)
+ ValueTask<TResponse> SendExact<TCommand, TResponse>(TCommand command, CancellationToken ct = default)
+ where TCommand : ICommand<TResponse>;
 }
 ```
 
-Семантика:
+:
 
-- `Send` (локальный) — исключение хендлера летит вызывающему как есть (ожидание MediatR-пользователей).
-- `Publish` — диспетчеризация всем локальным хендлерам; политика per event type: `Sequential` (по умолчанию; первый бросок прерывает цепочку) или `Parallel` (барьер: все стартуют, агрегированная ошибка `AggregateException` по завершении).
-- `Stream` — лениво; отмена по `ct` останавливает источник.
-- Токен отмены пробрасывается всюду без копий.
+- `Send` () — ( MediatR-).
+- `Publish` — ; per event type: `Sequential` ( ; ) `Parallel` (: , `AggregateException` ).
+- `Stream` — ; `ct` .
+- .
 
-### 4.4 Пайплайн
+### 4.4 
 
 ```csharp
 public interface IHandlerMiddleware<TRequest, TResponse> where TRequest : IRequest<TResponse>
 {
-    ValueTask<TResponse> Handle(TRequest request, HandlerDelegate<TResponse> next, CancellationToken ct);
+ ValueTask<TResponse> Handle(TRequest request, HandlerDelegate<TResponse> next, CancellationToken ct);
 }
 
 public delegate ValueTask<TResponse> HandlerDelegate<in TRequest, TResponse>(TRequest request, CancellationToken ct);
 
-// Пайплайн событий (IEvent не имеет ответа — отдельный контракт)
+// (IEvent — )
 public interface IEventMiddleware<in TEvent> where TEvent : IEvent
 {
-    ValueTask Handle(TEvent @event, EventHandlerDelegate next, CancellationToken ct);
+ ValueTask Handle(TEvent @event, EventHandlerDelegate next, CancellationToken ct);
 }
 public delegate ValueTask EventHandlerDelegate<in TEvent>(TEvent @event, CancellationToken ct) where TEvent : IEvent;
 
-// Сахар, реализованный сам как behavior (нулевая цена композиции)
+// , behavior ( )
 public interface IPreProcessor<in TRequest> where TRequest : IRequest { ValueTask Process(TRequest r, CancellationToken ct); }
 public interface IPostProcessor<in TRequest, in TResponse> where TRequest : IRequest<TResponse> { ValueTask Process(TRequest r, TResponse response, CancellationToken ct); }
 ```
 
-Порядок: глобальные behaviors (регистрация по порядку) → per-message behaviors → pre-processors → handler → post-processors. Для событий — аналогичная цепочка из `IEventMiddleware` (порядок: глобальные → per-event → хендлеры). Порядок фиксирован при построении реестра; пайплайн сшивается в один статический делегат через scoped-фабрики один раз, не на вызове (§5.1). Behaviors применяются и к локальному диспетчу, и к консьюмеру из очереди (единая семантика кросс-каттинга).
+: behaviors ( ) → per-message behaviors → pre-processors → handler → post-processors. — `IEventMiddleware` (: → per-event → ). ; scoped- , (§5.1). Behaviors , ( -).
 
-Стриминг: behaviors для `IStreamQuery` — отдельный контракт `IStreamMiddleware<TQuery, TRow>` (композиция через `IAsyncEnumerable`, обёртки не аллоцируют при синхронном движении курсора).
+: behaviors `IStreamQuery` — `IStreamMiddleware<TQuery, TRow>` ( `IAsyncEnumerable`, ).
 
 ---
 
-## 5. Диспетчеризация (гибрид D6)
+## 5. ( D6)
 
-### 5.1 Статический fast-path (source generator)
+### 5.1 fast-path (source generator)
 
-Генератор на компиляции строит по всем хендлерам в сборке:
+ :
 
-- `MedianaRegistrar` — partial-методы регистрации хендлеров в DI (без рефлексии);
-- switch-диспетчер по точному типу сообщения: `RuntimeTypeHandle`-switch → прямые вызовы зарегистрированных фабрик. O(1) без хэширования строк, инлайнится JIT;
-- сшитые пайплайны per (сообщение × хендлер): behaviors разрешаются в делегат-цепочку один раз при построении реестра (через scoped-фабрики), не на каждом вызове;
-- конфигурацию топологий из атрибутов роутинга (§6) — JSON-манифест для `ITransport.BuildTopology`;
-- STJ source-gen контексты для конверта и payload-контрактов.
+- `MedianaRegistrar` — partial- DI ( );
+- switch- : `RuntimeTypeHandle`-switch → . O(1) , JIT;
+- per ( × ): behaviors - ( scoped-), ;
+- (§6) — JSON- `ITransport.BuildTopology`;
+- STJ source-gen payload-.
 
-### 5.2 Runtime-регистрация (opt-in escape hatch)
+### 5.2 Runtime- (opt-in escape hatch)
 
-`cfg.AddRuntimeHandlers(assemblies)` — явное включение. Принцип freeze-on-first-dispatch, copy-on-write: реестр иммутабелен; добавление строит новую копию и публикует через `Volatile.Write`; читатели никогда не лочатся. AOT-статус сформулирован явно: runtime-режим не использует Reflection.Emit; диспетчеризация через открытые generic-типы работает под NativeAOT при `DynamicallyAccessedMemberTypes`-аннотациях на сборках-плагинах (требование документируется); Roslyn-компиляция делегатов — необязательное ускорение, только на JIT-хостах.
+`cfg.AddRuntimeHandlers(assemblies)` — . freeze-on-first-dispatch, copy-on-write: ; `Volatile.Write`; . AOT- : runtime- Reflection.Emit; generic- NativeAOT `DynamicallyAccessedMemberTypes`- - ( ); Roslyn- — , JIT-.
 
-### 5.3 Аллокационная модель (бюджет: 0 байт на локальном Send)
+### 5.3 (: 0 Send)
 
-| Стадия | Механизм | Аллокации |
+| | | |
 |---|---|---|
-| Резолв хендлера | switch по точному типу, статические фабрики | 0 |
-| Пайплайн | заранее сшитый статический делегат; контекстов/списков/замыканий нет | 0 |
-| Async | `ValueTask`; при синхронном завершении хендлера state machine не создаётся | 0 |
-| Реальная асинхронность | кольцевой пул `IValueTaskSource` на базе `ManualResetValueTaskSourceCore` (доступен и в ns2.1) | 0 в steady state (пул) |
-| Сообщение | class-record по конвенции; struct — через `SendExact` без боксинга | 0 |
+| | switch , | 0 |
+| | ; // | 0 |
+| Async | `ValueTask`; state machine | 0 |
+| | `IValueTaskSource` `ManualResetValueTaskSourceCore` ( ns2.1) | 0 steady state () |
+| | class-record ; struct — `SendExact` | 0 |
 
-Реестры: net10.0 — `FrozenDictionary` (~47% быстрее lookup чем Dictionary); ns2.1 — самописный immutable bucket-массив по `RuntimeTypeHandle` (на реальных N реестра сравнимо).
+: net10.0 — `FrozenDictionary` (~47% lookup Dictionary); ns2.1 — immutable bucket- `RuntimeTypeHandle` ( N ).
 
-Хосты консьюмеров: `BackgroundService`, backpressure через `System.Threading.Channels`, семафор concurrency, graceful drain при shutdown (stop consume → дождаться in-flight → ack/nack).
+ : `BackgroundService`, backpressure `System.Threading.Channels`, concurrency, graceful drain shutdown (stop consume → in-flight → ack/nack).
 
-### 5.4 Слабые места MediatR и контр-меры (D16)
+### 5.4 MediatR - (D16)
 
-| Слабость MediatR in-process | Контр-мера Mediana |
+| MediatR in-process | - Mediana |
 |------------------------------|--------------------|
-| Behaviors резолвятся из DI **на каждый Send** (N service-lookup'ов на вызов) | Пайплайн сшит в статический делегат один раз при построении реестра; на вызове — ноль обращений к DI (для singleton-режима, см. ниже) или ровно один lookup хендлера (scoped-режим) |
-| Пайплайн (цепочка делегатов) собирается на каждый вызов | Заранее сшитая цепочка per (сообщение × хендлер); никаких замыканий и аллокаций на вызове |
-| `Task<TResponse>` — гарантированная аллокация Task на каждый вызов | `ValueTask<T>` + синхронный fast-path без state machine; реальная асинхронность — pooled `IValueTaskSource` (0 в steady state) |
-| `Publish` резолвит всех handlers и строит делегаты на каждую публикацию | Pre-stitched массив скомпилированных invoker'ов per event type; публикация — обход массива, 0 аллокаций (sequential) |
-| `CreateStream` аллоцирует итераторную машинерию на каждый вызов | Проброс `IAsyncEnumerable` хендлера напрямую; без stream-behaviors — ноль обёрток, с behaviors — композит без пошаговых аллокаций |
-| Рефлексивное сканирование сборок на старте | Source-gen регистрация; startup-стоимость — генерация при компиляции, не в рантайме |
-| Словарные lookup'и на каждый Send/TypedHandler | Switch-диспетч по точному типу (source-gen), fallback-словарь только для runtime-зарегистрированных |
+| Behaviors DI ** Send** (N service-lookup' ) | ; — DI ( singleton-, . ) lookup (scoped-) |
+| ( ) | per ( × ); |
+| `Task<TResponse>` — Task | `ValueTask<T>` + fast-path state machine; — pooled `IValueTaskSource` (0 steady state) |
+| `Publish` handlers | Pre-stitched invoker' per event type; — , 0 (sequential) |
+| `CreateStream` | `IAsyncEnumerable` ; stream-behaviors — , behaviors — |
+| | Source-gen ; startup- — , |
+| lookup' Send/TypedHandler | Switch- (source-gen), fallback- runtime- |
 
-**Lifetime-политика хендлеров** (перф-ручка с сохранением корректности): по умолчанию `Scoped` — хендлер резолвится из текущего scope на каждый вызов (корректно для зависимостей типа DbContext; цена — один service-lookup на вызов). Opt-in `cfg.UseSingletonHandlers()` — хендлеры без scoped-зависимостей инстанцируются один раз и вызываются напрямую: ноль service-lookup'ов на вызове. Генератор статически проверяет, что singleton-режим не применяется к хендлерам со scoped-зависимостями (диагностика-ошибка).
+**Lifetime- ** (- ): `Scoped` — scope ( DbContext; — service-lookup ). Opt-in `cfg.UseSingletonHandlers()` — scoped- : service-lookup' . , singleton- scoped- (-).
 
 ---
 
-## 6. Роутинг
+## 6. 
 
-Источник истины — fluent-конфигурация; атрибут — сахар для простых случаев; без политики сообщение локальное.
+ — fluent-; — ; .
 
 ```csharp
 services.AddMediana(cfg => {
-    cfg.Route<CreateOrder>().ToQueue("orders");                       // command → конкурентная очередь
-    cfg.Route<OrderCreated>().FanOut(Topic.Pattern("order.{type}")); // event → fan-out
-    cfg.Route<GetOrder>().Remote(timeout: TimeSpan.FromSeconds(5));   // query → request/reply
-    cfg.Route<ReserveStock>().LocalAndRemote("stock");                // оба: локально + в очередь
+ cfg.Route<CreateOrder>().ToQueue("orders"); // command → 
+ cfg.Route<OrderCreated>().FanOut(Topic.Pattern("order.{type}")); // event → fan-out
+ cfg.Route<GetOrder>().Remote(timeout: TimeSpan.FromSeconds(5)); // query → request/reply
+ cfg.Route<ReserveStock>().LocalAndRemote("stock"); // : + 
 });
 ```
 
@@ -255,249 +255,249 @@ services.AddMediana(cfg => {
 public sealed record CreateOrder(Guid OrderId, ...) : ICommand<OrderId>;
 ```
 
-Правила по семантике:
+ :
 
-- **Command** → одна очередь, конкурентные консьюмеры (load-balancing), у которой ровно один хендлер-тип на ноде.
-- **Event** → exchange/topic с fan-out: каждый подписчик — своя очередь/подписка; доставка at-least-once каждому.
-- **Query** → request/reply: correlation id, таймаут-политика per route, `RemoteTimeoutException` по истечении.
-- `LocalAndRemote` — диспетч локально и публикация в очередь (для event — natural fan-out; для command — задокументированный компромисс: два выполнения, только для сценариев типа аудит-зеркал; генератор выдаёт warning-диагностку).
+- **Command** → , (load-balancing), - .
+- **Event** → exchange/topic fan-out: — /; at-least-once .
+- **Query** → request/reply: correlation id, - per route, `RemoteTimeoutException` .
+- `LocalAndRemote` — ( event — natural fan-out; command — : , -; warning-).
 
-Политики доставки per route: `Direct` (без outbox-пакета — по умолчанию) или `Outbox` (требует установленного пакета Mediana.Outbox; без него конфигурация падает с внятной ошибкой на старте).
+ per route: `Direct` ( outbox- — ) `Outbox` ( Mediana.Outbox; ).
 
 ---
 
-## 7. Конверт и wire-формат
+## 7. wire-
 
 ```
 Envelope {
-  EnvelopeVersion: int,                  // эволюция только additive
-  MessageId: UUIDv7,                     // sortable, дедупликация inbox
-  CorrelationId: UUID?,                  // сквозная корреляция цепочек
-  CausationId: UUID?,                    // messageId сообщения-причины
-  MessageType { FullName, TypeVersion, ContractHash },
-  Timestamp: DateTimeOffset,
-  SourceEndpoint: string,
-  TraceParent: string?,                  // W3C, сквозные трейсы
-  Headers: bag<string,string>,           // user + системные (partition key, reply-to...)
-  Payload: bytes
+ EnvelopeVersion: int, // additive
+ MessageId: UUIDv7, // sortable, inbox
+ CorrelationId: UUID?, // 
+ CausationId: UUID?, // messageId -
+ MessageType { FullName, TypeVersion, ContractHash },
+ Timestamp: DateTimeOffset,
+ SourceEndpoint: string,
+ TraceParent: string?, // W3C, 
+ Headers: bag<string,string>, // user + (partition key, reply-to...)
+ Payload: bytes
 }
 ```
 
-- Сериализатор выбирается per message type (fluent: `cfg.UseMessagePack<CreateOrder>()`); конверт всегда бинарно-компактен (обёртка поверх payload-bytes, STJ Utf8 source-gen для JSON-режима конверта).
-- `ContractHash` — детекция несовместимого контракта на приёме → poison без retry.
-- Эволюция контрактов: только additive-поля; правила обязательности полей — через сериализатор-specific настройки, задокументированные per provider.
-- PartitionKey (optional, из `IPartitioned { string PartitionKey { get; } }` на сообщении) → Kafka partition key / RabbitMQ routing-ключ по соглашению: ordering per key.
+- per message type (fluent: `cfg.UseMessagePack<CreateOrder>()`); - ( payload-bytes, STJ Utf8 source-gen JSON- ).
+- `ContractHash` — → poison retry.
+- : additive-; — -specific , per provider.
+- PartitionKey (optional, `IPartitioned { string PartitionKey { get; } }` ) → Kafka partition key / RabbitMQ routing- : ordering per key.
 
 ---
 
-## 8. Транспортный SPI и провайдеры
+## 8. SPI 
 
 ```csharp
 public interface ITransport
 {
-    string Name { get; }
-    TransportCapabilities Capabilities { get; }
-    ValueTask BuildTopology(TopologyManifest manifest, CancellationToken ct);  // идемпотентный declare
-    ValueTask<ITransportPublisher> CreatePublisher(CancellationToken ct);
-    IConsumerHostFactory CreateConsumers(IReadOnlyList<ConsumerEndpoint> endpoints);
+ string Name { get; }
+ TransportCapabilities Capabilities { get; }
+ ValueTask BuildTopology(TopologyManifest manifest, CancellationToken ct); // declare
+ ValueTask<ITransportPublisher> CreatePublisher(CancellationToken ct);
+ IConsumerHostFactory CreateConsumers(IReadOnlyList<ConsumerEndpoint> endpoints);
 }
 
 public interface ITransportPublisher
 {
-    ValueTask Publish(Envelope envelope, PublishOptions options, CancellationToken ct);
-    // PublishOptions: confirmDelivery (для outbox-relay), partitionKey, headers-merge
+ ValueTask Publish(Envelope envelope, PublishOptions options, CancellationToken ct);
+ // PublishOptions: confirmDelivery ( outbox-relay), partitionKey, headers-merge
 }
 ```
 
 ### 8.1 RabbitMQ (`Mediana.RabbitMQ`)
 
-- Exchange: direct (command/query) или topic (event, паттерн из роуты); очереди + bindings из манифеста.
-- Dead-letter: DLX на каждую очередь → `<queue>.dlq`; poison и retry-исчерпание идут туда с заголовками причины.
-- Retry: nack с requeue=false → DLX-cycle c TTL-очередями (`<queue>.retry.<delay>`), задержки из retry-политики.
-- Request/reply: **direct reply-to** (без временных очередей); таймаут на клиенте; streaming — chunked frames + completion/error frame по тому же reply-to.
-- Надёжность публикации: publisher confirms (opt-in per route; обязателен при outbox-режиме).
-- Топология объявляется идемпотентно на старте и переиспользуется (кэш declare).
+- Exchange: direct (command/query) topic (event, ); + bindings .
+- Dead-letter: DLX → `<queue>.dlq`; poison retry- .
+- Retry: nack requeue=false → DLX-cycle c TTL- (`<queue>.retry.<delay>`), retry-.
+- Request/reply: **direct reply-to** ( ); ; streaming — chunked frames + completion/error frame reply-to.
+- : publisher confirms (opt-in per route; outbox-).
+- ( declare).
 
 ### 8.2 Kafka (`Mediana.Kafka`)
 
-- Топики из роуты; command → топик + consumer group (конкурентность), event → топик на сервис-подписчик (group per subscriber).
-- Retry-паттерн retry-топиков: `topic.retry.5s`, `topic.retry.30s` → `topic.dlq`; non-blocking retries.
-- Ordering: partition key из PartitionKey сообщения (или MessageId); документируем per-key ordering.
-- Request/reply и streaming — не поддерживаются (D11); конфигурация Query/StreamQuery на kafka-транспорте → диагностическая ошибка на старте.
+- ; command → + consumer group (), event → - (group per subscriber).
+- Retry- retry-: `topic.retry.5s`, `topic.retry.30s` → `topic.dlq`; non-blocking retries.
+- Ordering: partition key PartitionKey ( MessageId); per-key ordering.
+- Request/reply streaming — (D11); Query/StreamQuery kafka- → .
 
-### 8.3 MassTransit (`Mediana.MassTransit`) — три режима
+### 8.3 MassTransit (`Mediana.MassTransit`) — 
 
-1. **Транспорт**: Mediana-роуты публикуются через MassTransit `IBus`/`IRequestClient` — пользователь получает saga-экосистему, шедулер и конфигурацию MassTransit; Mediana использует выбранный MassTransit-транспорт (RabbitMQ/Azure Service Bus/...).
-2. **Мост в Mediana**: MassTransit-консюмеры (`cfg.AddMedianaDispatch()` на receive endpoint) диспатчат входящие MassTransit-сообщения в локальный Mediana-пайплайн — behaviors, retry, идемпотентность применяются единообразно.
-3. **MassTransit-envelope режим**: Mediana издаёт конверт в формате MassTransit (messageType envelope) — внешние MassTransit-сервисы потребляют наши сообщения без библиотек Mediana; Fault-события публикуются в MassTransit Fault-формате.
+1. ****: Mediana- MassTransit `IBus`/`IRequestClient` — saga-, MassTransit; Mediana MassTransit- (RabbitMQ/Azure Service Bus/...).
+2. ** Mediana**: MassTransit- (`cfg.AddMedianaDispatch()` receive endpoint) MassTransit- Mediana- — behaviors, retry, .
+3. **MassTransit-envelope **: Mediana MassTransit (messageType envelope) — MassTransit- Mediana; Fault- MassTransit Fault-.
 
-Взаимная изоляция: собственные outbox/retry Mediana при MassTransit-транспорте по умолчанию делегируются MassTransit (его outbox/ retry), чтобы не задваивать механизмы; переключаемо.
-
----
-
-## 9. Надёжность доставки
-
-### 9.1 Inbox (в транспортном уровне, всегда включён для remote-консюмеров)
-
-- Дедупликация `(MessageId, HandlerIdentity)`; хранилище — интерфейс `IInboxStore` с реализациями в outbox-пакетах БД **и** лёгкой in-memory (для dev/тест; документируем ограничения: не переживает рестарт).
-- Запись «обрабатывается» до хендлера (unique constraint побеждает гонку двойной доставки), статус → «обработано» после успеха; коллизия → skip с метрикой.
-
-### 9.2 Retry-политики
-
-- Per message type: `Fixed / Incremental / Exponential (+jitter)`, MaxAttempts; два контура — in-process (transient-ошибки, без редоставки) и transport-level (redelivery по механизмам §8). По умолчанию: Exponential 50ms→5s, 5 попыток in-process, дальше транспортный контур. Движок retry/backoff/jitter — собственная реализация (D14), не Polly.
-
-### 9.3 DLQ и poison detection
-
-- Исчерпание retry → dead-letter родным механизмом транспорта; конверт сохраняется целиком, fingerprint ошибки (тип+stack-hash) в заголовках.
-- Poison (десериализация, ContractHash mismatch, известные non-retryable) → DLQ сразу, без retry, алерт-метрика `mediana_poison_total`.
-
-### 9.4 Transactional Outbox — **opt-in через отдельный NuGet** (D4)
-
-- `Mediana.Outbox` — ядро: перехват бизнес-транзакции (EF Core `SaveChangesInterceptor` / Dapper-транзакция / Mongo session через соответствующие провайдер-пакеты), запись исходящих конвертов в ту же транзакцию.
-- Фоновый relay: батч-выборка `FOR UPDATE SKIP LOCKED` (SQL) / lease (Mongo), publisher confirms, экспоненциальный backoff при недоступности транспорта, политика cleanup по возрасту.
-- Семантика честно документируется: at-least-once доставка + inbox на стороне хендлера = effectively-once выполнение.
-- **Без пакета**: роуты с `Direct`-политикой публикуют напрямую (retry/DLQ работают, атомарности с бизнес-транзакцией нет). Конфигурация `Outbox`-политики без установленного пакета → понятная ошибка старта с именем NuGet-пакета.
+ : outbox/retry Mediana MassTransit- MassTransit ( outbox/ retry), ; .
 
 ---
 
-## 10. Стриминг
+## 9. 
 
-- Локальный: `IAsyncEnumerable` от хендлера через `IMediator.Stream`, behaviors через `IStreamMiddleware` (композиция без аллокаций на синхронном движении курсора).
-- Удалённый: RabbitMQ chunked reply-frames + completion/error frame (D11); MassTransit — через его колбэки, где применимо. Kafka — нет.
-- Backpressure: рамки тянутся с consumer-prefetch; отмена (`ct`) → cancel-frame гасит серверный курсор.
+### 9.1 Inbox ( , remote-)
+
+- `(MessageId, HandlerIdentity)`; — `IInboxStore` outbox- **** in-memory ( dev/; : ).
+- «» (unique constraint ), → «» ; → skip .
+
+### 9.2 Retry-
+
+- Per message type: `Fixed / Incremental / Exponential (+jitter)`, MaxAttempts; — in-process (transient-, ) transport-level (redelivery §8). : Exponential 50ms→5s, 5 in-process, . retry/backoff/jitter — (D14), Polly.
+
+### 9.3 DLQ poison detection
+
+- retry → dead-letter ; , fingerprint (+stack-hash) .
+- Poison (, ContractHash mismatch, non-retryable) → DLQ , retry, - `mediana_poison_total`.
+
+### 9.4 Transactional Outbox — **opt-in NuGet** (D4)
+
+- `Mediana.Outbox` — : - (EF Core `SaveChangesInterceptor` / Dapper- / Mongo session -), .
+- relay: - `FOR UPDATE SKIP LOCKED` (SQL) / lease (Mongo), publisher confirms, backoff , cleanup .
+- : at-least-once + inbox = effectively-once .
+- ** **: `Direct`- (retry/DLQ , - ). `Outbox`- → NuGet-.
 
 ---
 
-## 11. Наблюдаемость и семантика ошибок (D15 — полная OTLP-телеметрия)
+## 10. 
 
-### 11.1 Инструментация ядра (ноль зависимостей, ноль затрат при выключенном сборщике)
+- : `IAsyncEnumerable` `IMediator.Stream`, behaviors `IStreamMiddleware` ( ).
+- : RabbitMQ chunked reply-frames + completion/error frame (D11); MassTransit — , . Kafka — .
+- Backpressure: consumer-prefetch; (`ct`) → cancel-frame .
 
-Все сигналы через BCL API (`ActivitySource`/`Meter`/`ILogger`): без слушателей `Activity` API — no-op без аллокаций (гарантия north star); метрики пишутся через reusable теги-объекты.
+---
 
-**Трейсы (ActivitySource "Mediana") — полный инвентарь:**
+## 11. (D15 — OTLP-)
 
-| Span | Где | Ключевые атрибуты (OTel messaging semconv) |
+### 11.1 ( , )
+
+ BCL API (`ActivitySource`/`Meter`/`ILogger`): `Activity` API — no-op ( north star); reusable -.
+
+** (ActivitySource "Mediana") — :**
+
+| Span | | (OTel messaging semconv) |
 |------|-----|--------------------------------------------|
-| `dispatch {MessageType}` | локальный Send/Stream | `messaging.message.id`, `messaging.system`="inproc" |
-| `publish {MessageType}` | публикация (direct или через outbox) | `messaging.destination.name`, `messaging.system`, partition key |
-| `consume {MessageType}` | приём и диспетч хендлером | + `messaging.destination.name` очереди/топика |
-| `request.send {MessageType}` | удалённый Send, сторона клиента | correlation, destination, timeout |
-| `request.handle {MessageType}` | удалённый Send, сторона консьюмера | связан через traceparent конверта |
-| `outbox.relay` | батч relay | batch size, taken/sent/skipped |
-| `inbox.dedup` | проверка дедупликации | hit/miss |
+| `dispatch {MessageType}` | Send/Stream | `messaging.message.id`, `messaging.system`="inproc" |
+| `publish {MessageType}` | (direct outbox) | `messaging.destination.name`, `messaging.system`, partition key |
+| `consume {MessageType}` | | + `messaging.destination.name` / |
+| `request.send {MessageType}` | Send, | correlation, destination, timeout |
+| `request.handle {MessageType}` | Send, | traceparent |
+| `outbox.relay` | relay | batch size, taken/sent/skipped |
+| `inbox.dedup` | | hit/miss |
 
-Сквозная трассировка: `traceparent` (W3C TraceContext) в конверте — локальный→очередь→хендлер цепочка одним trace; `CorrelationId`/`CausationId` в атрибутах каждого span'а.
+ : `traceparent` (W3C TraceContext) — →→ trace; `CorrelationId`/`CausationId` span'.
 
-**Метрики (Meter "Mediana"):** dispatch duration histogram (по видам command/query/event/stream), in-flight count, publish/consume duration, consumer lag, retry attempts counter (по контурам), DLQ rate, `mediana_poison_total`, outbox lag/age/batch size, request/reply duration + timeout counter, stream rows counter.
+** (Meter "Mediana"):** dispatch duration histogram ( command/query/event/stream), in-flight count, publish/consume duration, consumer lag, retry attempts counter ( ), DLQ rate, `mediana_poison_total`, outbox lag/age/batch size, request/reply duration + timeout counter, stream rows counter.
 
-**Логи:** `ILogger` с семантическими ключами `message.type`, `message.id`, `correlation.id`, `causation.id`, `transport`, `endpoint`; ambient log-scope из конверта.
+**:** `ILogger` `message.type`, `message.id`, `correlation.id`, `causation.id`, `transport`, `endpoint`; ambient log-scope .
 
-### 11.2 Пакет Mediana.Telemetry.OpenTelemetry (готовый OTLP-экспорт)
+### 11.2 Mediana.Telemetry.OpenTelemetry ( OTLP-)
 
 ```csharp
 builder.Services.AddMedianaOpenTelemetry(otel => {
-    otel.WithOtlpExporter()                    // gRPC/HTTP, env OTEL_EXPORTER_OTLP_ENDPOINT/*
-        .WithTraces(t => t.SetSampler(new ParentBasedTraceIdRatio(0.1)))
-        .WithMetrics(m => m.AddDeltaTemporality())
-        .WithLogs();                           // bridge ILogger → OTLP logs
+ otel.WithOtlpExporter() // gRPC/HTTP, env OTEL_EXPORTER_OTLP_ENDPOINT/*
+ .WithTraces(t => t.SetSampler(new ParentBasedTraceIdRatio(0.1)))
+ .WithMetrics(m => m.AddDeltaTemporality())
+ .WithLogs(); // bridge ILogger → OTLP logs
 });
 ```
 
-- Подключает OTel SDK только к сигналам Mediana (не захватывает чужие источники — их приложение добавляет само); либо режим `AddToExisting(sdk)` для композиции с уже настроенным OTel.
-- Атрибуты уже соответствуют OTel messaging semantic conventions — коллекторы и дашборды понимают без маппинга.
-- OTLP exporter: env-конфигурация стандартная (`OTEL_EXPORTER_OTLP_ENDPOINT`, `..._PROTOCOL`, `..._HEADERS`), ресурсы — `OTEL_SERVICE_NAME` + `service.namespace`/`service.version` по умолчанию из хоста.
-- Зависимость OpenTelemetry SDK — только в этом спутниковом пакете (D14 не нарушен).
+- OTel SDK Mediana ( — ); `AddToExisting(sdk)` OTel.
+- OTel messaging semantic conventions — .
+- OTLP exporter: env- (`OTEL_EXPORTER_OTLP_ENDPOINT`, `..._PROTOCOL`, `..._HEADERS`), — `OTEL_SERVICE_NAME` + `service.namespace`/`service.version` .
+- OpenTelemetry SDK — (D14 ).
 
-### 11.4 Асинхронный телеметрический конвейер (никакой записи, задерживающей путь диспетчеризации)
+### 11.4 ( , )
 
-Принцип: **inline на горячем пути — только дешёвая запись в память; весь I/O — фоновый**. Ни один вызов диспетчеризации не ожидает ни сети, ни диска, ни очереди телеметрии.
+: **inline — ; I/O — **. , , .
 
-1. **Guard-условия до сборки данных**: перед созданием span'а — `ActivitySource.HasListeners()`/`IsEnabled(sampling)`; метрики — через reusable теги-объекты. Нет слушателей / sampled-out → ноль аллокаций и ноль работы (бюджет §12 сохраняется).
-2. **Span'ы/метрики**: запись только в память процессора OTel (`BatchExportProcessor`): bounded-очередь, фоновая доставка по расписанию и по размеру батча, inline-код не ждёт экспорта.
-3. **Логи (ILogger-bridge)**: собственный bounded-канал (`System.Threading.Channels`, lock-free) + фоновый drain → OTLP batch-процессор. Переполнение очереди — **drop без блокировки**: политика по умолчанию `DropNewest` (настраивается `DropOldest`/`Block` — `Block` документирован как анти-паттерн для горячего пути); потерянные записи считаются метрикой `mediana_telemetry_dropped_total` (разбивка по сигналам).
-4. **Drop-политика экспортёра**: bounded queue OTLP-экспортёра при недоступном коллекторе тоже не блокирует вызовы; потери считаются (`mediana_telemetry_export_dropped_total`), экспоненциальный backoff ретраев доставки.
-5. **Graceful shutdown**: финальный flush с таймаутом (по умолчанию 5 сек, настраивается) — хвост телеметрии не теряется при штатной остановке; при таймауте — счётчик недосланного.
-6. **Проверяемость**: (а) тест латентности — диспетчеризация с заблокированным OTLP-endpoint'ом не отличается по латентности от выключенной телеметрии; (б) тест переполнения — bounded-очередь с медленным drain не блокирует producer'а, счётчик dropped растёт; (в) shutdown-flush — все записанные до остановки события доставлены тестовому приёмнику.
+1. **Guard- **: span' — `ActivitySource.HasListeners()`/`IsEnabled(sampling)`; — reusable -. / sampled-out → ( §12 ).
+2. **Span'/**: OTel (`BatchExportProcessor`): bounded-, , inline- .
+3. ** (ILogger-bridge)**: bounded- (`System.Threading.Channels`, lock-free) + drain → OTLP batch-. — **drop **: `DropNewest` ( `DropOldest`/`Block` — `Block` - ); `mediana_telemetry_dropped_total` ( ).
+4. **Drop- **: bounded queue OTLP- ; (`mediana_telemetry_export_dropped_total`), backoff .
+5. **Graceful shutdown**: flush ( 5 , ) — ; — .
+6. ****: () — OTLP-endpoint' ; () — bounded- drain producer', dropped ; () shutdown-flush — .
 
-### 11.3 Семантика ошибок
+### 11.3 
 
-- Локальный `Send` — исключение летит вызывающему как есть (ожидание MediatR-пользователей); span получает status=ERROR + `exception.*` события.
-- Удалённый `Send` — `RemoteExecutionException { RemoteErrorType, Message, Details, Envelope }`.
-- События — Fault-событие (в т.ч. MassTransit Fault-формат) + retry-контур; DLQ-события несут fingerprint ошибки в атрибутах.
-
----
-
-## 12. Производительность: бюджеты и CI-гейты
-
-Зафиксированные контракты (BenchmarkDotNet, `MemoryDiagnoser`, CI-джоба на PR):
-
-1. In-process `Send` (пайплайн 2 behaviors, sync-completion handler): **0 байт** аллокаций, обе платформы (net10.0 и ns2.1-ассет); в singleton-режиме хендлеров — также 0 обращений к DI на вызов.
-2. In-process `Send` (async handler): 0 байт в steady state (пул IVTS), латентность не хуже MediatR; цель ≥2× throughput на высококонкурентных async-путях.
-3. In-process `Publish` sequential (1–8 хендлеров): **0 байт** аллокаций на публикацию.
-4. In-process `Publish` parallel (1–8 хендлеров): ≤ 1 малой аллокации на хендлер в steady state (координация барьера — pooled waiter'ы; бюджет абсолютный).
-5. In-process `Stream`: 0 байт на движение курсора при отсутствии stream-behaviors; ≤ 1 малой аллокации на строку при их наличии.
-6. Десериализация + диспетч консьюмера: бюджет ≤ 1.2× стоимости сериализации payload.
-7. Outbox-путь: конверт + буферы ≤ 1 KB baseline аллокаций на сообщение.
-8. CI-гейт: benchmark-диф между main и PR; регрессия > 5% на любом зафиксированном бюджете → red build; аллокационные бюджеты — абсолютный гейт.
-9. CI-гейт зависимостей (D14): автоматический аудит деклараций пакетов ядра (Abstractions, Mediana, Transport.Abstractions, Generators, Outbox) — **ноль не-Microsoft внешних зависимостей**; появление новой зависимости Microsoft-пакета требует явного approve в PR (список разрешённых ведётся в CI-конфиге); спутниковые пакеты аудируются на отсутствие неожиданных транзитивных зависимостей.
-
-Бенчмарк-матрица (D16 — все режимы против MediatR 12.x в CI): Send sync/async, Publish sequential/parallel (1–8 хендлеров), Stream, сериализация (STJ/MessagePack), конверт, e2e через Testcontainers-RabbitMQ (throughput конкурентных консьюмеров). Отдельный сценарий: конкурентный Send (много потоков, scoped- и singleton-режимы) — проверка отсутствия contention на реестре.
+- `Send` — ( MediatR-); span status=ERROR + `exception.*` .
+- `Send` — `RemoteExecutionException { RemoteErrorType, Message, Details, Envelope }`.
+- — Fault- ( .. MassTransit Fault-) + retry-; DLQ- fingerprint .
 
 ---
 
-## 13. Тестирование
+## 12. : CI-
 
-- **Unit** (≥90% ядра): диспетч, реестр (включая copy-on-write гонки — stress-тесты), пайплайны, конверт, retry-политики, poison detection. TDD: RED→GREEN для ядра диспетча и пайплайнов.
-- **Integration** (Testcontainers): RabbitMQ/Kafka — топология, request/reply, retry/DLQ, inbox против двойной доставки; outbox против Postgres/SQL Server/Mongo — атомарность, relay, SKIP LOCKED конкурентность.
-- **Телеметрия**: интеграционный тест с in-process OTLP-приёмником (test HTTP/gRPC endpoint) — полный обход трейса локальный→очередь→хендлер одним trace, наличие всех span'ов §11.1, метрики после сбора, no-op путь без слушателей (аллокационный тест телеметрии); асинхронность конвейера §11.4 — латентность диспетчеризации при заблокированном OTLP-endpoint'е, drop-политика при переполнении, shutdown-flush.
-- **Интероп**: Mediana⇄MassTransit обе стороны; MassTransit-envelope режим; адаптер MediatR-хендлеров.
-- **AOT/trimming**: NativeAOT publish smoke + `TreatWarningsAsErrors` на trimming-аннотациях; оба ассета.
-- **ContractTests.Ns21**: (а) набор тестов ядра исполняется против ns2.1-ассета (включая reflection-free сценарии); (б) контрактный тест идентичности публичной API-поверхности двух ассетов (сравнение экспортированных типов/членов через reflection на собранных сборках).
-- Событийная конкурентность: детерминированные тесты Parallel/Sequential политик с virtual time для retry.
+ (BenchmarkDotNet, `MemoryDiagnoser`, CI- PR):
 
----
+1. In-process `Send` ( 2 behaviors, sync-completion handler): **0 ** , (net10.0 ns2.1-); singleton- — 0 DI .
+2. In-process `Send` (async handler): 0 steady state ( IVTS), MediatR; ≥2× throughput async-.
+3. In-process `Publish` sequential (1–8 ): **0 ** .
+4. In-process `Publish` parallel (1–8 ): ≤ 1 steady state ( — pooled waiter'; ).
+5. In-process `Stream`: 0 stream-behaviors; ≤ 1 .
+6. + : ≤ 1.2× payload.
+7. Outbox-: + ≤ 1 KB baseline .
+8. CI-: benchmark- main PR; > 5% → red build; — .
+9. CI- (D14): (Abstractions, Mediana, Transport.Abstractions, Generators, Outbox) — ** -Microsoft **; Microsoft- approve PR ( CI-); .
 
-## 14. DX: генератор и анализаторы
-
-Incremental source generator (netstandard2.0, регистрация как analyzer + generator в одном пакете `Mediana.Generators`):
-
-- Диагностики-ошибки: два хендлера команды; хендлер без сообщения; remote-роут сообщения без serializable-контракта; неизвестный транспорт в атрибуте; Query/StreamQuery на kafka-транспорте; `LocalAndRemote` для command — warning.
-- Генерирует: DI-registrar, switch-диспетчер, сшитые пайплайны, JSON-манифест топологий, STJ-конверты. Сгенерированный код идентичен для обоих TFM (кроме реестра — ветка по `#if NET10_0`).
-- Стабильный naming/formatting сгенерированного кода (`EmitCompilerGeneratedFiles` для ревью).
+- (D16 — MediatR 12.x CI): Send sync/async, Publish sequential/parallel (1–8 ), Stream, (STJ/MessagePack), , e2e Testcontainers-RabbitMQ (throughput ). : Send ( , scoped- singleton-) — contention .
 
 ---
 
-## 15. Версионирование и совместимость
+## 13. 
 
-- SemVer 2.0; пакеты транспортов и outbox версионируются синхронно с ядром в рамках мажора 1.x.
-- Wire-формат конверта: `EnvelopeVersion`, эволюция только additive; старые читатели игнорируют неизвестные поля.
-- `Mediana.MediatR` поддерживает контракты MediatR 12.x (`IRequestHandler<,>`, `INotificationHandler<>`, `IHandlerMiddleware<,>`) через адаптерную регистрацию `cfg.AddMediatRHandlers(assemblies)` — хендлеры оборачиваются в нативные Mediana-хендлеры, участвуют в общих пайплайнах.
-- Минимальные версии клиентов фиксируются в csproj как диапазоны с нижней границей (RabbitMQ.Client 7.x, Confluent.Kafka 2.x, MassTransit 8.x+) — точные нижние границы фиксируются на этапе плана реализации по актуальным стабильным версиям.
+- **Unit** (≥90% ): , ( copy-on-write — stress-), , , retry-, poison detection. TDD: RED→GREEN .
+- **Integration** (Testcontainers): RabbitMQ/Kafka — , request/reply, retry/DLQ, inbox ; outbox Postgres/SQL Server/Mongo — , relay, SKIP LOCKED .
+- ****: in-process OTLP- (test HTTP/gRPC endpoint) — →→ trace, span' §11.1, , no-op ( ); §11.4 — OTLP-endpoint', drop- , shutdown-flush.
+- ****: Mediana⇄MassTransit ; MassTransit-envelope ; MediatR-.
+- **AOT/trimming**: NativeAOT publish smoke + `TreatWarningsAsErrors` trimming-; .
+- **ContractTests.Ns21**: () ns2.1- ( reflection-free ); () API- ( / reflection ).
+- : Parallel/Sequential virtual time retry.
 
 ---
 
-## 16. Риски и открытые вопросы
+## 14. DX: 
 
-| Риск | Митигция |
+Incremental source generator (netstandard2.0, analyzer + generator `Mediana.Generators`):
+
+- -: ; ; remote- serializable-; ; Query/StreamQuery kafka-; `LocalAndRemote` command — warning.
+- : DI-registrar, switch-, , JSON- , STJ-. TFM ( — `#if NET10_0`).
+- naming/formatting (`EmitCompilerGeneratedFiles` ).
+
+---
+
+## 15. 
+
+- SemVer 2.0; outbox 1.x.
+- Wire- : `EnvelopeVersion`, additive; .
+- `Mediana.MediatR` MediatR 12.x (`IRequestHandler<,>`, `INotificationHandler<>`, `IHandlerMiddleware<,>`) `cfg.AddMediatRHandlers(assemblies)` — Mediana-, .
+- csproj (RabbitMQ.Client 7.x, Confluent.Kafka 2.x, MassTransit 8.x+) — .
+
+---
+
+## 16. 
+
+| | |
 |------|----------|
-| Сложность incremental generator (кэши, пересборки) | Ранний спайк-прототип генератора в начале реализации; канареечный тест на incremental behavior |
-| Zero-alloc при исключениях (exception path аллоцирует неизбежно) | Бюджет задаётся только на happy path; exception-path — отдельный мягкий бюджет |
-| Гонки copy-on-write реестра | Stress-тесты + модель review; immutable snapshot семантика |
-| ns2.1-деградация на легаси-хостах (Unity/Mono) | Честная документация; benchmark-запуск на соответствующих хостах вне CI-гейтов (best effort) |
-| MassTransit envelope-режим: тонкости формата | Интероп-тесты против реального MassTransit контракта; фикстуры с образцами конвертов |
-| Диапазоны версий клиентских библиотек | Решение фиксируется в плане реализации (D13 — рамки уже заданы) |
-| Расхождение API RabbitMQ.Client 6.x/7.x — дублирование транспортного кода на ns2.1-ассете | Тонкий слой адаптации внутри Mediana.RabbitMQ: вся логика протокола/топологии/retry общая, per-TFM только обёртки клиента; контрактные тесты идентичны поведения |
+| incremental generator (, ) | - ; incremental behavior |
+| Zero-alloc (exception path ) | happy path; exception-path — |
+| copy-on-write | Stress- + review; immutable snapshot |
+| ns2.1- - (Unity/Mono) | ; benchmark- CI- (best effort) |
+| MassTransit envelope-: | - MassTransit ; |
+| | (D13 — ) |
+| API RabbitMQ.Client 6.x/7.x — ns2.1- | Mediana.RabbitMQ: //retry , per-TFM ; |
 
-Открытые вопросы к плану реализации: точные нижние версии клиентских библиотек; схема SQL-таблиц outbox/inbox (миграции EF); политика cleanup relay; поддержка `required`-членов в ns2.1-ассете (избегаем в public API).
+ : ; SQL- outbox/inbox ( EF); cleanup relay; `required`- ns2.1- ( public API).
 
 ---
 
-## 17. Вехи v1 (порядок реализации детализируется в плане)
+## 17. v1 ( )
 
-1. **M1 Ядро**: Abstractions + диспетчер (source-gen + runtime), пайплайны, DI, бенчмарк-каркас, бюджеты §12. Каждый milestone закрывает **оба ассета** (net10.0 и ns2.1) одновременно, включая контрактный тест идентичности API-поверхности.
-2. **M2 Роутинг и конверт**: роутинг-политики, конверт, STJ source-gen, сериализаторный SPI.
-3. **M3 Транспортный SPI + RabbitMQ**: publisher/consumer, топология, retry/DLQ, request/reply, streaming, in-memory inbox.
-4. **M4 Kafka**: топики, retry-топики, ordering.
-5. **M5 MassTransit**: транспорт, мост, envelope-режим, интероп-тесты.
-6. **M6 Надёжность**: poison detection, DB-backed inbox, opt-in Outbox + EF/Dapper/Mongo провайдеры, relay.
-7. **M7 MediatR-адаптер, OTLP-пакет телеметрии, документация, релизная подготовка**. (Инструментация ядра §11.1 поставляется инкрементально вместе с M1–M6, не откладывается на M7.)
+1. **M1 **: Abstractions + (source-gen + runtime), , DI, -, §12. milestone ** ** (net10.0 ns2.1) , API-.
+2. **M2 **: -, , STJ source-gen, SPI.
+3. **M3 SPI + RabbitMQ**: publisher/consumer, , retry/DLQ, request/reply, streaming, in-memory inbox.
+4. **M4 Kafka**: , retry-, ordering.
+5. **M5 MassTransit**: , , envelope-, -.
+6. **M6 **: poison detection, DB-backed inbox, opt-in Outbox + EF/Dapper/Mongo , relay.
+7. **M7 MediatR-, OTLP- , , **. ( §11.1 M1–M6, M7.)

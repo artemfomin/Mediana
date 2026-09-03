@@ -1,28 +1,28 @@
 <Project>
-  <PropertyGroup>
-    <LangVersion>latest</LangVersion>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <EnableNETAnalyzers>true</EnableNETAnalyzers>
-    <AnalysisLevel>latest</AnalysisLevel>
-    <Deterministic>true</Deterministic>
-    <NuGetAudit>true</NuGetAudit>
-    <NuGetAuditMode>all</NuGetAuditMode>
-    <NuGetAuditLevel>low</NuGetAuditLevel>
-    <AccelerateBuildsInVisualStudio>true</AccelerateBuildsInVisualStudio>
-    <!-- Trimming/AOT дружелюбие: публичные API без рефлексии -->
-    <EnableAotAnalyzer Condition="'$(TargetFramework)' == 'net10.0'">true</EnableAotAnalyzer>
-    <IsPackable>false</IsPackable>
-    <RepoRoot>$(MSBuildThisFileDirectory)</RepoRoot>
-  </PropertyGroup>
+ <PropertyGroup>
+ <LangVersion>latest</LangVersion>
+ <Nullable>enable</Nullable>
+ <ImplicitUsings>enable</ImplicitUsings>
+ <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+ <EnableNETAnalyzers>true</EnableNETAnalyzers>
+ <AnalysisLevel>latest</AnalysisLevel>
+ <Deterministic>true</Deterministic>
+ <NuGetAudit>true</NuGetAudit>
+ <NuGetAuditMode>all</NuGetAuditMode>
+ <NuGetAuditLevel>low</NuGetAuditLevel>
+ <AccelerateBuildsInVisualStudio>true</AccelerateBuildsInVisualStudio>
+ <!-- Trimming/AOT : API -->
+ <EnableAotAnalyzer Condition="'$(TargetFramework)' == 'net10.0'">true</EnableAotAnalyzer>
+ <IsPackable>false</IsPackable>
+ <RepoRoot>$(MSBuildThisFileDirectory)</RepoRoot>
+ </PropertyGroup>
 
-  <!-- OSS-метаданные NuGet: см. Directory.Build.targets (импортируется после csproj,
-       когда IsPackable проектов уже установлен) -->
+ <!-- OSS- NuGet: . Directory.Build.targets ( csproj,
+ IsPackable ) -->
 
-  <!-- Тесты/бенчмарки не нуждаются в анализаторах уровня продукта -->
-  <PropertyGroup Condition="'$(IsTestProject)' == 'true' or '$(MSBuildProjectName)' == 'Mediana.Benchmarks'">
-    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
-    <EnableAotAnalyzer>false</EnableAotAnalyzer>
-  </PropertyGroup>
+ <!-- / -->
+ <PropertyGroup Condition="'$(IsTestProject)' == 'true' or '$(MSBuildProjectName)' == 'Mediana.Benchmarks'">
+ <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+ <EnableAotAnalyzer>false</EnableAotAnalyzer>
+ </PropertyGroup>
 </Project>

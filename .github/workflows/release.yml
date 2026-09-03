@@ -1,211 +1,211 @@
 name: Release (tag -> NuGet + GitHub Release)
 
 on:
-  push:
-    tags: ["v*"]
+ push:
+ tags: ["v*"]
 
 permissions:
-  contents: write # создание GitHub Release
+ contents: write # GitHub Release
 
 env:
-  DOTNET_NOLOGO: true
-  DOTNET_CLI_TELEMETRY_OPTOUT: true
-  REF_NAME: "${{ github.ref_name }}"
+ DOTNET_NOLOGO: true
+ DOTNET_CLI_TELEMETRY_OPTOUT: true
+ REF_NAME: "${{ github.ref_name }}"
 
 jobs:
-  verify:
-    name: "Verify (all gates) before publishing"
-    runs-on: windows-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "10.0.x"
-      - name: Build (warnings as errors)
-        run: |
-          dotnet restore
-          dotnet build -c Release
-      - name: Tests (all projects, both assets)
-        run: |
-          dotnet test tests/Mediana.UnitTests -c Release --no-build
-          dotnet test tests/Mediana.UnitTests.Ns21 -c Release --no-build
-          dotnet test tests/Mediana.GeneratorTests -c Release --no-build
-          dotnet test tests/Mediana.ContractTests.Ns21 -c Release --no-build
-          dotnet test tests/Mediana.InteropTests -c Release --no-build
-      - name: Coverage gate (union >= 95%)
-        run: |
-          dotnet test tests/Mediana.UnitTests -c Release --no-build --collect:"XPlat Code Coverage" --settings coverlet.runsettings
-          dotnet test tests/Mediana.UnitTests.Ns21 -c Release --no-build --collect:"XPlat Code Coverage" --settings coverlet.runsettings
-          powershell -File scripts/check-coverage.ps1
-      - name: Allocation gate (0 B/call)
-        run: dotnet run --project benchmarks/Mediana.Benchmarks -c Release --no-build -- alloc-check
+ verify:
+ name: "Verify (all gates) before publishing"
+ runs-on: windows-latest
+ permissions:
+ contents: read
+ steps:
+ - uses: actions/checkout@v4
+ - uses: actions/setup-dotnet@v4
+ with:
+ dotnet-version: "10.0.x"
+ - name: Build (warnings as errors)
+ run: |
+ dotnet restore
+ dotnet build -c Release
+ - name: Tests (all projects, both assets)
+ run: |
+ dotnet test tests/Mediana.UnitTests -c Release --no-build
+ dotnet test tests/Mediana.UnitTests.Ns21 -c Release --no-build
+ dotnet test tests/Mediana.GeneratorTests -c Release --no-build
+ dotnet test tests/Mediana.ContractTests.Ns21 -c Release --no-build
+ dotnet test tests/Mediana.InteropTests -c Release --no-build
+ - name: Coverage gate (union >= 95%)
+ run: |
+ dotnet test tests/Mediana.UnitTests -c Release --no-build --collect:"XPlat Code Coverage" --settings coverlet.runsettings
+ dotnet test tests/Mediana.UnitTests.Ns21 -c Release --no-build --collect:"XPlat Code Coverage" --settings coverlet.runsettings
+ powershell -File scripts/check-coverage.ps1
+ - name: Allocation gate (0 B/call)
+ run: dotnet run --project benchmarks/Mediana.Benchmarks -c Release --no-build -- alloc-check
 
-  aot:
-    name: NativeAOT publish smoke
-    runs-on: ubuntu-latest
-    needs: verify
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "10.0.x"
-      - name: Publish NativeAOT (linux-x64)
-        run: dotnet publish tests/Mediana.AotTests -c Release -r linux-x64 --self-contained true
-      - name: Run AOT binary
-        run: ./tests/Mediana.AotTests/bin/Release/net10.0/linux-x64/publish/Mediana.AotTests
+ aot:
+ name: NativeAOT publish smoke
+ runs-on: ubuntu-latest
+ needs: verify
+ permissions:
+ contents: read
+ steps:
+ - uses: actions/checkout@v4
+ - uses: actions/setup-dotnet@v4
+ with:
+ dotnet-version: "10.0.x"
+ - name: Publish NativeAOT (linux-x64)
+ run: dotnet publish tests/Mediana.AotTests -c Release -r linux-x64 --self-contained true
+ - name: Run AOT binary
+ run: ./tests/Mediana.AotTests/bin/Release/net10.0/linux-x64/publish/Mediana.AotTests
 
-  pack:
-    name: Pack all packages
-    runs-on: windows-latest
-    needs: [verify, aot]
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "10.0.x"
-      - name: Extract version from tag (validated)
-        id: ver
-        shell: pwsh
-        run: |
-          $tag = $env:REF_NAME
-          if ($tag -notmatch '^v\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$') {
-            Write-Error "Invalid tag format: $tag"
-            exit 1
-          }
-          $version = $tag.TrimStart('v')
-          "version=$version" >> $env:GITHUB_OUTPUT
-          $prerelease = $version.Contains('-')
-          "prerelease=$prerelease" >> $env:GITHUB_OUTPUT
-      - name: Pack (version from tag, symbols snupkg)
-        shell: pwsh
-        env:
-          VER: ${{ steps.ver.outputs.version }}
-        run: |
-          $v = $env:VER
-          if (-not $v) { Write-Error "Version not set"; exit 1 }
-          $projects = Get-ChildItem src -Filter *.csproj -Recurse | Where-Object {
-            (Select-Xml -Path $_.FullName -XPath "//IsPackable").Node.InnerText -eq 'true'
-          }
-          dotnet build -c Release -p:Version=$v
-          New-Item -ItemType Directory -Force -Path dist | Out-Null
-          foreach ($p in $projects) {
-            dotnet pack $p.FullName -c Release --no-build -p:Version=$v -o dist
-          }
-          Get-ChildItem dist
-      - name: Verify package metadata (license/icon/readme embedded)
-        shell: pwsh
-        run: |
-          $fail = $false
-          foreach ($nupkg in (Get-ChildItem dist -Filter *.nupkg)) {
-            $name = $nupkg.BaseName
-            $tmp = "tmp-$name"
-            if (Test-Path $tmp) { Remove-Item -Recurse -Force $tmp }
-            Expand-Archive $nupkg.FullName $tmp -Force
-            $nuspec = Get-ChildItem $tmp -Filter *.nuspec | Select-Object -First 1
-            $raw = Get-Content $nuspec.FullName -Raw
-            $hasLicense = ($raw -match 'license') -and ($raw -match 'MIT')
-            $hasRepo = $raw -match 'artemfomin/Mediana'
-            $hasIcon = Test-Path "$tmp/icon.png"
-            $hasReadme = Test-Path "$tmp/package-readme.md"
-            if (-not $hasLicense) { Write-Host "FAIL [$name]: license"; $fail = $true }
-            if (-not $hasRepo)    { Write-Host "FAIL [$name]: repo url"; $fail = $true }
-            if (-not $hasIcon)    { Write-Host "FAIL [$name]: icon embedded"; $fail = $true }
-            if (-not $hasReadme)  { Write-Host "FAIL [$name]: readme embedded"; $fail = $true }
-            Remove-Item -Recurse -Force $tmp
-          }
-          if ($fail) { exit 1 }
-          Write-Host "Package metadata: OK for all packages"
-      - name: Upload packages artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: nuget-packages
-          path: dist/*
+ pack:
+ name: Pack all packages
+ runs-on: windows-latest
+ needs: [verify, aot]
+ permissions:
+ contents: read
+ steps:
+ - uses: actions/checkout@v4
+ - uses: actions/setup-dotnet@v4
+ with:
+ dotnet-version: "10.0.x"
+ - name: Extract version from tag (validated)
+ id: ver
+ shell: pwsh
+ run: |
+ $tag = $env:REF_NAME
+ if ($tag -notmatch '^v\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$') {
+ Write-Error "Invalid tag format: $tag"
+ exit 1
+ }
+ $version = $tag.TrimStart('v')
+ "version=$version" >> $env:GITHUB_OUTPUT
+ $prerelease = $version.Contains('-')
+ "prerelease=$prerelease" >> $env:GITHUB_OUTPUT
+ - name: Pack (version from tag, symbols snupkg)
+ shell: pwsh
+ env:
+ VER: ${{ steps.ver.outputs.version }}
+ run: |
+ $v = $env:VER
+ if (-not $v) { Write-Error "Version not set"; exit 1 }
+ $projects = Get-ChildItem src -Filter *.csproj -Recurse | Where-Object {
+ (Select-Xml -Path $_.FullName -XPath "//IsPackable").Node.InnerText -eq 'true'
+ }
+ dotnet build -c Release -p:Version=$v
+ New-Item -ItemType Directory -Force -Path dist | Out-Null
+ foreach ($p in $projects) {
+ dotnet pack $p.FullName -c Release --no-build -p:Version=$v -o dist
+ }
+ Get-ChildItem dist
+ - name: Verify package metadata (license/icon/readme embedded)
+ shell: pwsh
+ run: |
+ $fail = $false
+ foreach ($nupkg in (Get-ChildItem dist -Filter *.nupkg)) {
+ $name = $nupkg.BaseName
+ $tmp = "tmp-$name"
+ if (Test-Path $tmp) { Remove-Item -Recurse -Force $tmp }
+ Expand-Archive $nupkg.FullName $tmp -Force
+ $nuspec = Get-ChildItem $tmp -Filter *.nuspec | Select-Object -First 1
+ $raw = Get-Content $nuspec.FullName -Raw
+ $hasLicense = ($raw -match 'license') -and ($raw -match 'MIT')
+ $hasRepo = $raw -match 'artemfomin/Mediana'
+ $hasIcon = Test-Path "$tmp/icon.png"
+ $hasReadme = Test-Path "$tmp/package-readme.md"
+ if (-not $hasLicense) { Write-Host "FAIL [$name]: license"; $fail = $true }
+ if (-not $hasRepo) { Write-Host "FAIL [$name]: repo url"; $fail = $true }
+ if (-not $hasIcon) { Write-Host "FAIL [$name]: icon embedded"; $fail = $true }
+ if (-not $hasReadme) { Write-Host "FAIL [$name]: readme embedded"; $fail = $true }
+ Remove-Item -Recurse -Force $tmp
+ }
+ if ($fail) { exit 1 }
+ Write-Host "Package metadata: OK for all packages"
+ - name: Upload packages artifact
+ uses: actions/upload-artifact@v4
+ with:
+ name: nuget-packages
+ path: dist/*
 
-  publish-nuget:
-    name: Publish to NuGet.org
-    runs-on: windows-latest
-    needs: [verify, aot, pack]
-    environment: nuget
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: nuget-packages
-          path: dist
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "10.0.x"
-      - name: Push nupkg + snupkg
-        env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
-        shell: pwsh
-        run: |
-          if ([string]::IsNullOrEmpty($env:NUGET_API_KEY)) {
-            Write-Error "NUGET_API_KEY secret not set — cannot publish. Add it in Settings > Secrets > Actions."
-            exit 1
-          }
-          foreach ($pkg in (Get-ChildItem dist -Include *.nupkg,*.snupkg -Recurse)) {
-            Write-Host "Push $($pkg.Name)"
-            dotnet nuget push $pkg.FullName --source https://api.nuget.org/v3/index.json --api-key $env:NUGET_API_KEY
-          }
+ publish-nuget:
+ name: Publish to NuGet.org
+ runs-on: windows-latest
+ needs: [verify, aot, pack]
+ environment: nuget
+ permissions:
+ id-token: write
+ contents: read
+ steps:
+ - uses: actions/download-artifact@v4
+ with:
+ name: nuget-packages
+ path: dist
+ - uses: actions/setup-dotnet@v4
+ with:
+ dotnet-version: "10.0.x"
+ - name: Push nupkg + snupkg
+ env:
+ NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+ shell: pwsh
+ run: |
+ if ([string]::IsNullOrEmpty($env:NUGET_API_KEY)) {
+ Write-Error "NUGET_API_KEY secret not set — cannot publish. Add it in Settings > Secrets > Actions."
+ exit 1
+ }
+ foreach ($pkg in (Get-ChildItem dist -Include *.nupkg,*.snupkg -Recurse)) {
+ Write-Host "Push $($pkg.Name)"
+ dotnet nuget push $pkg.FullName --source https://api.nuget.org/v3/index.json --api-key $env:NUGET_API_KEY
+ }
 
-  github-release:
-    name: "GitHub Release (with vs-MediatR comparison)"
-    runs-on: ubuntu-latest
-    needs: [verify, aot, pack, publish-nuget]
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-      - name: Extract version (validated)
-        id: ver
-        run: |
-          TAG="$REF_NAME"
-          if ! echo "$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
-            echo "::error::Invalid tag format: $TAG"; exit 1
-          fi
-          echo "version=${TAG#v}" >> $GITHUB_OUTPUT
-          echo "${TAG#v}" | grep -q '-' && echo "is_pre=true" >> $GITHUB_OUTPUT || echo "is_pre=false" >> $GITHUB_OUTPUT
-      - uses: actions/download-artifact@v4
-        with:
-          name: nuget-packages
-          path: dist
-      - name: Create release (gh CLI, no third-party action)
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.ver.outputs.version }}
-          IS_PRE: ${{ steps.ver.outputs.is_pre }}
-        run: |
-          cat > /tmp/release-notes.md << 'NOTES_EOF'
-          # Mediana vVERSION_PLACEHOLDER
+ github-release:
+ name: "GitHub Release (with vs-MediatR comparison)"
+ runs-on: ubuntu-latest
+ needs: [verify, aot, pack, publish-nuget]
+ permissions:
+ contents: write
+ steps:
+ - uses: actions/checkout@v4
+ - name: Extract version (validated)
+ id: ver
+ run: |
+ TAG="$REF_NAME"
+ if ! echo "$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+ echo "::error::Invalid tag format: $TAG"; exit 1
+ fi
+ echo "version=${TAG#v}" >> $GITHUB_OUTPUT
+ echo "${TAG#v}" | grep -q '-' && echo "is_pre=true" >> $GITHUB_OUTPUT || echo "is_pre=false" >> $GITHUB_OUTPUT
+ - uses: actions/download-artifact@v4
+ with:
+ name: nuget-packages
+ path: dist
+ - name: Create release (gh CLI, no third-party action)
+ env:
+ GH_TOKEN: ${{ github.token }}
+ VERSION: ${{ steps.ver.outputs.version }}
+ IS_PRE: ${{ steps.ver.outputs.is_pre }}
+ run: |
+ cat > /tmp/release-notes.md << 'NOTES_EOF'
+ # Mediana vVERSION_PLACEHOLDER
 
-          **Packages published to [NuGet](https://www.nuget.org/packages/Mediana).**
+ **Packages published to [NuGet](https://www.nuget.org/packages/Mediana).**
 
-          ## Mediana vs MediatR — summary
+ ## Mediana vs MediatR — summary
 
-          | Metric | MediatR 14.2 | Mediana |
-          |---|---:|---:|
-          | Send (1 thread) | 100.3 ns | **13.6 ns (7.4×)** |
-          | Allocations | 512 B/op | **0 B/op** |
-          | Throughput 64 threads | 24 M ops/s | **710 M ops/s (29×)** |
-          | p99.99 | 21–31 µs | **500 ns (42–61×)** |
-          | GC pauses | 3.4–3.7% time | **0.00%** |
-          | RAM retention/op | 606 B | **181 B (3.3×)** |
-          | WorkingSet | 79.5 MB | **30.5 MB (−62%)** |
-          | Core package | 265 KB | **68.5 KB (3.9×)** |
+ | Metric | MediatR 14.2 | Mediana |
+ |---|---:|---:|
+ | Send (1 thread) | 100.3 ns | **13.6 ns (7.4×)** |
+ | Allocations | 512 B/op | **0 B/op** |
+ | Throughput 64 threads | 24 M ops/s | **710 M ops/s (29×)** |
+ | p99.99 | 21–31 µs | **500 ns (42–61×)** |
+ | GC pauses | 3.4–3.7% time | **0.00%** |
+ | RAM retention/op | 606 B | **181 B (3.3×)** |
+ | WorkingSet | 79.5 MB | **30.5 MB (−62%)** |
+ | Core package | 265 KB | **68.5 KB (3.9×)** |
 
-          Full methodology: [`benchmarks/RESULTS.md`](https://github.com/artemfomin/Mediana/blob/main/benchmarks/RESULTS.md).
-          Changes — in [`CHANGELOG.md`](https://github.com/artemfomin/Mediana/blob/main/CHANGELOG.md).
-          NOTES_EOF
-          sed -i "s/VERSION_PLACEHOLDER/$VERSION/g" /tmp/release-notes.md
-          PRE_FLAG=""
-          [ "$IS_PRE" = "true" ] && PRE_FLAG="--prerelease"
-          gh release create "$REF_NAME" dist/* --title "v$VERSION" --notes-file /tmp/release-notes.md $PRE_FLAG
+ Full methodology: [`benchmarks/RESULTS.md`](https://github.com/artemfomin/Mediana/blob/main/benchmarks/RESULTS.md).
+ Changes — in [`CHANGELOG.md`](https://github.com/artemfomin/Mediana/blob/main/CHANGELOG.md).
+ NOTES_EOF
+ sed -i "s/VERSION_PLACEHOLDER/$VERSION/g" /tmp/release-notes.md
+ PRE_FLAG=""
+ [ "$IS_PRE" = "true" ] && PRE_FLAG="--prerelease"
+ gh release create "$REF_NAME" dist/* --title "v$VERSION" --notes-file /tmp/release-notes.md $PRE_FLAG

@@ -1,157 +1,157 @@
 name: CI
 
 on:
-  push:
-    branches: [main, "feature/**"]
-  pull_request:
+ push:
+ branches: [main, "feature/**"]
+ pull_request:
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+ group: ci-${{ github.ref }}
+ cancel-in-progress: true
 
 permissions:
-  contents: read
+ contents: read
 
 env:
-  DOTNET_NOLOGO: true
-  DOTNET_CLI_TELEMETRY_OPTOUT: true
+ DOTNET_NOLOGO: true
+ DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
-  build-test:
-    name: Build & Test (gates)
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "10.0.x"
-      - name: Restore
-        run: dotnet restore
-      - name: Build (warnings as errors)
-        run: dotnet build -c Release --no-restore
-      - name: "Unit tests (both assets) + coverage gate (union branch >= 95%)"
-        run: |
-          dotnet test tests/Mediana.UnitTests -c Release --no-build --collect:"XPlat Code Coverage" --settings coverlet.runsettings
-          dotnet test tests/Mediana.UnitTests.Ns21 -c Release --no-build --collect:"XPlat Code Coverage" --settings coverlet.runsettings
-          powershell -File scripts/check-coverage.ps1
-      - name: Generator + Contract + Interop tests
-        run: |
-          dotnet test tests/Mediana.GeneratorTests -c Release --no-build
-          dotnet test tests/Mediana.ContractTests.Ns21 -c Release --no-build
-          dotnet test tests/Mediana.InteropTests -c Release --no-build
-      - name: Integration tests (Testcontainers; Docker required)
-        run: dotnet test tests/Mediana.IntegrationTests -c Release --no-build
-        continue-on-error: true # docs/QUESTIONS.md Q1
+ build-test:
+ name: Build & Test (gates)
+ runs-on: windows-latest
+ steps:
+ - uses: actions/checkout@v4
+ - uses: actions/setup-dotnet@v4
+ with:
+ dotnet-version: "10.0.x"
+ - name: Restore
+ run: dotnet restore
+ - name: Build (warnings as errors)
+ run: dotnet build -c Release --no-restore
+ - name: "Unit tests (both assets) + coverage gate (union branch >= 95%)"
+ run: |
+ dotnet test tests/Mediana.UnitTests -c Release --no-build --collect:"XPlat Code Coverage" --settings coverlet.runsettings
+ dotnet test tests/Mediana.UnitTests.Ns21 -c Release --no-build --collect:"XPlat Code Coverage" --settings coverlet.runsettings
+ powershell -File scripts/check-coverage.ps1
+ - name: Generator + Contract + Interop tests
+ run: |
+ dotnet test tests/Mediana.GeneratorTests -c Release --no-build
+ dotnet test tests/Mediana.ContractTests.Ns21 -c Release --no-build
+ dotnet test tests/Mediana.InteropTests -c Release --no-build
+ - name: Integration tests (Testcontainers; Docker required)
+ run: dotnet test tests/Mediana.IntegrationTests -c Release --no-build
+ continue-on-error: true # docs/QUESTIONS.md Q1
 
-  vs-mediatr:
-    name: Benchmarks vs MediatR (comparison summary)
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "10.0.x"
-      - name: Build benchmarks
-        run: dotnet build benchmarks/Mediana.Benchmarks -c Release
-      - name: "Allocation gate (absolute: 0 B/call)"
-        run: dotnet run --project benchmarks/Mediana.Benchmarks -c Release --no-build -- alloc-check
-      - name: RAM comparison (churn + retention + footprint)
-        run: |
-          dotnet run --project benchmarks/Mediana.Benchmarks -c Release --no-build -- ram-check all > ram.log 2>&1
-          dotnet run --project benchmarks/Mediana.Benchmarks -c Release --no-build -- ram-check footprint mediatr >> ram.log 2>&1
-          dotnet run --project benchmarks/Mediana.Benchmarks -c Release --no-build -- ram-check footprint mediana >> ram.log 2>&1
-      - name: Load comparison (scaling + tails)
-        if: github.event_name == 'push'
-        run: dotnet run --project benchmarks/Mediana.Benchmarks -c Release --no-build -- load-check all > load.log 2>&1
-      - name: Job summary (vs MediatR)
-        if: always()
-        shell: pwsh
-        run: |
-          $summary = "## Mediana vs MediatR — сравнение (CI)`n"
-          foreach ($f in @("ram.log","load.log")) {
-            if (Test-Path $f) {
-              $summary += "`n### $f`n`````n" + (Get-Content $f -Raw) + "`````n"
-            }
-          }
-          $summary += "`nПолные методики: [benchmarks/RESULTS.md](https://github.com/artemfomin/Mediana/blob/main/benchmarks/RESULTS.md)`n"
-          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value $summary
-      - name: Upload raw logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: vs-mediatr-logs
-          path: |
-            ram.log
-            load.log
-          if-no-files-found: ignore
+ vs-mediatr:
+ name: Benchmarks vs MediatR (comparison summary)
+ runs-on: windows-latest
+ steps:
+ - uses: actions/checkout@v4
+ - uses: actions/setup-dotnet@v4
+ with:
+ dotnet-version: "10.0.x"
+ - name: Build benchmarks
+ run: dotnet build benchmarks/Mediana.Benchmarks -c Release
+ - name: "Allocation gate (absolute: 0 B/call)"
+ run: dotnet run --project benchmarks/Mediana.Benchmarks -c Release --no-build -- alloc-check
+ - name: RAM comparison (churn + retention + footprint)
+ run: |
+ dotnet run --project benchmarks/Mediana.Benchmarks -c Release --no-build -- ram-check all > ram.log 2>&1
+ dotnet run --project benchmarks/Mediana.Benchmarks -c Release --no-build -- ram-check footprint mediatr >> ram.log 2>&1
+ dotnet run --project benchmarks/Mediana.Benchmarks -c Release --no-build -- ram-check footprint mediana >> ram.log 2>&1
+ - name: Load comparison (scaling + tails)
+ if: github.event_name == 'push'
+ run: dotnet run --project benchmarks/Mediana.Benchmarks -c Release --no-build -- load-check all > load.log 2>&1
+ - name: Job summary (vs MediatR)
+ if: always()
+ shell: pwsh
+ run: |
+ $summary = "## Mediana vs MediatR — (CI)`n"
+ foreach ($f in @("ram.log","load.log")) {
+ if (Test-Path $f) {
+ $summary += "`n### $f`n`````n" + (Get-Content $f -Raw) + "`````n"
+ }
+ }
+ $summary += "`n : [benchmarks/RESULTS.md](https://github.com/artemfomin/Mediana/blob/main/benchmarks/RESULTS.md)`n"
+ Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value $summary
+ - name: Upload raw logs
+ if: always()
+ uses: actions/upload-artifact@v4
+ with:
+ name: vs-mediatr-logs
+ path: |
+ ram.log
+ load.log
+ if-no-files-found: ignore
 
-  mutation:
-    name: Mutation testing (Stryker >= 90%)
-    runs-on: windows-latest
-    if: github.event_name == 'push'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "10.0.x"
-      - name: Stryker
-        run: |
-          dotnet tool restore
-          dotnet tool run dotnet-stryker
-      - name: Upload mutation report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: mutation-report
-          path: StrykerOutput/**/reports/mutation-report.html
+ mutation:
+ name: Mutation testing (Stryker >= 90%)
+ runs-on: windows-latest
+ if: github.event_name == 'push'
+ steps:
+ - uses: actions/checkout@v4
+ - uses: actions/setup-dotnet@v4
+ with:
+ dotnet-version: "10.0.x"
+ - name: Stryker
+ run: |
+ dotnet tool restore
+ dotnet tool run dotnet-stryker
+ - name: Upload mutation report
+ if: always()
+ uses: actions/upload-artifact@v4
+ with:
+ name: mutation-report
+ path: StrykerOutput/**/reports/mutation-report.html
 
-  dependency-audit:
-    name: "Dependency audit (vulnerable + D14 core purity)"
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "10.0.x"
-      - name: Restore
-        run: dotnet restore
-      - name: Vulnerability audit (all projects)
-        shell: bash
-        run: |
-          set -euo pipefail
-          out=$(dotnet list Mediana.slnx package --vulnerable --include-transitive 2>&1); echo "$out"
-          if echo "$out" | grep -qE '>\s+\S+\s+[0-9]'; then
-            echo "::error::Vulnerable packages detected"; exit 1
-          fi
-          echo "Vulnerability audit: OK (0 vulnerable packages)"
-      - name: D14 core-purity gate
-        shell: bash
-        run: |
-          set -euo pipefail
-          ALLOW='^(Microsoft\.|System\.|NETStandard\.Library$|NuGet\.FrameworkDepth\.Runner$)'
-          fail=0
-          for p in Mediana.Abstractions Mediana Mediana.Transport.Abstractions Mediana.Outbox; do
-            off=$(dotnet list "src/$p/$p.csproj" package --include-transitive \
-              | awk '/^ *> /{print $2}' | sort -u | grep -Ev "$ALLOW" || true)
-            if [ -n "$off" ]; then
-              echo "::error::Non-Microsoft dependency in $p:"
-              echo "$off"
-              fail=1
-            fi
-          done
-          [ $fail -eq 0 ] && echo "D14 core purity: OK (zero non-Microsoft dependencies)"
+ dependency-audit:
+ name: "Dependency audit (vulnerable + D14 core purity)"
+ runs-on: ubuntu-latest
+ permissions:
+ contents: read
+ steps:
+ - uses: actions/checkout@v4
+ - uses: actions/setup-dotnet@v4
+ with:
+ dotnet-version: "10.0.x"
+ - name: Restore
+ run: dotnet restore
+ - name: Vulnerability audit (all projects)
+ shell: bash
+ run: |
+ set -euo pipefail
+ out=$(dotnet list Mediana.slnx package --vulnerable --include-transitive 2>&1); echo "$out"
+ if echo "$out" | grep -qE '>\s+\S+\s+[0-9]'; then
+ echo "::error::Vulnerable packages detected"; exit 1
+ fi
+ echo "Vulnerability audit: OK (0 vulnerable packages)"
+ - name: D14 core-purity gate
+ shell: bash
+ run: |
+ set -euo pipefail
+ ALLOW='^(Microsoft\.|System\.|NETStandard\.Library$|NuGet\.FrameworkDepth\.Runner$)'
+ fail=0
+ for p in Mediana.Abstractions Mediana Mediana.Transport.Abstractions Mediana.Outbox; do
+ off=$(dotnet list "src/$p/$p.csproj" package --include-transitive \
+ | awk '/^ *> /{print $2}' | sort -u | grep -Ev "$ALLOW" || true)
+ if [ -n "$off" ]; then
+ echo "::error::Non-Microsoft dependency in $p:"
+ echo "$off"
+ fail=1
+ fi
+ done
+ [ $fail -eq 0 ] && echo "D14 core purity: OK (zero non-Microsoft dependencies)"
 
-  aot:
-    name: NativeAOT publish smoke
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "10.0.x"
-      - name: Publish NativeAOT (linux-x64, linker preinstalled)
-        run: dotnet publish tests/Mediana.AotTests -c Release -r linux-x64 --self-contained true
-      - name: Run AOT binary
-        run: ./tests/Mediana.AotTests/bin/Release/net10.0/linux-x64/publish/Mediana.AotTests
+ aot:
+ name: NativeAOT publish smoke
+ runs-on: ubuntu-latest
+ steps:
+ - uses: actions/checkout@v4
+ - uses: actions/setup-dotnet@v4
+ with:
+ dotnet-version: "10.0.x"
+ - name: Publish NativeAOT (linux-x64, linker preinstalled)
+ run: dotnet publish tests/Mediana.AotTests -c Release -r linux-x64 --self-contained true
+ - name: Run AOT binary
+ run: ./tests/Mediana.AotTests/bin/Release/net10.0/linux-x64/publish/Mediana.AotTests

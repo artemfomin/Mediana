@@ -7,10 +7,10 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Mediana.MediatR;
 
 /// <summary>
-/// Адаптер MediatR 12+/14+: существующие MediatR-хендлеры выполняются через Mediana без изменений
-/// (D1). Мост сканирует сборки, резолвит хендлеры из DI и диспатчит с семантикой Mediana
-/// (ValueTask, исключения как есть). Behaviors Mediana применяются к Mediana-native сообщениям;
-/// bridge MediatR-behaviors зафиксирован в docs/QUESTIONS.md (Q8).
+/// MediatR 12+/14+: inand MediatR- inby Mediana without fromnotand
+/// See English documentation.
+/// See English documentation.
+/// bridge MediatR-behaviors andandin in docs/QUESTIONS.md (Q8)
 /// </summary>
 public sealed class MediatRBridge
 {
@@ -33,7 +33,7 @@ public sealed class MediatRBridge
         Notification,
     }
 
-    [RequiresUnreferencedCode("Сканирование MediatR-хендлеров: для AOT регистрируйте вручную.")]
+    [RequiresUnreferencedCode("Scans MediatR handlers: for AOT register manually.")]
     private void Scan(Assembly assembly)
     {
         Type[] types;
@@ -43,7 +43,7 @@ public sealed class MediatRBridge
         }
         catch (ReflectionTypeLoadException ex)
         {
-            // H-7 fix: plugin-сценарии — частично загруженные сборки
+            // H-7 fix: plugin-onandand — andbut already and
             types = ex.Types.Where(t => t is not null).Select(t => t!).ToArray();
         }
 
@@ -83,12 +83,14 @@ public sealed class MediatRBridge
         }
     }
 
-    // H-8/M-13/M-15 fix: кэш типизированных делегатов вместо reflection на каждый вызов
+    // H-8/M-13/M-15 fix: andfromandin thenin inthen reflection on each inin
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Type RequestType, Type ResponseType), Func<object, object, CancellationToken, Task>> HandleCache = new();
 
-    /// <summary>Выполнить MediatR-запрос через Mediana-мост (кэш делегатов, исключения as-is).</summary>
-    [RequiresDynamicCode("MakeGenericType: для AOT регистрируйте хендлеры явно.")]
-    [RequiresUnreferencedCode("Рефлексивный резолв хендлеров: для trimming — явная регистрация.")]
+    /// <summary>Execute a MediatR request through the Mediana bridge (delegate cache, exceptions as-is).</summary>
+ [RequiresDynamicCode("MakeGenericType: for AOT and and inbut.")]
+
+ [RequiresUnreferencedCode(" andin in handlers: for trimming — inon and and .")]
+
     public async ValueTask<TResponse> Send<TResponse>(global::MediatR.IRequest<TResponse> request, CancellationToken cancellationToken = default)
     {
         Guard(request);
@@ -108,7 +110,7 @@ public sealed class MediatRBridge
             var method = closedInterface.GetMethod("Handle", new[] { key.RequestType, typeof(CancellationToken) })
                 ?? throw new MediatorConfigurationException("Handle method not found for " + key.RequestType + ".");
 
-            // R5/H-8 fix: Expression.Lambda → compiled delegate, без Invoke/DynamicInvoke — исключения as-is
+            // R5/H-8 fix: Expression.Lambda → compiled delegate, without Invoke/DynamicInvoke — andand as-is
             var handlerParam = System.Linq.Expressions.Expression.Parameter(typeof(object), "handler");
             var requestParam = System.Linq.Expressions.Expression.Parameter(typeof(object), "request");
             var ctParam = System.Linq.Expressions.Expression.Parameter(typeof(CancellationToken), "ct");
@@ -127,7 +129,7 @@ public sealed class MediatRBridge
         return await (Task<TResponse>)result;
     }
 
-    /// <summary>Опубликовать MediatR-уведомление всем хендлерам; M-12 fix — агрегация ошибок.</summary>
+    /// <summary>Publish a MediatR notification to all handlers; M-12 fix — error aggregation.</summary>
     public async ValueTask Publish<TNotification>(TNotification notification, CancellationToken cancellationToken = default)
         where TNotification : global::MediatR.INotification
     {
@@ -161,11 +163,12 @@ public sealed class MediatRBridge
     }
 }
 
-/// <summary>DI-регистрация моста.</summary>
+/// <summary>DI-andand .</summary>
 public static class MediatRBridgeRegistration
 {
-    /// <summary>Зарегистрировать MediatRBridge (хендлеры MediatR должны быть в DI).</summary>
-    [RequiresUnreferencedCode("Сканирует сборки: для AOT передайте сборки явно и регистрируйте хендлеры вручную.")]
+    /// <summary>andandin MediatRBridge ( MediatR to in DI).</summary>
+ [RequiresUnreferencedCode(" and and: for AOT and inbut and and and in .")]
+
     public static IServiceCollection AddMedianaMediatRBridge(
         this IServiceCollection services,
         params Assembly[] assemblies)

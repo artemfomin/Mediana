@@ -8,9 +8,9 @@ using Xunit;
 namespace Mediana.ContractTests.Ns21;
 
 /// <summary>
-/// Контракт идентичности публичной API-поверхности ns2.1-ассета ядра относительно net10.0-ассета (D2).
-/// Тестовая сборка ссылается на ns2.1-ассеты; эта же проверка выполняется скриптом verify.ps1
-/// для обоих ассетов через reflection-сравнение.
+/// andandbutand andbut API-byinbutand ns2.1- frombutandbut net10.0- (D2)
+/// thenin on ns2.1-; in inby andthen verify.ps1
+/// for and thenin reflection-innotand
 /// </summary>
 public class ApiSurfaceTests
 {
@@ -89,7 +89,7 @@ public class ApiSurfaceTests
     [Fact]
     public async Task Behavioral_parity_ns21_asset_dispatches_all_kinds()
     {
-        // Поведенческий паритет: тот же сценарий, что AotTests, против ns2.1-ассета
+        // inand and: that onand, then AotTests, fromandin ns2.1-
         var sc = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
         sc.AddMediana(c => c
             .UseSingletonHandlers()

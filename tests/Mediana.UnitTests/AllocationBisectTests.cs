@@ -7,10 +7,10 @@ using Xunit;
 namespace Mediana.UnitTests;
 
 /// <summary>
-/// Регрессионный тест нулевых аллокаций диспетчера по под-путям.
-/// Закрепляет инженерный факт: invocation generic-делегата из canon-shared generic-контекста
-/// аллоцирует ~24-32Б/вызов; цепочки через non-generic хопы и специализированные
-/// (value-type) инстанциации — ноль (D16, §12).
+/// and in and and by by-
+/// andnot : invocation generic- from canon-shared generic-
+/// and ~24-32B/inin; byand non-generic and andfromandin
+/// See English documentation.
 /// </summary>
 [Trait("Category", "Allocation")]
 public class AllocationBisectTests
@@ -59,7 +59,7 @@ public class AllocationBisectTests
         var concrete = (CommandCallSite<Echo, int, EchoHandler>)entry.CommandCallSite!;
 
         var n = 5000;
-        // прогрев корня
+        // warmup
         _ = concrete.InvokeTyped(new Echo(1), sp, default);
         _ = concrete.InvokeTyped(new Echo(1), sp, default);
 
@@ -98,9 +98,9 @@ public class AllocationBisectTests
     }
 
     /// <summary>
-    /// Документированный canon-налог: object-путь Send с reference-ответом из generic-контекста —
-    /// до 1 малой аллокации (~32Б). Value-ответы, события и typed-путь — строго ноль (тесты выше).
-    /// Генератор (Mediana.Generators) устраняет налог структурно.
+    /// andin canon-on: object- Send reference-frominthen from generic- —
+    /// to 1 andand (~32). Value-fromin, and and typed- — but ( in)
+    /// notthen (Mediana.Generators) on but
     /// </summary>
     [Fact]
     public void Ref_response_send_documented_canon_tax()

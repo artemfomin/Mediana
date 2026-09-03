@@ -10,12 +10,12 @@ using Xunit;
 namespace Mediana.UnitTests;
 
 /// <summary>
-/// R9: 11 регрессионных тестов — по одному на каждый фикс из второй итерации security-audit.
-/// Каждый тест привязан к ID находки.
+/// R9: 11 and thenin — by but on each and from inthen andandand security-audit
+/// onin ID onand
 /// </summary>
 public class RegressionTests
 {
-    // ═══ R1: Mongo OutboxMessage.DocumentId — корреляция по строке ObjectId ═══
+    // ═══ R1: Mongo OutboxMessage.DocumentId — and by ObjectId ═══
 
     [Fact]
     public void R1_OutboxMessage_has_DocumentId_for_Mongo_correlation()
@@ -30,12 +30,12 @@ public class RegressionTests
         };
         Assert.Equal("6a98d9c1213974adb66502f9", msg.DocumentId);
 
-        // Два разных сообщения — разные DocumentId (не коллидируют)
+        // in and — DocumentId (not andand)
         var msg2 = new OutboxMessage { DocumentId = "6a98d9c1213974adb66502fa" };
         Assert.NotEqual(msg.DocumentId, msg2.DocumentId);
     }
 
-    // ═══ R2: Parked колонка — существует в OutboxMessage и в модели EF ═══
+    // ═══ R2: Parked — in in OutboxMessage and in and EF ═══
 
     [Fact]
     public void R2_Parked_field_exists_in_OutboxMessage()
@@ -44,12 +44,12 @@ public class RegressionTests
         Assert.True(msg.Parked);
     }
 
-    // ═══ R3: MaxDeliveryAttempts — параметр интерфейса, не хардкод ═══
+    // ═══ R3: MaxDeliveryAttempts — and, not ═══
 
     [Fact]
     public void R3_MarkFailed_receives_maxAttempts_parameter()
     {
-        // Проверяем что сигнатура интерфейса содержит int maxDeliveryAttempts
+        // in then andon and and int maxDeliveryAttempts
         var method = typeof(IOutboxStore).GetMethod("MarkFailed");
         Assert.NotNull(method);
         var parameters = method!.GetParameters();
@@ -72,11 +72,11 @@ public class RegressionTests
         await Task.Delay(200);
         await relay.StopAsync(CancellationToken.None);
 
-        // Store записал maxAttempts = 3 (не хардкод 10)
+        // Store and maxAttempts = 3 (not 10)
         Assert.Contains(3, store.ReceivedMaxAttempts);
     }
 
-    // ═══ R4: Kafka poison MessageId — стабильный (кэшируется) ═══
+    // ═══ R4: Kafka poison MessageId — and (and) ═══
 
     [Fact]
     public void R4_OutboxMessage_Parked_field_exists()
@@ -87,19 +87,19 @@ public class RegressionTests
         Assert.False(msg2.Parked);
     }
 
-    // ═══ R7: Jitter — потокобезопасный на ns2.1 ═══
+    // ═══ R7: Jitter — bythenwithout on ns2.1 ═══
 
     [Fact]
     public void R7_Jitter_thread_safe()
     {
-        // Параллельный вызов DelayFor с jitter не бросает (state corruption в System.Random)
+        // inin DelayFor jitter not (state corruption in System.Random)
         var policy = new RetryPolicy { Strategy = BackoffStrategy.Exponential, BaseDelay = TimeSpan.FromMilliseconds(1), Jitter = 0.5 };
         var random = new Random(42);
         Parallel.For(0, 100, i => policy.DelayFor(i % 5 + 1, random));
-        // Если бы Random не был потокобезопасен, получили бы исключение или corrupt state
+        // and Random not bythenwithout, byor andand or corrupt state
     }
 
-    // ═══ R8: EnvelopeCodec — лимиты ═══
+    // ═══ R8: EnvelopeCodec — andand ═══
 
     [Fact]
     public void R8_EnvelopeCodec_rejects_oversized_payload()
@@ -137,7 +137,7 @@ public class RegressionTests
         Assert.Equal(envelope.MessageId, decoded.MessageId);
     }
 
-    // ═══ Вспомогательные типы ═══
+    // ═══ by and ═══
 
     private sealed class RecordingOutboxStore : IOutboxStore
     {

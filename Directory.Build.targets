@@ -1,28 +1,28 @@
 <Project>
-  <!-- ═══ OSS-метаданные NuGet: ПОСЛЕ csproj (IsPackable уже установлен) ═══ -->
-  <PropertyGroup Condition="'$(IsPackable)' == 'true'">
-    <Authors>artemfomin</Authors>
-    <Owners>artemfomin</Owners>
-    <Copyright>Copyright © 2026 artemfomin</Copyright>
-    <VersionPrefix>1.0.0</VersionPrefix>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/artemfomin/Mediana</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/artemfomin/Mediana.git</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
-    <PackageIcon>icon.png</PackageIcon>
-    <PackageReadmeFile>package-readme.md</PackageReadmeFile>
-    <PackageReleaseNotes>https://github.com/artemfomin/Mediana/releases</PackageReleaseNotes>
-    <EmbedUntrackedSources>true</EmbedUntrackedSources>
-    <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
-  </PropertyGroup>
+ <!-- ═══ OSS- NuGet: csproj (IsPackable ) ═══ -->
+ <PropertyGroup Condition="'$(IsPackable)' == 'true'">
+ <Authors>artemfomin</Authors>
+ <Owners>artemfomin</Owners>
+ <Copyright>Copyright © 2026 artemfomin</Copyright>
+ <VersionPrefix>1.0.0</VersionPrefix>
+ <PackageLicenseExpression>MIT</PackageLicenseExpression>
+ <PackageProjectUrl>https://github.com/artemfomin/Mediana</PackageProjectUrl>
+ <RepositoryUrl>https://github.com/artemfomin/Mediana.git</RepositoryUrl>
+ <RepositoryType>git</RepositoryType>
+ <PackageIcon>icon.png</PackageIcon>
+ <PackageReadmeFile>package-readme.md</PackageReadmeFile>
+ <PackageReleaseNotes>https://github.com/artemfomin/Mediana/releases</PackageReleaseNotes>
+ <EmbedUntrackedSources>true</EmbedUntrackedSources>
+ <IncludeSymbols>true</IncludeSymbols>
+ <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+ <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+ </PropertyGroup>
 
-  <ItemGroup Condition="'$(IsPackable)' == 'true'">
-    <!-- Центральные иконка и readme: один файл на все пакеты -->
-    <None Include="$(RepoRoot)icon.png" Visible="false" Pack="true" PackagePath="\" />
-    <None Include="$(RepoRoot)package-readme.md" Visible="false" Pack="true" PackagePath="\" />
-    <!-- SourceLink: build-time only, не течёт к потребителям (D14) -->
-    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
-  </ItemGroup>
+ <ItemGroup Condition="'$(IsPackable)' == 'true'">
+ <!-- readme: -->
+ <None Include="$(RepoRoot)icon.png" Visible="false" Pack="true" PackagePath="\" />
+ <None Include="$(RepoRoot)package-readme.md" Visible="false" Pack="true" PackagePath="\" />
+ <!-- SourceLink: build-time only, (D14) -->
+ <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+ </ItemGroup>
 </Project>
