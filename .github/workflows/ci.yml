@@ -77,7 +77,7 @@ jobs:
           Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value $summary
       - name: Upload raw logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: vs-mediatr-logs
           path: |
@@ -100,7 +100,7 @@ jobs:
           dotnet tool run dotnet-stryker
       - name: Upload mutation report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mutation-report
           path: StrykerOutput/**/reports/mutation-report.html
