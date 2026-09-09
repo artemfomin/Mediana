@@ -136,7 +136,7 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: nuget-packages
           path: dist
@@ -174,7 +174,7 @@ jobs:
           fi
           echo "version=${TAG#v}" >> $GITHUB_OUTPUT
           echo "${TAG#v}" | grep -q '-' && echo "is_pre=true" >> $GITHUB_OUTPUT || echo "is_pre=false" >> $GITHUB_OUTPUT
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: nuget-packages
           path: dist
