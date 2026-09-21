@@ -32,14 +32,14 @@
  <!-- -->
  <PackageVersion Include="xunit" Version="2.9.3" />
  <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
- <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
+ <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
  <PackageVersion Include="coverlet.collector" Version="10.0.1" />
  <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
  <PackageVersion Include="MassTransit.TestFramework" Version="9.2.1" />
- <PackageVersion Include="Testcontainers.RabbitMq" Version="4.14.0" />
- <PackageVersion Include="Testcontainers.Kafka" Version="4.14.0" />
- <PackageVersion Include="Testcontainers.PostgreSql" Version="4.14.0" />
- <PackageVersion Include="Testcontainers.MongoDb" Version="4.14.0" />
+ <PackageVersion Include="Testcontainers.RabbitMq" Version="4.15.0" />
+ <PackageVersion Include="Testcontainers.Kafka" Version="4.15.0" />
+ <PackageVersion Include="Testcontainers.PostgreSql" Version="4.15.0" />
+ <PackageVersion Include="Testcontainers.MongoDb" Version="4.15.0" />
  <PackageVersion Include="Npgsql" Version="10.0.0" />
  </ItemGroup>
 </Project>
