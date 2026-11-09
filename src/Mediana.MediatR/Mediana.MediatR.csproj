@@ -6,6 +6,7 @@
     <PackageId>Mediana.MediatR</PackageId>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="System.Text.Json" />
     <ProjectReference Include="..\Mediana\Mediana.csproj" />
     <PackageReference Include="MediatR" />
   </ItemGroup>
