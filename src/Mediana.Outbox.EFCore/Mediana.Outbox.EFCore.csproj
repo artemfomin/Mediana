@@ -6,6 +6,7 @@
     <PackageId>Mediana.Outbox.EFCore</PackageId>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <ProjectReference Include="..\Mediana.Outbox\Mediana.Outbox.csproj" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
